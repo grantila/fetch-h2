@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"lib": [ "es2015", "es2017" ],
+		"outDir": "dist",
+		"sourceMap": true,
+		"module": "CommonJS",
+		"target": "esnext"
+	},
+	"include": [
+		"index.ts",
+		"generated",
+		"lib",
+		"test"
+	]
+}

@@ -1,0 +1,6 @@
+lib
+scripts
+test
+.npmignore
+.travis.yml
+tsconfig.json
