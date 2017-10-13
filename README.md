@@ -1,3 +1,6 @@
+[![npm version][npm-image]][npm-url]
+[![build status][travis-image]][travis-url]
+
 # fetch-h2
 
 HTTP/2 [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) implementation for Node.js (using Node.js' built-in `http2` module). This module is intended to be solely for HTTP/2, handling HTTP/2 sessions transparently. For an HTTP/1(.1)-only alternative, you can use [node-fetch](https://github.com/bitinn/node-fetch).
@@ -78,7 +81,7 @@ await disconnectAll( );
  * The `credentials` option is currently not implemented since `fetch-h2` has no cookie jar ('yet').
  * The `cache` option is unused, as `fetch-h2` has no built-in cache.
  * The `referrer` and `referrerPolicy` are unused, as `fetch-h2` operates outside the concept of "web pages".
- * The `integrity` option **is actually implemented** but no validation is performed if the result body is read through the Node.js `ReadableStream` (using `response.readable( )`. The body **is** validated if `arrayBuffer( )`, `blob( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise.
+ * The `integrity` option **is actually implemented** but no validation is performed if the result body is read through the Node.js `ReadableStream` (using `response.readable( )`). The body **is** validated if `arrayBuffer( )`, `blob( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise.
 
 
 ## Extensions
@@ -155,3 +158,8 @@ const body = new JsonBody( myData );
 const method = 'POST';
 const response = await fetch( url, { method, body } );
 ```
+
+[npm-image]: https://img.shields.io/npm/v/fetch-h2.svg
+[npm-url]: https://npmjs.org/package/fetch-h2
+[travis-image]: https://img.shields.io/travis/grantila/fetch-h2.svg
+[travis-url]: https://travis-ci.org/grantila/fetch-h2
