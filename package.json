@@ -18,7 +18,7 @@
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
     "test": "node --expose-http2 node_modules/.bin/_mocha dist/test",
     "buildtest": "npm run build && npm run test",
-    "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest"
+    "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh"
   },
   "repository": {
     "type": "git",
