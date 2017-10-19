@@ -41,7 +41,7 @@ function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
 	const hash = createHash( algorithm )
 		.update(
 			data instanceof ArrayBuffer
-			? new DataView( data )
+			? new DataView( data ) as any
 			: < Buffer | string >data
 		)
 		.digest( 'base64' );
