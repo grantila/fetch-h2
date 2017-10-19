@@ -8,6 +8,7 @@ const core_1 = require("./core");
 const request_1 = require("./request");
 const response_1 = require("./response");
 const headers_1 = require("./headers");
+const body_1 = require("./body");
 const { 
 // Required for a request
 HTTP2_HEADER_METHOD, HTTP2_HEADER_SCHEME, HTTP2_HEADER_PATH, 
@@ -64,12 +65,13 @@ function fetchImpl(session, input, init = {}, extra) {
     };
     for (let [key, val] of headers.entries())
         headersToSend[key] = val;
+    const inspector = new body_1.BodyInspector(req);
     if (!endStream &&
-        req.length != null &&
+        inspector.length != null &&
         !req.headers.has(HTTP2_HEADER_CONTENT_LENGTH))
-        headersToSend[HTTP2_HEADER_CONTENT_LENGTH] = '' + req.length;
-    if (!endStream && !req.headers.has('content-type') && req.mime)
-        headersToSend[HTTP2_HEADER_CONTENT_TYPE] = req.mime;
+        headersToSend[HTTP2_HEADER_CONTENT_LENGTH] = '' + inspector.length;
+    if (!endStream && !req.headers.has('content-type') && inspector.mime)
+        headersToSend[HTTP2_HEADER_CONTENT_TYPE] = inspector.mime;
     function abortError() {
         return new core_1.AbortError(`${method} ${url} aborted`);
     }

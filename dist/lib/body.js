@@ -63,12 +63,6 @@ class Body {
         if (integrity)
             this._integrity = integrity;
     }
-    get mime() {
-        return this._mime;
-    }
-    get length() {
-        return this._length;
-    }
     _ensureUnused() {
         if (this._used)
             throw new ReferenceError("Body already used");
@@ -168,4 +162,23 @@ class DataBody extends Body {
     }
 }
 exports.DataBody = DataBody;
+class BodyInspector extends Body {
+    constructor(body) {
+        super();
+        this._ref = body;
+    }
+    _getMime() {
+        return this._mime;
+    }
+    _getLength() {
+        return this._length;
+    }
+    get mime() {
+        return this._getMime.call(this._ref);
+    }
+    get length() {
+        return this._getLength.call(this._ref);
+    }
+}
+exports.BodyInspector = BodyInspector;
 //# sourceMappingURL=body.js.map

@@ -55,9 +55,9 @@ function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
 export class Body implements IBody
 {
 	private _body: StorageBodyTypes;
-	private _length: number;
+	protected _length: number;
 	private _used: boolean;
-	private _mime?: string;
+	protected _mime?: string;
 	private _integrity?: string;
 	readonly bodyUsed: boolean;
 
@@ -109,16 +109,6 @@ export class Body implements IBody
 
 		if ( integrity )
 			this._integrity = integrity;
-	}
-
-	get mime( )
-	{
-		return this._mime;
-	}
-
-	get length( )
-	{
-		return this._length;
 	}
 
 	private _ensureUnused( )
@@ -257,5 +247,37 @@ export class DataBody extends Body
 		super( );
 
 		this.setBody( data );
+	}
+}
+
+export class BodyInspector extends Body
+{
+	private _ref: Body;
+
+	constructor( body: Body )
+	{
+		super( );
+
+		this._ref = body;
+	}
+
+	private _getMime( )
+	{
+		return this._mime;
+	}
+
+	private _getLength( )
+	{
+		return this._length;
+	}
+
+	get mime( )
+	{
+		return this._getMime.call( this._ref );
+	}
+
+	get length( )
+	{
+		return this._getLength.call( this._ref );
 	}
 }

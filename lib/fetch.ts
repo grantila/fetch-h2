@@ -11,6 +11,7 @@ import { Method, FetchInit, AbortError, SimpleSession } from './core'
 import { Request } from './request'
 import { H2StreamResponse, Response } from './response'
 import { Headers } from './headers'
+import { BodyInspector } from './body'
 
 
 const {
@@ -116,15 +117,17 @@ function fetchImpl(
 	for ( let [ key, val ] of headers.entries( ) )
 		headersToSend[ key ] = val;
 
+	const inspector = new BodyInspector( req );
+
 	if (
 		!endStream &&
-		req.length != null &&
+		inspector.length != null &&
 		!req.headers.has( HTTP2_HEADER_CONTENT_LENGTH )
 	)
-		headersToSend[ HTTP2_HEADER_CONTENT_LENGTH ] = '' + req.length;
+		headersToSend[ HTTP2_HEADER_CONTENT_LENGTH ] = '' + inspector.length;
 
-	if ( !endStream && !req.headers.has( 'content-type' ) && req.mime )
-		headersToSend[ HTTP2_HEADER_CONTENT_TYPE ] = req.mime;
+	if ( !endStream && !req.headers.has( 'content-type' ) && inspector.mime )
+		headersToSend[ HTTP2_HEADER_CONTENT_TYPE ] = inspector.mime;
 
 	function abortError( )
 	{

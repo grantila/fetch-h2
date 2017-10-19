@@ -2,16 +2,14 @@
 import { IBody, BodyTypes } from './core';
 export declare class Body implements IBody {
     private _body;
-    private _length;
+    protected _length: number;
     private _used;
-    private _mime?;
+    protected _mime?: string;
     private _integrity?;
     readonly bodyUsed: boolean;
     constructor();
     protected hasBody(): boolean;
     protected setBody(body: BodyTypes | IBody, mime?: string, integrity?: string): void;
-    readonly mime: string;
-    readonly length: number;
     private _ensureUnused();
     arrayBuffer(): Promise<ArrayBuffer>;
     private blob();
@@ -28,4 +26,12 @@ export declare class StreamBody extends Body {
 }
 export declare class DataBody extends Body {
     constructor(data: Buffer | string);
+}
+export declare class BodyInspector extends Body {
+    private _ref;
+    constructor(body: Body);
+    private _getMime();
+    private _getLength();
+    readonly mime: any;
+    readonly length: any;
 }
