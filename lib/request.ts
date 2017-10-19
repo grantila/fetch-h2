@@ -82,13 +82,6 @@ export class Request extends Body
 			this._init.headers
 		);
 
-		if (
-			!headers.has( 'content-type' ) &&
-			this._init.body &&
-			this._init.body instanceof JsonBody
-		)
-			headers.set( 'content-type', 'application/json' );
-
 		if ( this._init.body )
 		{
 			if ( headers.has( 'content-type' ) )

@@ -3,7 +3,8 @@ import { SessionOptions, SecureClientSessionOptions, ClientHttp2Session } from '
 import { URL } from 'url';
 import { RawHeaders, Headers } from './headers';
 export declare type Method = 'ACL' | 'BIND' | 'CHECKOUT' | 'CONNECT' | 'COPY' | 'DELETE' | 'GET' | 'HEAD' | 'LINK' | 'LOCK' | 'M-SEARCH' | 'MERGE' | 'MKACTIVITY' | 'MKCALENDAR' | 'MKCOL' | 'MOVE' | 'NOTIFY' | 'OPTIONS' | 'PATCH' | 'POST' | 'PROPFIND' | 'PROPPATCH' | 'PURGE' | 'PUT' | 'REBIND' | 'REPORT' | 'SEARCH' | 'SUBSCRIBE' | 'TRACE' | 'UNBIND' | 'UNLINK' | 'UNLOCK' | 'UNSUBSCRIBE';
-export declare type BodyTypes = Buffer | string | NodeJS.ReadableStream;
+export declare type StorageBodyTypes = Buffer | NodeJS.ReadableStream;
+export declare type BodyTypes = StorageBodyTypes | string;
 export declare type ModeTypes = 'cors' | 'no-cors' | 'same-origin';
 export declare type CredentialsTypes = 'omit' | 'same-origin' | 'include';
 export declare type CacheTypes = 'default' | 'no-store' | 'reload' | 'no-cache' | 'force-cache' | 'only-if-cached';

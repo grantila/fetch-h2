@@ -1,4 +1,4 @@
-import { Body, JsonBody } from './lib/body';
+import { Body, JsonBody, StreamBody, DataBody } from './lib/body';
 import { Headers } from './lib/headers';
 import { Request } from './lib/request';
 import { Response } from './lib/response';
@@ -8,4 +8,4 @@ declare const fetch: (input: string | Request, init?: Partial<FetchInit>) => Pro
 declare const disconnect: (url: string) => Promise<void>;
 declare const disconnectAll: () => Promise<void>;
 declare function context(opts?: ContextOptions): Context;
-export { context, fetch, disconnect, disconnectAll, Body, JsonBody, Headers, Request, Response, AbortError, PushMessage };
+export { context, fetch, disconnect, disconnectAll, Body, JsonBody, StreamBody, DataBody, Headers, Request, Response, AbortError, PushMessage };

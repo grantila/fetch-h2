@@ -45,8 +45,11 @@ export type Method =
 	'UNLOCK' |
 	'UNSUBSCRIBE';
 
+export type StorageBodyTypes =
+	Buffer | NodeJS.ReadableStream;
+
 export type BodyTypes =
-	Buffer | string | NodeJS.ReadableStream;
+	StorageBodyTypes | string;
 
 export type ModeTypes =
 	'cors' |

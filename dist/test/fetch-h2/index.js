@@ -42,15 +42,31 @@ describe('basic', () => {
         chai_1.expect(res.path).to.equal('/');
         await server.shutdown();
     });
-    /*
-        This can be enabled, and further tests written, when Node.js can do HTTPS
-        requests...
-    
-        it( 'should ...', async ( ) =>
-        {
-            const response = await fetch( 'https://httpbin.org/ip' );
-            const data = await response.json( );
-        } );
-    */
+    it('should be possible to GET HTTPS/2', async () => {
+        const response = await _1.fetch('https://nghttp2.org/httpbin/user-agent');
+        const data = await response.json();
+        chai_1.expect(data['user-agent']).to.include('fetch-h2/');
+    });
+    it('should be possible to POST JSON', async () => {
+        const testData = { foo: 'bar' };
+        const response = await _1.fetch('https://nghttp2.org/httpbin/post', {
+            method: 'POST',
+            body: new _1.JsonBody(testData),
+        });
+        const data = await response.json();
+        chai_1.expect(testData).to.deep.equal(data.json);
+        // fetch-h2 should set content type for JsonBody
+        chai_1.expect(data.headers['Content-Type']).to.equal('application/json');
+    });
+    it('should be possible to POST buffer-data', async () => {
+        const testData = '{"foo":"data"}';
+        const response = await _1.fetch('https://nghttp2.org/httpbin/post', {
+            method: 'POST',
+            body: new _1.DataBody(testData),
+        });
+        const data = await response.json();
+        chai_1.expect(data.data).to.equal(testData);
+        chai_1.expect(Object.keys(data.headers)).to.not.contain('Content-Type');
+    });
 });
 //# sourceMappingURL=index.js.map

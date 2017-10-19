@@ -7,7 +7,7 @@ import * as through2 from 'through2'
 import * as isBuffer from 'is-buffer'
 import * as toArrayBuffer from 'to-arraybuffer'
 
-import { IBody, BodyTypes } from './core'
+import { IBody, BodyTypes, StorageBodyTypes } from './core'
 
 
 function throwUnknownData( ): never
@@ -54,7 +54,8 @@ function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
 
 export class Body implements IBody
 {
-	private _body: BodyTypes;
+	private _body: StorageBodyTypes;
+	private _length: number;
 	private _used: boolean;
 	private _mime?: string;
 	private _integrity?: string;
@@ -62,6 +63,7 @@ export class Body implements IBody
 
 	constructor( )
 	{
+		this._length = null;
 		this._used = false;
 
 		Object.defineProperties( this, {
@@ -85,6 +87,7 @@ export class Body implements IBody
 	: void
 	{
 		this._ensureUnused( );
+		this._length = null;
 		this._used = false;
 
 		if ( body instanceof Body )
@@ -93,14 +96,29 @@ export class Body implements IBody
 			this._body = body._body;
 			this._mime = body._mime;
 		}
+		else if ( typeof body === 'string' )
+			this._body = Buffer.from( body );
 		else
-			this._body = < BodyTypes >body;
+			this._body = < StorageBodyTypes >body;
+
+		if ( isBuffer( this._body ) )
+			this._length = ( < Buffer >this._body ).length;
 
 		if ( mime )
 			this._mime = mime;
 
 		if ( integrity )
 			this._integrity = integrity;
+	}
+
+	get mime( )
+	{
+		return this._mime;
+	}
+
+	get length( )
+	{
+		return this._length;
 	}
 
 	private _ensureUnused( )
@@ -196,7 +214,7 @@ export class Body implements IBody
 			stream.end( );
 			return Promise.resolve( stream );
 		}
-		else if ( 'readable' in ( < NodeJS.ReadableStream >this._body ) )
+		else if ( 'readable' in Object( < NodeJS.ReadableStream >this._body ) )
 			return Promise.resolve( < NodeJS.ReadableStream >this._body );
 		else if ( isBuffer( this._body ) || typeof this._body === 'string' )
 			return Promise.resolve( )
@@ -219,5 +237,25 @@ export class JsonBody extends Body
 
 		const body = Buffer.from( JSON.stringify( obj ) );
 		this.setBody( body, 'application/json' );
+	}
+}
+
+export class StreamBody extends Body
+{
+	constructor( readable: NodeJS.ReadableStream )
+	{
+		super( );
+
+		this.setBody( readable );
+	}
+}
+
+export class DataBody extends Body
+{
+	constructor( data: Buffer | string )
+	{
+		super( );
+
+		this.setBody( data );
 	}
 }

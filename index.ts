@@ -1,6 +1,6 @@
 'use strict'
 
-import { Body, JsonBody } from './lib/body'
+import { Body, JsonBody, StreamBody, DataBody } from './lib/body'
 import { RawHeaders, Headers } from './lib/headers'
 import { Request } from './lib/request'
 import { Response } from './lib/response'
@@ -34,6 +34,8 @@ export {
 	// Re-export
 	Body,
 	JsonBody,
+	StreamBody,
+	DataBody,
 	Headers,
 	Request,
 	Response,

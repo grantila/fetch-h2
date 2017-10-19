@@ -35,10 +35,6 @@ class Request extends body_1.Body {
         const headers = new headers_1.GuardedHeaders(this._init.mode === 'no-cors'
             ? 'request-no-cors'
             : 'request', this._init.headers);
-        if (!headers.has('content-type') &&
-            this._init.body &&
-            this._init.body instanceof body_1.JsonBody)
-            headers.set('content-type', 'application/json');
         if (this._init.body) {
             if (headers.has('content-type'))
                 this.setBody(this._init.body, headers.get('content-type'));

@@ -31,6 +31,7 @@ function validateIntegrity(data, integrity) {
 }
 class Body {
     constructor() {
+        this._length = null;
         this._used = false;
         Object.defineProperties(this, {
             bodyUsed: {
@@ -44,18 +45,29 @@ class Body {
     }
     setBody(body, mime, integrity) {
         this._ensureUnused();
+        this._length = null;
         this._used = false;
         if (body instanceof Body) {
             body._ensureUnused();
             this._body = body._body;
             this._mime = body._mime;
         }
+        else if (typeof body === 'string')
+            this._body = Buffer.from(body);
         else
             this._body = body;
+        if (isBuffer(this._body))
+            this._length = this._body.length;
         if (mime)
             this._mime = mime;
         if (integrity)
             this._integrity = integrity;
+    }
+    get mime() {
+        return this._mime;
+    }
+    get length() {
+        return this._length;
     }
     _ensureUnused() {
         if (this._used)
@@ -120,7 +132,7 @@ class Body {
             stream.end();
             return Promise.resolve(stream);
         }
-        else if ('readable' in this._body)
+        else if ('readable' in Object(this._body))
             return Promise.resolve(this._body);
         else if (isBuffer(this._body) || typeof this._body === 'string')
             return Promise.resolve()
@@ -142,4 +154,18 @@ class JsonBody extends Body {
     }
 }
 exports.JsonBody = JsonBody;
+class StreamBody extends Body {
+    constructor(readable) {
+        super();
+        this.setBody(readable);
+    }
+}
+exports.StreamBody = StreamBody;
+class DataBody extends Body {
+    constructor(data) {
+        super();
+        this.setBody(data);
+    }
+}
+exports.DataBody = DataBody;
 //# sourceMappingURL=body.js.map

@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const body_1 = require("./lib/body");
 exports.Body = body_1.Body;
 exports.JsonBody = body_1.JsonBody;
+exports.StreamBody = body_1.StreamBody;
+exports.DataBody = body_1.DataBody;
 const headers_1 = require("./lib/headers");
 exports.Headers = headers_1.Headers;
 const request_1 = require("./lib/request");

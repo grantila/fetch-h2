@@ -14,7 +14,7 @@ HTTP2_HEADER_METHOD, HTTP2_HEADER_SCHEME, HTTP2_HEADER_PATH,
 // Methods
 HTTP2_METHOD_GET, HTTP2_METHOD_HEAD, 
 // Requests
-HTTP2_HEADER_USER_AGENT, HTTP2_HEADER_ACCEPT, 
+HTTP2_HEADER_USER_AGENT, HTTP2_HEADER_ACCEPT, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, 
 // Responses
 HTTP2_HEADER_STATUS, HTTP2_HEADER_LOCATION, 
 // Error codes
@@ -51,6 +51,7 @@ function fetchImpl(session, input, init = {}, extra) {
     const { signal, onPush } = init;
     const { protocol, host, pathname, search, hash } = new url_1.URL(url);
     const path = pathname + search + hash;
+    const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
     const headers = new headers_1.Headers(req.headers);
     const headersToSend = {
         // Set required headers
@@ -63,7 +64,12 @@ function fetchImpl(session, input, init = {}, extra) {
     };
     for (let [key, val] of headers.entries())
         headersToSend[key] = val;
-    const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
+    if (!endStream &&
+        req.length != null &&
+        !req.headers.has(HTTP2_HEADER_CONTENT_LENGTH))
+        headersToSend[HTTP2_HEADER_CONTENT_LENGTH] = '' + req.length;
+    if (!endStream && !req.headers.has('content-type') && req.mime)
+        headersToSend[HTTP2_HEADER_CONTENT_TYPE] = req.mime;
     function abortError() {
         return new core_1.AbortError(`${method} ${url} aborted`);
     }

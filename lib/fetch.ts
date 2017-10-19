@@ -26,6 +26,8 @@ const {
 	// Requests
 	HTTP2_HEADER_USER_AGENT,
 	HTTP2_HEADER_ACCEPT,
+	HTTP2_HEADER_CONTENT_TYPE,
+	HTTP2_HEADER_CONTENT_LENGTH,
 
 	// Responses
 	HTTP2_HEADER_STATUS,
@@ -95,6 +97,9 @@ function fetchImpl(
 	} = new URL( url );
 	const path = pathname + search + hash;
 
+	const endStream =
+		method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
+
 	const headers = new Headers( req.headers );
 
 	const headersToSend = {
@@ -111,8 +116,15 @@ function fetchImpl(
 	for ( let [ key, val ] of headers.entries( ) )
 		headersToSend[ key ] = val;
 
-	const endStream =
-		method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
+	if (
+		!endStream &&
+		req.length != null &&
+		!req.headers.has( HTTP2_HEADER_CONTENT_LENGTH )
+	)
+		headersToSend[ HTTP2_HEADER_CONTENT_LENGTH ] = '' + req.length;
+
+	if ( !endStream && !req.headers.has( 'content-type' ) && req.mime )
+		headersToSend[ HTTP2_HEADER_CONTENT_TYPE ] = req.mime;
 
 	function abortError( )
 	{

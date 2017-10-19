@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import { delay } from 'already';
 import { buffer } from 'get-stream';
 
-import { fetch, disconnectAll } from '../../';
+import { fetch, disconnectAll, JsonBody, StreamBody, DataBody } from '../../';
 
 afterEach( disconnectAll );
 
@@ -70,15 +70,44 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-/*
-	This can be enabled, and further tests written, when Node.js can do HTTPS
-	requests...
-
-	it( 'should ...', async ( ) =>
+	it( 'should be possible to GET HTTPS/2', async ( ) =>
 	{
-		const response = await fetch( 'https://httpbin.org/ip' );
+		const response = await fetch( 'https://nghttp2.org/httpbin/user-agent' );
 		const data = await response.json( );
+		expect( data[ 'user-agent' ] ).to.include( 'fetch-h2/' );
 	} );
-*/
+
+	it( 'should be possible to POST JSON', async ( ) =>
+	{
+		const testData = { foo: 'bar' };
+
+		const response = await fetch(
+			'https://nghttp2.org/httpbin/post',
+			{
+				method: 'POST',
+				body: new JsonBody( testData ),
+			}
+		);
+		const data = await response.json( );
+		expect( testData ).to.deep.equal( data.json );
+		// fetch-h2 should set content type for JsonBody
+		expect( data.headers[ 'Content-Type' ] ).to.equal( 'application/json' );
+	} );
+
+	it( 'should be possible to POST buffer-data', async ( ) =>
+	{
+		const testData = '{"foo": "data"}';
+
+		const response = await fetch(
+			'https://nghttp2.org/httpbin/post',
+			{
+				method: 'POST',
+				body: new DataBody( testData ),
+			}
+		);
+		const data = await response.json( );
+		expect( data.data ).to.equal( testData );
+		expect( Object.keys( data.headers ) ).to.not.contain( 'Content-Type' );
+	} );
 } );
 
