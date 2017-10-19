@@ -13,11 +13,11 @@ const core_1 = require("./lib/core");
 exports.AbortError = core_1.AbortError;
 const context_1 = require("./lib/context");
 const defaultContext = new context_1.Context();
-const fetch = defaultContext.fetch.bind(defaultContext);
+const fetch = (input, init) => defaultContext.fetch(input, init);
 exports.fetch = fetch;
-const disconnect = defaultContext.disconnect.bind(defaultContext);
+const disconnect = (url) => defaultContext.disconnect(url);
 exports.disconnect = disconnect;
-const disconnectAll = defaultContext.disconnectAll.bind(defaultContext);
+const disconnectAll = () => defaultContext.disconnectAll();
 exports.disconnectAll = disconnectAll;
 function context(opts) {
     return new context_1.Context(opts);

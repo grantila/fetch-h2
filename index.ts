@@ -4,15 +4,22 @@ import { Body, JsonBody } from './lib/body'
 import { RawHeaders, Headers } from './lib/headers'
 import { Request } from './lib/request'
 import { Response } from './lib/response'
-import { AbortError, PushMessage } from './lib/core'
+import { AbortError, PushMessage, FetchInit } from './lib/core'
 import { Context, ContextOptions } from './lib/context'
 
 
 const defaultContext = new Context( );
 
-const fetch = defaultContext.fetch.bind( defaultContext );
-const disconnect = defaultContext.disconnect.bind( defaultContext );
-const disconnectAll = defaultContext.disconnectAll.bind( defaultContext );
+const fetch =
+	( input: string | Request, init?: Partial< FetchInit > ) =>
+		defaultContext.fetch( input, init );
+const disconnect =
+	( url: string ) =>
+		defaultContext.disconnect( url );
+const disconnectAll =
+	( ) =>
+		defaultContext.disconnectAll( );
+
 function context( opts?: ContextOptions )
 {
 	return new Context( opts );
