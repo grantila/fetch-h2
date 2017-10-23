@@ -95,7 +95,22 @@ export class Context
 		const willCreate = !this._h2sessions.has( origin );
 
 		if ( willCreate )
-			this._h2sessions.set( origin, this.connect( origin, options ) );
+		{
+			const h2Session = this.connect( origin, options );
+
+			// Handle session closure (delete from store)
+			h2Session
+			.then( session =>
+			{
+				session.once( 'close', ( ) => this.disconnect( origin ) );
+			} )
+			.catch( ( ) =>
+			{
+				this.disconnect( origin )
+			} );
+
+			this._h2sessions.set( origin, h2Session );
+		}
 
 		return this._h2sessions.get( origin )
 		.catch( err =>
