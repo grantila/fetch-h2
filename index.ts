@@ -22,7 +22,12 @@ const disconnectAll =
 
 function context( opts?: ContextOptions )
 {
-	return new Context( opts );
+	const ctx = new Context( opts );
+	return {
+		fetch: ctx.fetch.bind( ctx ) as typeof fetch,
+		disconnect: ctx.disconnect.bind( ctx ) as typeof disconnect,
+		disconnectAll: ctx.disconnectAll.bind( ctx ) as typeof disconnectAll,
+	};
 }
 
 export {
