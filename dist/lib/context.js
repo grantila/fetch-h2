@@ -4,6 +4,7 @@ const http2_1 = require("http2");
 const url_1 = require("url");
 const version_1 = require("./generated/version");
 const fetch_1 = require("./fetch");
+const cookie_jar_1 = require("./cookie-jar");
 function makeDefaultUserAgent() {
     const name = `fetch-h2/${version_1.version} (+https://github.com/grantila/fetch-h2)`;
     const node = `nodejs/${process.versions.node}`;
@@ -28,6 +29,9 @@ class Context {
         this._accept = opts && 'accept' in opts
             ? opts.accept
             : defaultAccept;
+        this._cookieJar = opts && 'cookieJar' in opts
+            ? opts.cookieJar
+            : new cookie_jar_1.CookieJar();
     }
     connect(url, options) {
         const _url = 'string' === typeof url ? url : url.toString();
@@ -40,8 +44,18 @@ class Context {
     }
     getOrCreate(origin, options, created = false) {
         const willCreate = !this._h2sessions.has(origin);
-        if (willCreate)
-            this._h2sessions.set(origin, this.connect(origin, options));
+        if (willCreate) {
+            const h2Session = this.connect(origin, options);
+            // Handle session closure (delete from store)
+            h2Session
+                .then(session => {
+                session.once('close', () => this.disconnect(origin));
+            })
+                .catch(() => {
+                this.disconnect(origin);
+            });
+            this._h2sessions.set(origin, h2Session);
+        }
         return this._h2sessions.get(origin)
             .catch(err => {
             if (willCreate || created)
@@ -67,6 +81,7 @@ class Context {
             get: (url, options) => this.get(url, options),
             userAgent: () => this._userAgent,
             accept: () => this._accept,
+            cookieJar: this._cookieJar,
         };
         return fetch_1.fetch(sessionGetter, input, init);
     }

@@ -9,6 +9,7 @@ import {
 import { URL } from 'url'
 
 import { RawHeaders, Headers } from './headers'
+import { CookieJar } from './cookie-jar'
 
 export type Method =
 	'ACL' |
@@ -170,4 +171,6 @@ export interface SimpleSession
 
 	userAgent( ): string;
 	accept( ): string;
+
+	cookieJar: CookieJar;
 }

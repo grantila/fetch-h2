@@ -2,6 +2,7 @@
 import { SessionOptions, SecureClientSessionOptions, ClientHttp2Session } from 'http2';
 import { URL } from 'url';
 import { RawHeaders, Headers } from './headers';
+import { CookieJar } from './cookie-jar';
 export declare type Method = 'ACL' | 'BIND' | 'CHECKOUT' | 'CONNECT' | 'COPY' | 'DELETE' | 'GET' | 'HEAD' | 'LINK' | 'LOCK' | 'M-SEARCH' | 'MERGE' | 'MKACTIVITY' | 'MKCALENDAR' | 'MKCOL' | 'MOVE' | 'NOTIFY' | 'OPTIONS' | 'PATCH' | 'POST' | 'PROPFIND' | 'PROPPATCH' | 'PURGE' | 'PUT' | 'REBIND' | 'REPORT' | 'SEARCH' | 'SUBSCRIBE' | 'TRACE' | 'UNBIND' | 'UNLINK' | 'UNLOCK' | 'UNSUBSCRIBE';
 export declare type StorageBodyTypes = Buffer | NodeJS.ReadableStream;
 export declare type BodyTypes = StorageBodyTypes | string;
@@ -60,4 +61,5 @@ export interface SimpleSession {
     get(url: string | URL, options?: SessionOptions | SecureClientSessionOptions): Promise<ClientHttp2Session>;
     userAgent(): string;
     accept(): string;
+    cookieJar: CookieJar;
 }

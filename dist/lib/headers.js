@@ -1,5 +1,6 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
 exports.Guards = ['immutable', 'request', 'request-no-cors', 'response', 'none'];
 const forbiddenHeaders = [
     'accept-charset',
@@ -54,9 +55,6 @@ function isSimpleHeader(name, value) {
         'text/plain'
     ].includes(mimeType);
 }
-function arrayify(value) {
-    return Array.isArray(value) ? value : [value];
-}
 function filterName(name) {
     if (/[^A-Za-z0-9\-#$%&'*+.\^_`|~]/.test(name))
         throw new TypeError('Invalid character in header field name');
@@ -95,7 +93,7 @@ class Headers {
         else {
             for (let _name of Object.keys(init)) {
                 const name = filterName(_name);
-                const value = arrayify(init[name]);
+                const value = utils_1.arrayify(init[name]);
                 this._data.set(name, [...value]);
             }
         }

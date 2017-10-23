@@ -17,6 +17,7 @@ import { Request } from './request'
 import { Response } from './response'
 import { version } from './generated/version'
 import { fetch } from './fetch'
+import { CookieJar } from './cookie-jar'
 
 
 function makeDefaultUserAgent( ): string
@@ -37,6 +38,7 @@ export interface ContextOptions
 	userAgent: string;
 	overwriteUserAgent: boolean;
 	accept: string;
+	cookieJar: CookieJar;
 }
 
 export class Context
@@ -44,6 +46,7 @@ export class Context
 	private _h2sessions: Map< string, Promise< ClientHttp2Session > >;
 	private _userAgent: string;
 	private _accept: string;
+	private _cookieJar: CookieJar;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
@@ -64,6 +67,10 @@ export class Context
 		this._accept = opts && 'accept' in opts
 			? opts.accept
 			: defaultAccept;
+
+		this._cookieJar = opts && 'cookieJar' in opts
+			? opts.cookieJar
+			: new CookieJar( );
 	}
 
 	private connect(
@@ -157,6 +164,7 @@ export class Context
 				) => this.get( url, options ),
 			userAgent: ( ) => this._userAgent,
 			accept: ( ) => this._accept,
+			cookieJar: this._cookieJar,
 		};
 		return fetch( sessionGetter, input, init );
 	}

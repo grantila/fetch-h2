@@ -1,7 +1,7 @@
 export declare const Guards: string[];
 export declare type GuardTypes = 'immutable' | 'request' | 'request-no-cors' | 'response' | 'none';
 export declare type RawHeaders = {
-    [key: string]: string;
+    [key: string]: string | string[];
 };
 export declare class Headers {
     protected _guard: GuardTypes;

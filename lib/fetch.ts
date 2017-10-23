@@ -7,10 +7,11 @@ import AbortController from 'abort-controller'
 import { Finally } from 'already'
 
 
+import { arrayify, makeGuard } from './utils'
 import { Method, FetchInit, AbortError, SimpleSession } from './core'
 import { Request } from './request'
 import { H2StreamResponse, Response } from './response'
-import { Headers } from './headers'
+import { RawHeaders, Headers, GuardedHeaders } from './headers'
 import { BodyInspector } from './body'
 
 
@@ -27,12 +28,14 @@ const {
 	// Requests
 	HTTP2_HEADER_USER_AGENT,
 	HTTP2_HEADER_ACCEPT,
+	HTTP2_HEADER_COOKIE,
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_CONTENT_LENGTH,
 
 	// Responses
 	HTTP2_HEADER_STATUS,
 	HTTP2_HEADER_LOCATION,
+	HTTP2_HEADER_SET_COOKIE,
 
 	// Error codes
 	NGHTTP2_NO_ERROR,
@@ -67,7 +70,7 @@ interface FetchExtra
 	redirected: Array< string >;
 }
 
-function fetchImpl(
+async function fetchImpl(
 	session: SimpleSession,
 	input: string | Request,
 	init: Partial< FetchInit > = { },
@@ -103,7 +106,11 @@ function fetchImpl(
 
 	const headers = new Headers( req.headers );
 
-	const headersToSend = {
+	const cookies = ( await session.cookieJar.getCookies( url ) )
+		.map( cookie => cookie.cookieString( ) )
+		.join( '; ' );
+
+	const headersToSend: RawHeaders = {
 		// Set required headers
 		[ HTTP2_HEADER_METHOD ]: method,
 		[ HTTP2_HEADER_SCHEME ]: protocol.replace( /:.*/, '' ),
@@ -112,10 +119,16 @@ function fetchImpl(
 		// Set default headers
 		[ HTTP2_HEADER_ACCEPT ]: session.accept( ),
 		[ HTTP2_HEADER_USER_AGENT ]: session.userAgent( ),
+		[ HTTP2_HEADER_COOKIE ]: cookies,
 	};
 
 	for ( let [ key, val ] of headers.entries( ) )
-		headersToSend[ key ] = val;
+	{
+		if ( key === HTTP2_HEADER_COOKIE && headersToSend[ key ] )
+			( headersToSend[ key ] as string[] ).push( ...arrayify( val ) );
+		else
+			headersToSend[ key ] = val;
+	}
 
 	const inspector = new BodyInspector( req );
 
@@ -164,7 +177,56 @@ function fetchImpl(
 
 			const response = new Promise< Response >( ( resolve, reject ) =>
 			{
-				stream.on( 'push', ( _headers, flags ) =>
+				const guard = makeGuard( reject );
+
+				stream.on( 'aborted', guard( ( ...undocumented ) =>
+				{
+					console.error( "Not yet handled 'aborted'", undocumented );
+				} ) );
+
+				stream.on( 'error', guard( ( err: Error ) =>
+				{
+					reject( err );
+				} ) );
+
+				stream.on( 'frameError', guard( ( ...undocumented ) =>
+				{
+					console.error("Not yet handled 'frameError'", undocumented );
+				} ) );
+
+				stream.on( 'streamClosed', guard( errorCode =>
+				{
+					// We'll get an 'error' event if there actually is an
+					// error, but not if we got NGHTTP2_NO_ERROR.
+					// In case of an error, the 'error' event will be awaited
+					// instead, to get (and propagate) the error object.
+					if ( errorCode === NGHTTP2_NO_ERROR )
+						reject( new Error( "Stream prematurely closed" ) );
+				} ) );
+
+				stream.on( 'timeout', guard( ( ...undocumented ) =>
+				{
+					console.error("Not yet handled 'timeout'", undocumented );
+				} ) );
+
+				stream.on( 'trailers', guard( ( headers, flags ) =>
+				{
+					console.error("Not yet handled 'trailers'", headers, flags);
+				} ) );
+
+				// ClientHttp2Stream events
+
+				stream.on( 'continue', guard( ( ...undocumented ) =>
+				{
+					console.error("Not yet handled 'continue'", undocumented);
+				} ) );
+
+				stream.on( 'headers', guard( ( headers, flags ) =>
+				{
+					console.error("Not yet handled 'headers'", headers, flags);
+				} ) );
+
+				stream.on( 'push', guard( ( _headers, flags ) =>
 				{
 					if ( !onPush )
 					{
@@ -177,7 +239,7 @@ function fetchImpl(
 						return;
 					}
 
-					const headers = new Headers( );
+					const headers = new GuardedHeaders( 'response' );
 					Object.keys( _headers ).forEach( key =>
 					{
 						if ( Array.isArray( _headers[ key ] ) )
@@ -205,44 +267,9 @@ function fetchImpl(
 						// Stop throwing in callbacks you lunatic
 						process.exit( 1 );
 					}
-				} );
+				} ) );
 
-				stream.on( 'error', ( err: Error ) =>
-				{
-					reject( err );
-				} );
-
-				stream.on( 'aborted', ( ...undocumented ) =>
-				{
-					console.error( "Not yet handled 'aborted'", undocumented );
-				} );
-
-				stream.on( 'frameError', ( ...undocumented ) =>
-				{
-					console.error("Not yet handled 'frameError'", undocumented );
-				} );
-
-				stream.on( 'streamClosed', errorCode =>
-				{
-					// We'll get an 'error' event if there actually is an
-					// error, but not if we got NGHTTP2_NO_ERROR.
-					// In case of an error, the 'error' event will be awaited
-					// instead, to get (and propagate) the error object.
-					if ( errorCode === NGHTTP2_NO_ERROR )
-						reject( new Error( "Stream prematurely closed" ) );
-				} );
-
-				stream.on( 'continue', ( ...undocumented ) =>
-				{
-					console.error("Not yet handled 'continue'", undocumented);
-				} );
-
-				stream.on( 'headers', ( headers, flags ) =>
-				{
-					console.error("Not yet handled 'headers'", headers, flags);
-				} );
-
-				stream.on( 'response', headers =>
+				stream.on( 'response', guard( headers =>
 				{
 					if ( signal && signal.aborted )
 					{
@@ -256,6 +283,17 @@ function fetchImpl(
 					const location = '' + headers[ HTTP2_HEADER_LOCATION ];
 
 					const isRedirected = isRedirectStatus[ '' + status ];
+
+					if ( headers[ HTTP2_HEADER_SET_COOKIE ] )
+					{
+						const setCookies =
+							arrayify( headers[ HTTP2_HEADER_SET_COOKIE ] );
+
+						session.cookieJar.setCookies( setCookies, url );
+					}
+
+					delete headers[ 'set-cookie' ];
+					delete headers[ 'set-cookie2' ];
 
 					if ( isRedirected && !location )
 						return reject(
@@ -299,7 +337,7 @@ function fetchImpl(
 							{ redirected: redirected.concat( url ) }
 						)
 					);
-				} );
+				} ) );
 			} )
 
 			if ( !endStream )

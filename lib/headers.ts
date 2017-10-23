@@ -1,11 +1,14 @@
 'use strict'
 
+import { arrayify } from './utils'
+
+
 export const Guards =
 	[ 'immutable', 'request', 'request-no-cors', 'response', 'none' ];
 export type GuardTypes =
 	'immutable' | 'request' | 'request-no-cors' | 'response' | 'none';
 
-export type RawHeaders = { [ key: string ]: string };
+export type RawHeaders = { [ key: string ]: string | string[] };
 
 type HeaderMap = Map< string, Array< string > >;
 
@@ -74,11 +77,6 @@ function isSimpleHeader( name: string, value: string ): boolean
 		'multipart/form-data',
 		'text/plain'
 	].includes( mimeType );
-}
-
-function arrayify< T >( value: T | Array< T > ): Array< T >
-{
-	return Array.isArray( value ) ? value : [ value ];
 }
 
 function filterName( name: string ): string

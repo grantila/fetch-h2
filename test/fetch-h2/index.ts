@@ -5,7 +5,14 @@ import { expect } from 'chai';
 import { delay } from 'already';
 import { buffer } from 'get-stream';
 
-import { fetch, disconnectAll, JsonBody, StreamBody, DataBody } from '../../';
+import {
+	fetch,
+	context,
+	disconnectAll,
+	JsonBody,
+	StreamBody,
+	DataBody,
+} from '../../';
 
 afterEach( disconnectAll );
 
@@ -108,6 +115,25 @@ describe( 'basic', ( ) =>
 		const data = await response.json( );
 		expect( data.data ).to.equal( testData );
 		expect( Object.keys( data.headers ) ).to.not.contain( 'Content-Type' );
+	} );
+
+	it( 'should save and redirect cookies', async ( ) =>
+	{
+		const { fetch, disconnectAll } = context( );
+
+		const responseSet = await fetch(
+			'https://nghttp2.org/httpbin/cookies/set?foo=bar',
+			{ redirect:'manual' } );
+
+		expect( responseSet.headers.has( 'location' ) ).to.be.true;
+		const redirectedTo = responseSet.headers.get( 'location' );
+
+		const response = await fetch( 'https://nghttp2.org' + redirectedTo );
+
+		const data = await response.json( );
+		expect( data.cookies ).to.deep.equal( { foo: 'bar' } );
+
+		await disconnectAll( );
 	} );
 } );
 

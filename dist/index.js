@@ -22,7 +22,12 @@ exports.disconnect = disconnect;
 const disconnectAll = () => defaultContext.disconnectAll();
 exports.disconnectAll = disconnectAll;
 function context(opts) {
-    return new context_1.Context(opts);
+    const ctx = new context_1.Context(opts);
+    return {
+        fetch: ctx.fetch.bind(ctx),
+        disconnect: ctx.disconnect.bind(ctx),
+        disconnectAll: ctx.disconnectAll.bind(ctx),
+    };
 }
 exports.context = context;
 //# sourceMappingURL=index.js.map

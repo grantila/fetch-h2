@@ -4,6 +4,7 @@ const http2_1 = require("http2");
 const url_1 = require("url");
 const abort_controller_1 = require("abort-controller");
 const already_1 = require("already");
+const utils_1 = require("./utils");
 const core_1 = require("./core");
 const request_1 = require("./request");
 const response_1 = require("./response");
@@ -15,9 +16,9 @@ HTTP2_HEADER_METHOD, HTTP2_HEADER_SCHEME, HTTP2_HEADER_PATH,
 // Methods
 HTTP2_METHOD_GET, HTTP2_METHOD_HEAD, 
 // Requests
-HTTP2_HEADER_USER_AGENT, HTTP2_HEADER_ACCEPT, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, 
+HTTP2_HEADER_USER_AGENT, HTTP2_HEADER_ACCEPT, HTTP2_HEADER_COOKIE, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, 
 // Responses
-HTTP2_HEADER_STATUS, HTTP2_HEADER_LOCATION, 
+HTTP2_HEADER_STATUS, HTTP2_HEADER_LOCATION, HTTP2_HEADER_SET_COOKIE, 
 // Error codes
 NGHTTP2_NO_ERROR, } = http2_1.constants;
 const isRedirectStatus = {
@@ -39,7 +40,7 @@ function ensureNotCircularRedirection(redirections) {
             throw err;
         }
 }
-function fetchImpl(session, input, init = {}, extra) {
+async function fetchImpl(session, input, init = {}, extra) {
     const req = new request_1.Request(input, init);
     const { url, method, redirect } = req;
     const { redirected } = extra;
@@ -54,6 +55,9 @@ function fetchImpl(session, input, init = {}, extra) {
     const path = pathname + search + hash;
     const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
     const headers = new headers_1.Headers(req.headers);
+    const cookies = (await session.cookieJar.getCookies(url))
+        .map(cookie => cookie.cookieString())
+        .join('; ');
     const headersToSend = {
         // Set required headers
         [HTTP2_HEADER_METHOD]: method,
@@ -62,9 +66,14 @@ function fetchImpl(session, input, init = {}, extra) {
         // Set default headers
         [HTTP2_HEADER_ACCEPT]: session.accept(),
         [HTTP2_HEADER_USER_AGENT]: session.userAgent(),
+        [HTTP2_HEADER_COOKIE]: cookies,
     };
-    for (let [key, val] of headers.entries())
-        headersToSend[key] = val;
+    for (let [key, val] of headers.entries()) {
+        if (key === HTTP2_HEADER_COOKIE && headersToSend[key])
+            headersToSend[key].push(...utils_1.arrayify(val));
+        else
+            headersToSend[key] = val;
+    }
     const inspector = new body_1.BodyInspector(req);
     if (!endStream &&
         inspector.length != null &&
@@ -94,7 +103,38 @@ function fetchImpl(session, input, init = {}, extra) {
             .then(async (h2session) => {
             const stream = h2session.request(headersToSend, { endStream });
             const response = new Promise((resolve, reject) => {
-                stream.on('push', (_headers, flags) => {
+                const guard = utils_1.makeGuard(reject);
+                stream.on('aborted', guard((...undocumented) => {
+                    console.error("Not yet handled 'aborted'", undocumented);
+                }));
+                stream.on('error', guard((err) => {
+                    reject(err);
+                }));
+                stream.on('frameError', guard((...undocumented) => {
+                    console.error("Not yet handled 'frameError'", undocumented);
+                }));
+                stream.on('streamClosed', guard(errorCode => {
+                    // We'll get an 'error' event if there actually is an
+                    // error, but not if we got NGHTTP2_NO_ERROR.
+                    // In case of an error, the 'error' event will be awaited
+                    // instead, to get (and propagate) the error object.
+                    if (errorCode === NGHTTP2_NO_ERROR)
+                        reject(new Error("Stream prematurely closed"));
+                }));
+                stream.on('timeout', guard((...undocumented) => {
+                    console.error("Not yet handled 'timeout'", undocumented);
+                }));
+                stream.on('trailers', guard((headers, flags) => {
+                    console.error("Not yet handled 'trailers'", headers, flags);
+                }));
+                // ClientHttp2Stream events
+                stream.on('continue', guard((...undocumented) => {
+                    console.error("Not yet handled 'continue'", undocumented);
+                }));
+                stream.on('headers', guard((headers, flags) => {
+                    console.error("Not yet handled 'headers'", headers, flags);
+                }));
+                stream.on('push', guard((_headers, flags) => {
                     if (!onPush) {
                         // TODO: Signal context-specific/global
                         //       onhandled-push-handler.
@@ -103,7 +143,7 @@ function fetchImpl(session, input, init = {}, extra) {
                             "will drop the PUSH_PROMISE");
                         return;
                     }
-                    const headers = new headers_1.Headers();
+                    const headers = new headers_1.GuardedHeaders('response');
                     Object.keys(_headers).forEach(key => {
                         if (Array.isArray(_headers[key]))
                             _headers[key]
@@ -122,31 +162,8 @@ function fetchImpl(session, input, init = {}, extra) {
                         // Stop throwing in callbacks you lunatic
                         process.exit(1);
                     }
-                });
-                stream.on('error', (err) => {
-                    reject(err);
-                });
-                stream.on('aborted', (...undocumented) => {
-                    console.error("Not yet handled 'aborted'", undocumented);
-                });
-                stream.on('frameError', (...undocumented) => {
-                    console.error("Not yet handled 'frameError'", undocumented);
-                });
-                stream.on('streamClosed', errorCode => {
-                    // We'll get an 'error' event if there actually is an
-                    // error, but not if we got NGHTTP2_NO_ERROR.
-                    // In case of an error, the 'error' event will be awaited
-                    // instead, to get (and propagate) the error object.
-                    if (errorCode === NGHTTP2_NO_ERROR)
-                        reject(new Error("Stream prematurely closed"));
-                });
-                stream.on('continue', (...undocumented) => {
-                    console.error("Not yet handled 'continue'", undocumented);
-                });
-                stream.on('headers', (headers, flags) => {
-                    console.error("Not yet handled 'headers'", headers, flags);
-                });
-                stream.on('response', headers => {
+                }));
+                stream.on('response', guard(headers => {
                     if (signal && signal.aborted) {
                         // No reason to continue, the request is aborted
                         stream.destroy();
@@ -155,6 +172,12 @@ function fetchImpl(session, input, init = {}, extra) {
                     const status = parseInt('' + headers[HTTP2_HEADER_STATUS]);
                     const location = '' + headers[HTTP2_HEADER_LOCATION];
                     const isRedirected = isRedirectStatus['' + status];
+                    if (headers[HTTP2_HEADER_SET_COOKIE]) {
+                        const setCookies = utils_1.arrayify(headers[HTTP2_HEADER_SET_COOKIE]);
+                        session.cookieJar.setCookies(setCookies, url);
+                    }
+                    delete headers['set-cookie'];
+                    delete headers['set-cookie2'];
                     if (isRedirected && !location)
                         return reject(new Error("Server responded illegally with a " +
                             "redirect code but missing 'location' header"));
@@ -173,7 +196,7 @@ function fetchImpl(session, input, init = {}, extra) {
                             `'fetch-h2' doesn't support for ${method}`));
                     stream.destroy();
                     resolve(fetchImpl(session, req.clone(location), {}, { redirected: redirected.concat(url) }));
-                });
+                }));
             });
             if (!endStream)
                 await req.readable()

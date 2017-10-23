@@ -68,5 +68,15 @@ describe('basic', () => {
         chai_1.expect(data.data).to.equal(testData);
         chai_1.expect(Object.keys(data.headers)).to.not.contain('Content-Type');
     });
+    it('should save and redirect cookies', async () => {
+        const { fetch, disconnectAll } = _1.context();
+        const responseSet = await fetch('https://nghttp2.org/httpbin/cookies/set?foo=bar', { redirect: 'manual' });
+        chai_1.expect(responseSet.headers.has('location')).to.be.true;
+        const redirectedTo = responseSet.headers.get('location');
+        const response = await fetch('https://nghttp2.org' + redirectedTo);
+        const data = await response.json();
+        chai_1.expect(data.cookies).to.deep.equal({ foo: 'bar' });
+        await disconnectAll();
+    });
 });
 //# sourceMappingURL=index.js.map

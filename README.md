@@ -9,6 +9,8 @@ The module tries to adhere to the [Fetch API](https://developer.mozilla.org/docs
 
 Regardless of whether you're actually interested in the Fetch API per se or not, as long as you want to handle HTTP/2 client requests in Node.js, this module is a lot easier and more natural to use than the native built-in [`http2`](https://nodejs.org/dist/latest-v8.x/docs/api/http2.html) module which is low-level in comparison.
 
+`fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
+
 **NOTE;** HTTP/2 support was introduced in Node.js 8.4, and requires `node` to be started with a flag `--expose-http2`. This module won't work without it.
 
 **DISCLAIMER: This is an early project, and the Node.js implementation is early too. Don't expect everything to "just work".**
