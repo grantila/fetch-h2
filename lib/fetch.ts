@@ -51,7 +51,8 @@ const isRedirectStatus: { [ status: string ]: boolean; } = {
     "308": true,
 };
 
-function ensureNotCircularRedirection( redirections: Array< string > ): void
+function ensureNotCircularRedirection( redirections: ReadonlyArray< string > )
+: void
 {
 	const urls = [ ...redirections ];
 	const last = urls.pop( );
@@ -78,19 +79,12 @@ async function fetchImpl(
 )
 : Promise< Response >
 {
+	const { redirected } = extra;
+	ensureNotCircularRedirection( redirected );
+
 	const req = new Request( input, init );
 
 	const { url, method, redirect } = req;
-	const { redirected } = extra;
-
-	try
-	{
-		ensureNotCircularRedirection( redirected );
-	}
-	catch ( err )
-	{
-		return Promise.reject( err );
-	}
 
 	const { signal, onPush } = init;
 

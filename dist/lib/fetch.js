@@ -41,15 +41,10 @@ function ensureNotCircularRedirection(redirections) {
         }
 }
 async function fetchImpl(session, input, init = {}, extra) {
+    const { redirected } = extra;
+    ensureNotCircularRedirection(redirected);
     const req = new request_1.Request(input, init);
     const { url, method, redirect } = req;
-    const { redirected } = extra;
-    try {
-        ensureNotCircularRedirection(redirected);
-    }
-    catch (err) {
-        return Promise.reject(err);
-    }
     const { signal, onPush } = init;
     const { protocol, host, pathname, search, hash } = new url_1.URL(url);
     const path = pathname + search + hash;
