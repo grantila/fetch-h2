@@ -4,6 +4,7 @@ const http2_1 = require("http2");
 const url_1 = require("url");
 const abort_controller_1 = require("abort-controller");
 const already_1 = require("already");
+const callguard_1 = require("callguard");
 const utils_1 = require("./utils");
 const core_1 = require("./core");
 const request_1 = require("./request");
@@ -98,7 +99,7 @@ async function fetchImpl(session, input, init = {}, extra) {
             .then(async (h2session) => {
             const stream = h2session.request(headersToSend, { endStream });
             const response = new Promise((resolve, reject) => {
-                const guard = utils_1.makeGuard(reject);
+                const guard = callguard_1.syncGuard(reject, { catchAsync: true });
                 stream.on('aborted', guard((...undocumented) => {
                     console.error("Not yet handled 'aborted'", undocumented);
                 }));

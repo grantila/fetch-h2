@@ -19,10 +19,11 @@ class Server {
             stream.session.once('close', () => this._sessions.delete(stream.session));
         });
     }
-    listen(port) {
+    listen(port = void 0) {
         return new Promise((resolve, reject) => {
             this._server.listen(port, '0.0.0.0', resolve);
-        });
+        })
+            .then(() => this._server.address().port);
     }
     shutdown() {
         return new Promise((resolve, reject) => {
@@ -36,8 +37,8 @@ class Server {
 describe('basic', () => {
     it('should be able to perform simple GET', async () => {
         const server = new Server();
-        await server.listen(4711);
-        const response = await _1.fetch('http://localhost:4711/');
+        const port = await server.listen();
+        const response = await _1.fetch(`http://localhost:${port}/`);
         const res = await response.json();
         chai_1.expect(res.path).to.equal('/');
         await server.shutdown();
@@ -68,7 +69,7 @@ describe('basic', () => {
         chai_1.expect(data.data).to.equal(testData);
         chai_1.expect(Object.keys(data.headers)).to.not.contain('Content-Type');
     });
-    it('should save and redirect cookies', async () => {
+    it('should save and forward cookies', async () => {
         const { fetch, disconnectAll } = _1.context();
         const responseSet = await fetch('https://nghttp2.org/httpbin/cookies/set?foo=bar', { redirect: 'manual' });
         chai_1.expect(responseSet.headers.has('location')).to.be.true;

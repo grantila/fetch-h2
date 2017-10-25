@@ -5,9 +5,9 @@ import { URL } from 'url'
 
 import AbortController from 'abort-controller'
 import { Finally } from 'already'
+import { syncGuard } from 'callguard'
 
-
-import { arrayify, makeGuard } from './utils'
+import { arrayify } from './utils'
 import { Method, FetchInit, AbortError, SimpleSession } from './core'
 import { Request } from './request'
 import { H2StreamResponse, Response } from './response'
@@ -171,7 +171,7 @@ async function fetchImpl(
 
 			const response = new Promise< Response >( ( resolve, reject ) =>
 			{
-				const guard = makeGuard( reject );
+				const guard = syncGuard( reject, { catchAsync: true } );
 
 				stream.on( 'aborted', guard( ( ...undocumented ) =>
 				{

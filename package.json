@@ -38,7 +38,7 @@
     "@types/mocha": "2.x",
     "@types/node": "8.x",
     "@types/through2": "2.x",
-    "@types/tough-cookie": "^2.3.2",
+    "@types/tough-cookie": "2.x",
     "chai": "4.x",
     "mocha": "4.x",
     "rimraf": "2.x",
@@ -48,10 +48,11 @@
   "dependencies": {
     "abort-controller": "1.x",
     "already": "0.x",
+    "callguard": "1.x",
     "get-stream": "3.x",
     "is-buffer": "1.x",
     "through2": "2.x",
-    "to-arraybuffer": "^1.0.1",
-    "tough-cookie": "^2.3.3"
+    "to-arraybuffer": "1.x",
+    "tough-cookie": "2.x"
   }
 }
