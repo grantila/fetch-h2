@@ -42,12 +42,13 @@ class Server
 		} );
 	}
 
-	listen( port: number ): Promise< void >
+	listen( port: number = void 0 ): Promise< number >
 	{
 		return new Promise( ( resolve, reject ) =>
 		{
 			this._server.listen( port, '0.0.0.0', resolve );
-		} );
+		} )
+		.then( ( ) => this._server.address( ).port );
 	}
 
 	shutdown( ): Promise< void >
@@ -68,9 +69,9 @@ describe( 'basic', ( ) =>
 	it( 'should be able to perform simple GET', async ( ) =>
 	{
 		const server = new Server( );
-		await server.listen( 4711 );
+		const port = await server.listen( );
 
-		const response = await fetch( 'http://localhost:4711/' );
+		const response = await fetch( `http://localhost:${port}/` );
 		const res = await response.json( );
 		expect( res.path ).to.equal( '/' );
 
@@ -117,7 +118,7 @@ describe( 'basic', ( ) =>
 		expect( Object.keys( data.headers ) ).to.not.contain( 'Content-Type' );
 	} );
 
-	it( 'should save and redirect cookies', async ( ) =>
+	it( 'should save and forward cookies', async ( ) =>
 	{
 		const { fetch, disconnectAll } = context( );
 
