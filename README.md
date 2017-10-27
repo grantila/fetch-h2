@@ -11,9 +11,9 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 `fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
 
-**NOTE;** HTTP/2 support was introduced in Node.js 8.4, and requires `node` to be started with a flag `--expose-http2`. This module won't work without it.
+**NOTE;** HTTP/2 support was recently introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag.
 
-**DISCLAIMER: This is an early project, and the Node.js implementation is early too. Don't expect everything to "just work".**
+**DISCLAIMER: This is an early project, don't expect everything to "just work".**
 
 
 ## Imports
