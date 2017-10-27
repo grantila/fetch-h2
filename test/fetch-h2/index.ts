@@ -4,6 +4,7 @@ import 'mocha';
 import { expect } from 'chai';
 import { delay } from 'already';
 import { buffer } from 'get-stream';
+import * as through2 from 'through2';
 
 import {
 	fetch,
@@ -116,6 +117,52 @@ describe( 'basic', ( ) =>
 		const data = await response.json( );
 		expect( data.data ).to.equal( testData );
 		expect( Object.keys( data.headers ) ).to.not.contain( 'Content-Type' );
+	} );
+
+	it( 'should be possible to POST already ended stream-data', async ( ) =>
+	{
+		const stream = through2( );
+
+		stream.write( "foo" );
+		stream.write( "bar" );
+		stream.end( );
+
+		const response = await fetch(
+			'https://nghttp2.org/httpbin/post',
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+				headers: { 'content-length': '6' },
+			}
+		);
+
+		const data = await response.json( );
+		expect( data.data ).to.equal( "foobar" );
+	} );
+
+	it( 'should be possible to POST not yet ended stream-data', async ( ) =>
+	{
+		const stream = through2( );
+
+		const eventual_response = fetch(
+			'https://nghttp2.org/httpbin/post',
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+				headers: { 'content-length': '6' },
+			}
+		);
+
+		await delay( 1 );
+
+		stream.write( "foo" );
+		stream.write( "bar" );
+		stream.end( );
+
+		const response = await eventual_response;
+
+		const data = await response.json( );
+		expect( data.data ).to.equal( "foobar" );
 	} );
 
 	it( 'should save and forward cookies', async ( ) =>

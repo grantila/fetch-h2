@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("mocha");
 const chai_1 = require("chai");
+const already_1 = require("already");
+const through2 = require("through2");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);
 const http2 = require("http2");
@@ -68,6 +70,34 @@ describe('basic', () => {
         const data = await response.json();
         chai_1.expect(data.data).to.equal(testData);
         chai_1.expect(Object.keys(data.headers)).to.not.contain('Content-Type');
+    });
+    it('should be possible to POST already ended stream-data', async () => {
+        const stream = through2();
+        stream.write("foo");
+        stream.write("bar");
+        stream.end();
+        const response = await _1.fetch('https://nghttp2.org/httpbin/post', {
+            method: 'POST',
+            body: new _1.StreamBody(stream),
+            headers: { 'content-length': '6' },
+        });
+        const data = await response.json();
+        chai_1.expect(data.data).to.equal("foobar");
+    });
+    it('should be possible to POST not yet ended stream-data', async () => {
+        const stream = through2();
+        const eventual_response = _1.fetch('https://nghttp2.org/httpbin/post', {
+            method: 'POST',
+            body: new _1.StreamBody(stream),
+            headers: { 'content-length': '6' },
+        });
+        await already_1.delay(1);
+        stream.write("foo");
+        stream.write("bar");
+        stream.end();
+        const response = await eventual_response;
+        const data = await response.json();
+        chai_1.expect(data.data).to.equal("foobar");
     });
     it('should save and forward cookies', async () => {
         const { fetch, disconnectAll } = _1.context();
