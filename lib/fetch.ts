@@ -101,8 +101,10 @@ async function fetchImpl(
 	const headers = new Headers( req.headers );
 
 	const cookies = ( await session.cookieJar.getCookies( url ) )
-		.map( cookie => cookie.cookieString( ) )
-		.join( '; ' );
+		.map( cookie => cookie.cookieString( ) );
+
+	if ( headers.has( HTTP2_HEADER_COOKIE ) )
+		cookies.push( ...arrayify( headers.get( HTTP2_HEADER_COOKIE ) ) );
 
 	const headersToSend: RawHeaders = {
 		// Set required headers
@@ -113,16 +115,14 @@ async function fetchImpl(
 		// Set default headers
 		[ HTTP2_HEADER_ACCEPT ]: session.accept( ),
 		[ HTTP2_HEADER_USER_AGENT ]: session.userAgent( ),
-		[ HTTP2_HEADER_COOKIE ]: cookies,
 	};
 
+	if ( cookies.length > 0 )
+		headersToSend[ HTTP2_HEADER_COOKIE ] = cookies.join( '; ' );
+
 	for ( let [ key, val ] of headers.entries( ) )
-	{
-		if ( key === HTTP2_HEADER_COOKIE && headersToSend[ key ] )
-			( headersToSend[ key ] as string[] ).push( ...arrayify( val ) );
-		else
+		if ( key !== HTTP2_HEADER_COOKIE )
 			headersToSend[ key ] = val;
-	}
 
 	const inspector = new BodyInspector( req );
 
@@ -339,8 +339,7 @@ async function fetchImpl(
 				.then( readable =>
 				{
 					readable.pipe( stream );
-					return stream;
-				} )
+				} );
 
 			return response;
 		} );

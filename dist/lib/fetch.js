@@ -52,8 +52,9 @@ async function fetchImpl(session, input, init = {}, extra) {
     const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
     const headers = new headers_1.Headers(req.headers);
     const cookies = (await session.cookieJar.getCookies(url))
-        .map(cookie => cookie.cookieString())
-        .join('; ');
+        .map(cookie => cookie.cookieString());
+    if (headers.has(HTTP2_HEADER_COOKIE))
+        cookies.push(...utils_1.arrayify(headers.get(HTTP2_HEADER_COOKIE)));
     const headersToSend = {
         // Set required headers
         [HTTP2_HEADER_METHOD]: method,
@@ -62,14 +63,12 @@ async function fetchImpl(session, input, init = {}, extra) {
         // Set default headers
         [HTTP2_HEADER_ACCEPT]: session.accept(),
         [HTTP2_HEADER_USER_AGENT]: session.userAgent(),
-        [HTTP2_HEADER_COOKIE]: cookies,
     };
-    for (let [key, val] of headers.entries()) {
-        if (key === HTTP2_HEADER_COOKIE && headersToSend[key])
-            headersToSend[key].push(...utils_1.arrayify(val));
-        else
+    if (cookies.length > 0)
+        headersToSend[HTTP2_HEADER_COOKIE] = cookies.join('; ');
+    for (let [key, val] of headers.entries())
+        if (key !== HTTP2_HEADER_COOKIE)
             headersToSend[key] = val;
-    }
     const inspector = new body_1.BodyInspector(req);
     if (!endStream &&
         inspector.length != null &&
@@ -198,7 +197,6 @@ async function fetchImpl(session, input, init = {}, extra) {
                 await req.readable()
                     .then(readable => {
                     readable.pipe(stream);
-                    return stream;
                 });
             return response;
         });
