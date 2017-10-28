@@ -6,6 +6,8 @@ import { delay } from 'already';
 import { buffer } from 'get-stream';
 import * as through2 from 'through2';
 
+import { makeServer } from '../lib/server';
+
 import {
 	fetch,
 	context,
@@ -13,72 +15,152 @@ import {
 	JsonBody,
 	StreamBody,
 	DataBody,
+	Response,
 } from '../../';
 
 afterEach( disconnectAll );
 
-import * as http2 from 'http2'
-class Server
+function ensureStatusSuccess( response: Response ): Response
 {
-	private _server: http2.Http2Server;
-	private _sessions: Set< http2.Http2Session >;
-
-	constructor( )
-	{
-		this._server = http2.createServer( );
-		this._sessions = new Set( );
-
-		this._server.on( 'stream', ( stream, headers ) =>
-		{
-			stream.respond( {
-				'content-type': 'text/plain',
-				':status': 200,
-			} );
-
-			stream.end( JSON.stringify( { path: headers[ ':path' ] } ) );
-
-			this._sessions.add( stream.session );
-			stream.session.once( 'close', ( ) =>
-				this._sessions.delete( stream.session) );
-		} );
-	}
-
-	listen( port: number = void 0 ): Promise< number >
-	{
-		return new Promise( ( resolve, reject ) =>
-		{
-			this._server.listen( port, '0.0.0.0', resolve );
-		} )
-		.then( ( ) => this._server.address( ).port );
-	}
-
-	shutdown( ): Promise< void >
-	{
-		return new Promise< void >( ( resolve, reject ) =>
-		{
-			for ( let session of this._sessions )
-			{
-				session.destroy( );
-			}
-			this._server.close( resolve );
-		} );
-	}
+	if ( response.status < 200 || response.status >= 300 )
+		throw new Error( "Status not 2xx" );
+	return response;
 }
 
 describe( 'basic', ( ) =>
 {
 	it( 'should be able to perform simple GET', async ( ) =>
 	{
-		const server = new Server( );
-		const port = await server.listen( );
+		const { server, port } = await makeServer( );
 
-		const response = await fetch( `http://localhost:${port}/` );
+		const response = ensureStatusSuccess(
+			await fetch( `http://localhost:${port}/headers` )
+		);
+
 		const res = await response.json( );
-		expect( res.path ).to.equal( '/' );
+		expect( res[ ':path' ] ).to.equal( '/headers' );
 
 		await server.shutdown( );
 	} );
 
+	it( 'should be able to set upper-case headers', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const headers = {
+			'Content-Type': 'text/foo+text',
+			'Content-Length': '6',
+		};
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/headers`,
+				{
+					method: 'POST',
+					body: new DataBody( "foobar" ),
+					headers,
+				}
+			)
+		);
+
+		const res = await response.json( );
+
+		for ( let [ key, val ] of Object.entries( headers ) )
+			expect( res[ key.toLowerCase( ) ] ).to.equal( val );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to set numeric headers', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const headers = {
+			'content-type': 'text/foo+text',
+			'content-length': < string >< any >6,
+		};
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/headers`,
+				{
+					method: 'POST',
+					body: new DataBody( "foobar" ),
+					headers,
+				}
+			)
+		);
+
+		const res = await response.json( );
+
+		for ( let [ key, val ] of Object.entries( headers ) )
+			expect( res[ key ] ).to.equal( `${val}` );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to POST stream-data with known length', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const stream = through2( );
+
+		stream.write( "foo" );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+				headers: { 'content-length': '6' },
+			}
+		);
+
+		await delay( 1 );
+
+		stream.write( "bar" );
+		stream.end( );
+
+		const response = ensureStatusSuccess( await eventual_response );
+
+		const data = await response.text( );
+		expect( data ).to.equal( "foobar" );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to POST stream-data with unknown length', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const stream = through2( );
+
+		stream.write( "foo" );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+			}
+		);
+
+		await delay( 1 );
+
+		stream.write( "bar" );
+		stream.end( );
+
+		const response = ensureStatusSuccess( await eventual_response );
+
+		const data = await response.text( );
+		expect( data ).to.equal( "foobar" );
+
+		await server.shutdown( );
+	} );
+} );
+
+describe( 'nghttp2.org/httpbin', ( ) =>
+{
 	it( 'should be possible to GET HTTPS/2', async ( ) =>
 	{
 		const response = await fetch( 'https://nghttp2.org/httpbin/user-agent' );
