@@ -1,7 +1,7 @@
-import { Method, ModeTypes, CredentialsTypes, CacheTypes, RedirectTypes, ReferrerTypes, ReferrerPolicyTypes, RequestInit } from './core';
+import { Method, ModeTypes, CredentialsTypes, CacheTypes, RedirectTypes, ReferrerTypes, ReferrerPolicyTypes, RequestInit, RequestInitWithoutBody } from './core';
 import { Headers } from './headers';
 import { Body } from './body';
-export declare class Request extends Body {
+export declare class Request extends Body implements RequestInitWithoutBody {
     private _url;
     private _init;
     readonly method: Method;

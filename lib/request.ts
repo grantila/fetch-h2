@@ -11,6 +11,7 @@ import {
 	ReferrerTypes,
 	ReferrerPolicyTypes,
 	RequestInit,
+	RequestInitWithoutBody,
 } from './core'
 
 import { Headers, GuardedHeaders } from './headers'
@@ -26,7 +27,7 @@ const defaultInit: Partial< RequestInit > = {
 	referrer: 'client',
 };
 
-export class Request extends Body
+export class Request extends Body implements RequestInitWithoutBody
 {
 	private _url: string;
 	private _init: Partial< RequestInit >;
@@ -82,7 +83,7 @@ export class Request extends Body
 			this._init.headers
 		);
 
-		if ( this._init.body )
+		if ( !this.hasBody( ) && this._init.body )
 		{
 			if ( headers.has( 'content-type' ) )
 				this.setBody( this._init.body, headers.get( 'content-type' ) );

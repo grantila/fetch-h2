@@ -119,11 +119,10 @@ export interface PushMessage
 	headers: Headers;
 }
 
-export interface RequestInit
+export interface RequestInitWithoutBody
 {
 	method: Method;
 	headers: RawHeaders | Headers;
-	body: BodyTypes | IBody;
 	mode: ModeTypes;
 	credentials: CredentialsTypes;
 	cache: CacheTypes;
@@ -131,6 +130,11 @@ export interface RequestInit
 	referrer: ReferrerTypes;
 	referrerPolicy: ReferrerPolicyTypes;
 	integrity: string;
+}
+
+export interface RequestInit extends RequestInitWithoutBody
+{
+	body: BodyTypes | IBody;
 }
 
 export interface FetchInit extends RequestInit
