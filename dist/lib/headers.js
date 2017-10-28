@@ -93,7 +93,8 @@ class Headers {
         else {
             for (let _name of Object.keys(init)) {
                 const name = filterName(_name);
-                const value = utils_1.arrayify(init[name]);
+                const value = utils_1.arrayify(init[_name])
+                    .map(val => `${val}`);
                 this._data.set(name, [...value]);
             }
         }

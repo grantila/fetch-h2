@@ -147,7 +147,8 @@ export class Headers
 			for ( let _name of Object.keys( init ) )
 			{
 				const name = filterName( _name );
-				const value = arrayify( init[ name ] );
+				const value = arrayify( init[ _name ] )
+					.map( val => `${val}` );
 				this._data.set( name, [ ...value ] );
 			}
 		}
