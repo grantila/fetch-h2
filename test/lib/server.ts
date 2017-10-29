@@ -10,6 +10,8 @@ import {
 	constants,
 } from 'http2'
 
+import { createHash } from 'crypto'
+
 const {
 	HTTP2_HEADER_PATH,
 	HTTP2_HEADER_CONTENT_TYPE,
@@ -62,6 +64,27 @@ export class Server
 
 			stream.respond( responseHeaders );
 			stream.pipe( stream );
+		}
+		else if ( path === '/sha256' )
+		{
+			const hash = createHash( 'sha256' );
+
+			const responseHeaders = {
+				':status': 200,
+			};
+			stream.respond( responseHeaders );
+
+			hash.on( 'readable', ( ) =>
+			{
+				const data = < Buffer >hash.read( );
+				if ( data )
+				{
+					stream.write( data.toString( 'hex' ) );
+					stream.end( );
+				}
+			} );
+
+			stream.pipe( hash );
 		}
 		else
 		{

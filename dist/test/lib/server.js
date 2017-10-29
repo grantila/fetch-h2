@@ -1,6 +1,7 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
+const crypto_1 = require("crypto");
 const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, } = http2_1.constants;
 class Server {
     constructor() {
@@ -30,6 +31,22 @@ class Server {
             });
             stream.respond(responseHeaders);
             stream.pipe(stream);
+        }
+        else if (path === '/sha256') {
+            const hash = crypto_1.createHash('sha256');
+            const responseHeaders = {
+                ':status': 200,
+            };
+            stream.respond(responseHeaders);
+            hash.on('readable', () => {
+                const data = hash.read();
+                if (data) {
+                    console.log("READABLE", data.toString('hex'));
+                    stream.write(data.toString('hex'));
+                    stream.end();
+                }
+            });
+            stream.pipe(hash);
         }
         else {
             stream.respond({ ':status': 400 });

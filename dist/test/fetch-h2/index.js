@@ -4,6 +4,8 @@ require("mocha");
 const chai_1 = require("chai");
 const already_1 = require("already");
 const through2 = require("through2");
+const from2 = require("from2");
+const crypto_1 = require("crypto");
 const server_1 = require("../lib/server");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);
@@ -84,6 +86,37 @@ describe('basic', () => {
         const data = await response.text();
         chai_1.expect(data).to.equal("foobar");
         await server.shutdown();
+    });
+    it.skip('should be able to POST large stream with known length', async () => {
+        const { server, port } = await server_1.makeServer();
+        const chunkSize = 16 * 1024;
+        const chunks = 1024;
+        const chunk = Buffer.allocUnsafe(chunkSize);
+        const hash = crypto_1.createHash('sha256');
+        let referenceHash;
+        let chunkNum = 0;
+        const stream = from2((size, next) => {
+            if (chunkNum++ === chunks) {
+                next(null, null);
+                referenceHash = hash.digest("hex");
+                return;
+            }
+            hash.update(chunk);
+            next(null, chunk);
+        });
+        const eventual_response = _1.fetch(`http://localhost:${port}/sha256`, {
+            method: 'POST',
+            body: new _1.StreamBody(stream),
+            headers: { 'content-length': '' + chunkSize * chunks },
+        });
+        await already_1.delay(1);
+        const response = ensureStatusSuccess(await eventual_response);
+        const data = await response.text();
+        chai_1.expect(data).to.equal(referenceHash);
+        await server.shutdown();
+    });
+    it.skip('should be able to POST large stream with unknown length', async () => {
+        //
     });
 });
 describe('nghttp2.org/httpbin', () => {

@@ -5,6 +5,8 @@ import { expect } from 'chai';
 import { delay } from 'already';
 import { buffer } from 'get-stream';
 import * as through2 from 'through2';
+import * as from2 from 'from2';
+import { createHash } from 'crypto'
 
 import { makeServer } from '../lib/server';
 
@@ -156,6 +158,55 @@ describe( 'basic', ( ) =>
 		expect( data ).to.equal( "foobar" );
 
 		await server.shutdown( );
+	} );
+
+	it.skip( 'should be able to POST large stream with known length', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const chunkSize = 16 * 1024;
+		const chunks = 1024;
+		const chunk = Buffer.allocUnsafe( chunkSize );
+
+		const hash = createHash( 'sha256' );
+		let referenceHash;
+
+		let chunkNum = 0;
+		const stream = from2( ( size, next ) =>
+		{
+			if ( chunkNum++ === chunks )
+			{
+				next( null, null );
+				referenceHash = hash.digest( "hex" );
+				return;
+			}
+
+			hash.update( chunk );
+			next( null, chunk );
+		} );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/sha256`,
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+				headers: { 'content-length': '' + chunkSize * chunks },
+			}
+		);
+
+		await delay( 1 );
+
+		const response = ensureStatusSuccess( await eventual_response );
+
+		const data = await response.text( );
+		expect( data ).to.equal( referenceHash );
+
+		await server.shutdown( );
+	} );
+
+	it.skip( 'should be able to POST large stream with unknown length', async ( ) =>
+	{
+		//
 	} );
 } );
 
