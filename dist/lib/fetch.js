@@ -99,14 +99,14 @@ async function fetchImpl(session, input, init = {}, extra) {
             const stream = h2session.request(headersToSend, { endStream });
             const response = new Promise((resolve, reject) => {
                 const guard = callguard_1.syncGuard(reject, { catchAsync: true });
-                stream.on('aborted', guard((...undocumented) => {
-                    console.error("Not yet handled 'aborted'", undocumented);
+                stream.on('aborted', guard((...whatever) => {
+                    reject(new Error("Request aborted"));
                 }));
                 stream.on('error', guard((err) => {
                     reject(err);
                 }));
-                stream.on('frameError', guard((...undocumented) => {
-                    console.error("Not yet handled 'frameError'", undocumented);
+                stream.on('frameError', guard((...whatever) => {
+                    reject(new Error("Request failed"));
                 }));
                 stream.on('streamClosed', guard(errorCode => {
                     // We'll get an 'error' event if there actually is an
@@ -116,18 +116,22 @@ async function fetchImpl(session, input, init = {}, extra) {
                     if (errorCode === NGHTTP2_NO_ERROR)
                         reject(new Error("Stream prematurely closed"));
                 }));
-                stream.on('timeout', guard((...undocumented) => {
-                    console.error("Not yet handled 'timeout'", undocumented);
+                stream.on('timeout', guard((...whatever) => {
+                    reject(new Error("Request timed out"));
                 }));
                 stream.on('trailers', guard((headers, flags) => {
                     console.error("Not yet handled 'trailers'", headers, flags);
                 }));
                 // ClientHttp2Stream events
-                stream.on('continue', guard((...undocumented) => {
-                    console.error("Not yet handled 'continue'", undocumented);
+                stream.on('continue', guard((...whatever) => {
+                    reject(new Error("Request failed with 100 continue. " +
+                        "This can't happen unless a server failure"));
                 }));
                 stream.on('headers', guard((headers, flags) => {
-                    console.error("Not yet handled 'headers'", headers, flags);
+                    const code = headers[HTTP2_HEADER_STATUS];
+                    reject(new Error(`Request failed with a ${code} status. ` +
+                        "Any 1xx error is unexpected to fetch() and " +
+                        "shouldn't happen."));
                 }));
                 stream.on('push', guard((_headers, flags) => {
                     if (!onPush) {

@@ -173,9 +173,9 @@ async function fetchImpl(
 			{
 				const guard = syncGuard( reject, { catchAsync: true } );
 
-				stream.on( 'aborted', guard( ( ...undocumented ) =>
+				stream.on( 'aborted', guard( ( ...whatever ) =>
 				{
-					console.error( "Not yet handled 'aborted'", undocumented );
+					reject( new Error( "Request aborted" ) );
 				} ) );
 
 				stream.on( 'error', guard( ( err: Error ) =>
@@ -183,9 +183,9 @@ async function fetchImpl(
 					reject( err );
 				} ) );
 
-				stream.on( 'frameError', guard( ( ...undocumented ) =>
+				stream.on( 'frameError', guard( ( ...whatever ) =>
 				{
-					console.error("Not yet handled 'frameError'", undocumented );
+					reject( new Error( "Request failed" ) );
 				} ) );
 
 				stream.on( 'streamClosed', guard( errorCode =>
@@ -198,9 +198,9 @@ async function fetchImpl(
 						reject( new Error( "Stream prematurely closed" ) );
 				} ) );
 
-				stream.on( 'timeout', guard( ( ...undocumented ) =>
+				stream.on( 'timeout', guard( ( ...whatever ) =>
 				{
-					console.error("Not yet handled 'timeout'", undocumented );
+					reject( new Error( "Request timed out" ) );
 				} ) );
 
 				stream.on( 'trailers', guard( ( headers, flags ) =>
@@ -210,14 +210,20 @@ async function fetchImpl(
 
 				// ClientHttp2Stream events
 
-				stream.on( 'continue', guard( ( ...undocumented ) =>
+				stream.on( 'continue', guard( ( ...whatever ) =>
 				{
-					console.error("Not yet handled 'continue'", undocumented);
+					reject( new Error(
+						"Request failed with 100 continue. " +
+						"This can't happen unless a server failure" ) );
 				} ) );
 
 				stream.on( 'headers', guard( ( headers, flags ) =>
 				{
-					console.error("Not yet handled 'headers'", headers, flags);
+					const code = headers[ HTTP2_HEADER_STATUS ];
+					reject( new Error(
+						`Request failed with a ${code} status. ` +
+						"Any 1xx error is unexpected to fetch() and " +
+						"shouldn't happen." ) );
 				} ) );
 
 				stream.on( 'push', guard( ( _headers, flags ) =>

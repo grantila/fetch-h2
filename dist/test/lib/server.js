@@ -41,7 +41,6 @@ class Server {
             hash.on('readable', () => {
                 const data = hash.read();
                 if (data) {
-                    console.log("READABLE", data.toString('hex'));
                     stream.write(data.toString('hex'));
                     stream.end();
                 }
