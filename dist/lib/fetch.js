@@ -100,7 +100,7 @@ async function fetchImpl(session, input, init = {}, extra) {
             const response = new Promise((resolve, reject) => {
                 const guard = callguard_1.syncGuard(reject, { catchAsync: true });
                 stream.on('aborted', guard((...whatever) => {
-                    reject(new Error("Request aborted"));
+                    reject(new core_1.AbortError("Request aborted"));
                 }));
                 stream.on('error', guard((err) => {
                     reject(err);
@@ -114,10 +114,10 @@ async function fetchImpl(session, input, init = {}, extra) {
                     // In case of an error, the 'error' event will be awaited
                     // instead, to get (and propagate) the error object.
                     if (errorCode === NGHTTP2_NO_ERROR)
-                        reject(new Error("Stream prematurely closed"));
+                        reject(new core_1.AbortError("Stream prematurely closed"));
                 }));
                 stream.on('timeout', guard((...whatever) => {
-                    reject(new Error("Request timed out"));
+                    reject(new core_1.TimeoutError("Request timed out"));
                 }));
                 stream.on('trailers', guard((headers, flags) => {
                     console.error("Not yet handled 'trailers'", headers, flags);

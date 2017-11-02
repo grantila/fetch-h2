@@ -8,7 +8,13 @@ import { Finally } from 'already'
 import { syncGuard } from 'callguard'
 
 import { arrayify } from './utils'
-import { Method, FetchInit, AbortError, SimpleSession } from './core'
+import {
+	Method,
+	FetchInit,
+	AbortError,
+	TimeoutError,
+	SimpleSession,
+} from './core'
 import { Request } from './request'
 import { H2StreamResponse, Response } from './response'
 import { RawHeaders, Headers, GuardedHeaders } from './headers'
@@ -175,7 +181,7 @@ async function fetchImpl(
 
 				stream.on( 'aborted', guard( ( ...whatever ) =>
 				{
-					reject( new Error( "Request aborted" ) );
+					reject( new AbortError( "Request aborted" ) );
 				} ) );
 
 				stream.on( 'error', guard( ( err: Error ) =>
@@ -195,12 +201,13 @@ async function fetchImpl(
 					// In case of an error, the 'error' event will be awaited
 					// instead, to get (and propagate) the error object.
 					if ( errorCode === NGHTTP2_NO_ERROR )
-						reject( new Error( "Stream prematurely closed" ) );
+						reject(
+							new AbortError( "Stream prematurely closed" ) );
 				} ) );
 
 				stream.on( 'timeout', guard( ( ...whatever ) =>
 				{
-					reject( new Error( "Request timed out" ) );
+					reject( new TimeoutError( "Request timed out" ) );
 				} ) );
 
 				stream.on( 'trailers', guard( ( headers, flags ) =>

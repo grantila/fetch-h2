@@ -59,6 +59,9 @@ export interface ResponseInit {
 export declare class AbortError extends Error {
     constructor(message: string);
 }
+export declare class TimeoutError extends Error {
+    constructor(message: string);
+}
 export interface SimpleSession {
     get(url: string | URL, options?: SessionOptions | SecureClientSessionOptions): Promise<ClientHttp2Session>;
     userAgent(): string;

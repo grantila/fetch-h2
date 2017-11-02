@@ -166,6 +166,15 @@ export class AbortError extends Error
 	}
 }
 
+export class TimeoutError extends Error
+{
+	constructor( message: string )
+	{
+		super( message );
+		Object.setPrototypeOf( this, TimeoutError.prototype );
+	}
+}
+
 export interface SimpleSession
 {
 	get(

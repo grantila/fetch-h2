@@ -40,11 +40,12 @@ import {
     Request,
     Response,
     AbortError,
+    TimeoutError,
     PushMessage,
 } from 'fetch-h2'
 ```
 
-Apart from the obvious `fetch`, the functions `context`, `disconnect` and `disconnectAll` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `JsonBody`, `StreamBody` and `DataBody` are extensions over `Body`, described below. `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal). The `PushMessage` is an interface for `onPush` callbacks, mentioned below.
+Apart from the obvious `fetch`, the functions `context`, `disconnect` and `disconnectAll` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `JsonBody`, `StreamBody` and `DataBody` are extensions over `Body`, described below. `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out. The `PushMessage` is an interface for `onPush` callbacks, mentioned below.
 
 
 ## Usage

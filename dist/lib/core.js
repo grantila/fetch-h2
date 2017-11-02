@@ -7,4 +7,11 @@ class AbortError extends Error {
     }
 }
 exports.AbortError = AbortError;
+class TimeoutError extends Error {
+    constructor(message) {
+        super(message);
+        Object.setPrototypeOf(this, TimeoutError.prototype);
+    }
+}
+exports.TimeoutError = TimeoutError;
 //# sourceMappingURL=core.js.map

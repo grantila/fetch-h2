@@ -13,6 +13,7 @@ const response_1 = require("./lib/response");
 exports.Response = response_1.Response;
 const core_1 = require("./lib/core");
 exports.AbortError = core_1.AbortError;
+exports.TimeoutError = core_1.TimeoutError;
 const context_1 = require("./lib/context");
 const defaultContext = new context_1.Context();
 const fetch = (input, init) => defaultContext.fetch(input, init);
