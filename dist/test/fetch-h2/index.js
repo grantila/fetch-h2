@@ -96,6 +96,67 @@ describe('basic', () => {
         chai_1.expect(data).to.equal("foobar");
         await server.shutdown();
     });
+    it('should not be able to send both json and body', async () => {
+        const { server, port } = await server_1.makeServer();
+        const eventual_response = _1.fetch(`http://localhost:${port}/echo`, {
+            method: 'POST',
+            body: 'foo',
+            json: { foo: '' }
+        });
+        const err = await getRejection(eventual_response);
+        chai_1.expect(err.message).to.contain('Cannot specify both');
+        await server.shutdown();
+    });
+    it('should be able to send json', async () => {
+        const { server, port } = await server_1.makeServer();
+        const json = { foo: 'bar' };
+        const response = await _1.fetch(`http://localhost:${port}/echo`, {
+            method: 'POST',
+            json
+        });
+        const data = await response.json();
+        const { headers } = response;
+        chai_1.expect(headers.get('content-type')).to.equal('application/json');
+        chai_1.expect(data).to.deep.equal(json);
+        await server.shutdown();
+    });
+    it('should be able to send body as string', async () => {
+        const { server, port } = await server_1.makeServer();
+        const body = "foobar";
+        const response = await _1.fetch(`http://localhost:${port}/echo`, {
+            method: 'POST',
+            body
+        });
+        const data = await response.text();
+        const { headers } = response;
+        chai_1.expect(data).to.deep.equal(body);
+        await server.shutdown();
+    });
+    it('should be able to send body as buffer', async () => {
+        const { server, port } = await server_1.makeServer();
+        const body = Buffer.from("foobar");
+        const response = await _1.fetch(`http://localhost:${port}/echo`, {
+            method: 'POST',
+            body
+        });
+        const data = await response.arrayBuffer();
+        chai_1.expect(Buffer.compare(Buffer.from(data), body)).to.equal(0);
+        await server.shutdown();
+    });
+    it('should be able to send body as readable stream', async () => {
+        const { server, port } = await server_1.makeServer();
+        const stream = through2();
+        stream.write("foo");
+        stream.write("bar");
+        stream.end();
+        const response = await _1.fetch(`http://localhost:${port}/echo`, {
+            method: 'POST',
+            body: stream,
+        });
+        const data = await response.text();
+        chai_1.expect(data).to.equal("foobar");
+        await server.shutdown();
+    });
     it('should timeout on a slow request', async () => {
         const { server, port } = await server_1.makeServer();
         const eventual_response = _1.fetch(`http://localhost:${port}/wait/10`, {
@@ -108,12 +169,11 @@ describe('basic', () => {
     });
     it('should not timeout on a fast request', async () => {
         const { server, port } = await server_1.makeServer();
-        const eventual_response = _1.fetch(`http://localhost:${port}/wait/1`, {
+        const response = await _1.fetch(`http://localhost:${port}/wait/1`, {
             method: 'POST',
             timeout: 100,
         });
-        const data = await eventual_response;
-        chai_1.expect(data.status).to.equal(200);
+        chai_1.expect(response.status).to.equal(200);
         await server.shutdown();
     });
     it.skip('should be able to POST large stream with known length', async () => {

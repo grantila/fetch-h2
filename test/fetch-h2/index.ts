@@ -173,6 +173,117 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
+	it( 'should not be able to send both json and body', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body: 'foo',
+				json: { foo: '' }
+			}
+		);
+
+		const err = await getRejection( eventual_response );
+
+		expect( err.message ).to.contain( 'Cannot specify both' );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to send json', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const json = { foo: 'bar' };
+
+		const response = await fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				json
+			}
+		);
+
+		const data = await response.json( );
+		const { headers } = response;
+
+		expect( headers.get( 'content-type' ) ).to.equal( 'application/json' );
+		expect( data ).to.deep.equal( json );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to send body as string', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const body = "foobar";
+
+		const response = await fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body
+			}
+		);
+
+		const data = await response.text( );
+		const { headers } = response;
+
+		expect( data ).to.deep.equal( body );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to send body as buffer', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const body = Buffer.from( "foobar" );
+
+		const response = await fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body
+			}
+		);
+
+		const data = await response.arrayBuffer( );
+
+		expect( Buffer.compare( Buffer.from( data ), body ) ).to.equal( 0 );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to send body as readable stream', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const stream = through2( );
+
+		stream.write( "foo" );
+		stream.write( "bar" );
+		stream.end( );
+
+		const response = await fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				body: stream,
+			}
+		);
+
+		const data = await response.text( );
+
+		expect( data ).to.equal( "foobar" );
+
+		await server.shutdown( );
+	} );
+
 	it( 'should timeout on a slow request', async ( ) =>
 	{
 		const { server, port } = await makeServer( );
@@ -196,7 +307,7 @@ describe( 'basic', ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const eventual_response = fetch(
+		const response = await fetch(
 			`http://localhost:${port}/wait/1`,
 			{
 				method: 'POST',
@@ -204,9 +315,7 @@ describe( 'basic', ( ) =>
 			}
 		);
 
-		const data = await eventual_response;
-
-		expect( data.status ).to.equal( 200 );
+		expect( response.status ).to.equal( 200 );
 
 		await server.shutdown( );
 	} );

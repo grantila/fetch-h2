@@ -35,11 +35,16 @@ class Request extends body_1.Body {
         const headers = new headers_1.GuardedHeaders(this._init.mode === 'no-cors'
             ? 'request-no-cors'
             : 'request', this._init.headers);
+        if (this._init.body && this._init.json)
+            throw new Error("Cannot specify both 'body' and 'json'");
         if (!this.hasBody() && this._init.body) {
             if (headers.has('content-type'))
                 this.setBody(this._init.body, headers.get('content-type'));
             else
                 this.setBody(this._init.body);
+        }
+        else if (!this.hasBody() && this._init.json) {
+            this.setBody(new body_1.JsonBody(this._init.json));
         }
         Object.defineProperties(this, {
             method: {

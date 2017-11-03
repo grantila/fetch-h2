@@ -135,6 +135,7 @@ export interface RequestInitWithoutBody
 export interface RequestInit extends RequestInitWithoutBody
 {
 	body: BodyTypes | IBody;
+	json: any;
 }
 
 export interface FetchInit extends RequestInit
