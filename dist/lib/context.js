@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const url_1 = require("url");
+const core_1 = require("./core");
 const version_1 = require("./generated/version");
 const fetch_1 = require("./fetch");
 const cookie_jar_1 = require("./cookie-jar");
@@ -14,6 +15,14 @@ function makeDefaultUserAgent() {
 }
 const defaultUserAgent = makeDefaultUserAgent();
 const defaultAccept = 'application/json, text/*;0.9, */*;q=0.8';
+function makeOkError(err) {
+    err.metaData = err.metaData || {};
+    err.metaData.ok = true;
+    return err;
+}
+function isOkError(err) {
+    return err.metaData && err.metaData.ok;
+}
 class Context {
     constructor(opts) {
         this._h2sessions = new Map();
@@ -35,28 +44,39 @@ class Context {
     }
     connect(url, options) {
         const _url = 'string' === typeof url ? url : url.toString();
-        return new Promise((resolve, reject) => {
-            const h2session = options
-                ? http2_1.connect(_url, options, () => resolve(h2session))
-                : http2_1.connect(_url, () => resolve(h2session));
-            h2session.once('error', reject);
+        const makeConnectionTimeout = () => new core_1.TimeoutError(`Connection timeout to ${_url}`);
+        const makeError = (event) => event
+            ? new Error(`Unknown connection error (${event}): ${_url}`)
+            : new Error(`Connection closed`);
+        let session;
+        const promise = new Promise((resolve, reject) => {
+            session =
+                options
+                    ? http2_1.connect(_url, options, () => resolve(session))
+                    : http2_1.connect(_url, () => resolve(session));
+            session.once('close', () => reject(makeOkError(makeError())));
+            session.once('timeout', () => reject(makeConnectionTimeout()));
+            session.once('frameError', (frameType, errorCode, stream) => reject(makeError(`frameError ${errorCode} [type ${frameType}]`)));
+            session.once('error', reject);
         });
+        return { promise, session };
     }
     getOrCreate(origin, options, created = false) {
         const willCreate = !this._h2sessions.has(origin);
         if (willCreate) {
-            const h2Session = this.connect(origin, options);
+            const sessionItem = this.connect(origin, options);
+            const { promise } = sessionItem;
             // Handle session closure (delete from store)
-            h2Session
+            promise
                 .then(session => {
                 session.once('close', () => this.disconnect(origin));
             })
                 .catch(() => {
                 this.disconnect(origin);
             });
-            this._h2sessions.set(origin, h2Session);
+            this._h2sessions.set(origin, sessionItem);
         }
-        return this._h2sessions.get(origin)
+        return this._h2sessions.get(origin).promise
             .catch(err => {
             if (willCreate || created)
                 // Created in this request, forward error
@@ -69,12 +89,15 @@ class Context {
         const { origin } = new url_1.URL(url);
         return this.getOrCreate(origin, options);
     }
-    handleDisconnect(eventualH2session) {
-        return eventualH2session
-            .then(h2session => {
-            h2session.destroy();
-        })
-            .catch(err => { });
+    handleDisconnect(sessionItem) {
+        const { promise, session } = sessionItem;
+        session.destroy();
+        return promise
+            .then(h2session => { })
+            .catch(err => {
+            if (!isOkError(err))
+                console.warn("Disconnect error", err);
+        });
     }
     fetch(input, init) {
         const sessionGetter = {

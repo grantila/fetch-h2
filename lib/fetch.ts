@@ -3,7 +3,6 @@
 import { constants as h2constants } from 'http2'
 import { URL } from 'url'
 
-import AbortController from 'abort-controller'
 import { Finally } from 'already'
 import { syncGuard } from 'callguard'
 
@@ -75,6 +74,7 @@ function ensureNotCircularRedirection( redirections: ReadonlyArray< string > )
 interface FetchExtra
 {
 	redirected: Array< string >;
+	timeoutAt: number;
 }
 
 async function fetchImpl(
@@ -142,6 +142,55 @@ async function fetchImpl(
 	if ( !endStream && !req.headers.has( 'content-type' ) && inspector.mime )
 		headersToSend[ HTTP2_HEADER_CONTENT_TYPE ] = inspector.mime;
 
+	function timeoutError( )
+	{
+		return new TimeoutError(
+			`${method} ${url} timed out after ${init.timeout} ms` );
+	}
+
+	const timeoutAt = extra.timeoutAt || (
+		'timeout' in init
+			// Setting the timeoutAt here at first time allows async cookie
+			// jar to not take part of timeout for at least the first request
+			// (in a potential redirect chain)
+			? Date.now( ) + init.timeout
+			: null
+	);
+
+	function setupTimeout( )
+	: { promise: Promise< Response >; clear: Function; }
+	{
+		if ( !timeoutAt )
+			return null;
+
+		const now = Date.now( );
+		if ( now >= timeoutAt )
+			throw timeoutError( );
+
+		let timerId;
+
+		return {
+			clear: ( ) =>
+			{
+				if ( timerId )
+					clearTimeout( timerId );
+			},
+			promise: new Promise( ( resolve, reject ) =>
+			{
+				timerId = setTimeout( ( ) =>
+					{
+						timerId = null;
+						reject( timeoutError( ) )
+					},
+					timeoutAt - now
+				);
+			} )
+		};
+
+	}
+
+	const timeoutInfo = setupTimeout( );
+
 	function abortError( )
 	{
 		return new AbortError( `${method} ${url} aborted` );
@@ -162,8 +211,11 @@ async function fetchImpl(
 			} )
 		: null;
 
-	function cleanupSignals( )
+	function cleanup( )
 	{
+		if ( timeoutInfo && timeoutInfo.clear )
+			timeoutInfo.clear( );
+
 		if ( signal )
 			signal.onabort = null;
 	}
@@ -341,7 +393,10 @@ async function fetchImpl(
 							session,
 							req.clone( location ),
 							{ },
-							{ redirected: redirected.concat( url ) }
+							{
+								timeoutAt,
+								redirected: redirected.concat( url )
+							}
 						)
 					);
 				} ) );
@@ -361,11 +416,12 @@ async function fetchImpl(
 	return Promise.race(
 		[
 			signalPromise,
+			timeoutInfo && timeoutInfo.promise,
 			doFetch( ),
 		]
 		.filter( promise => promise )
 	)
-	.then( ...Finally( cleanupSignals ) );
+	.then( ...Finally( cleanup ) );
 }
 
 export function fetch(
@@ -375,32 +431,7 @@ export function fetch(
 )
 : Promise< Response >
 {
-	if ( init && init.signal && 'timeout' in init )
-		throw new Error(
-			"Cannot provide both 'timeout' and 'signal' to fetch()" );
+	const timeoutAt = null;
 
-	if ( init && 'timeout' in init )
-	{
-		const timeout = init.timeout;
-
-		const newInit: Partial< FetchInit > = Object.assign( { }, init );
-		delete newInit.timeout;
-
-		const abortController = new AbortController( );
-		newInit.signal = abortController.signal;
-		let timerId = setTimeout( ( ) =>
-			{
-				timerId = null;
-				abortController.abort( );
-			}, timeout );
-
-		return fetch( session, input, newInit )
-		.then( ...Finally( ( ) =>
-		{
-			if ( timerId )
-				clearTimeout( timerId );
-		} ) );
-	}
-
-	return fetchImpl( session, input, init, { redirected: [ ] } );
+	return fetchImpl( session, input, init, { timeoutAt, redirected: [ ] } );
 }

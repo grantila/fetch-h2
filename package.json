@@ -49,7 +49,6 @@
     "typescript": "2.5.x"
   },
   "dependencies": {
-    "abort-controller": "1.x",
     "already": "0.x",
     "callguard": "1.x",
     "get-stream": "3.x",

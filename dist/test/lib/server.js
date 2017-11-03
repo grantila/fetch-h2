@@ -2,18 +2,26 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const crypto_1 = require("crypto");
+const already_1 = require("already");
 const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, } = http2_1.constants;
 class Server {
     constructor() {
         this._server = http2_1.createServer();
         this._sessions = new Set();
         this.port = null;
-        this._server.on('stream', this.onStream.bind(this));
+        this._server.on('stream', (stream, headers) => {
+            this.onStream(stream, headers)
+                .catch(err => {
+                console.error("Unit test server failed", err);
+                process.exit(1);
+            });
+        });
     }
-    onStream(stream, headers) {
+    async onStream(stream, headers) {
         this._sessions.add(stream.session);
         stream.session.once('close', () => this._sessions.delete(stream.session));
         const path = headers[HTTP2_HEADER_PATH];
+        let m;
         if (path === '/headers') {
             stream.respond({
                 'content-type': 'application/json',
@@ -31,6 +39,25 @@ class Server {
             });
             stream.respond(responseHeaders);
             stream.pipe(stream);
+        }
+        else if (m = path.match(/\/wait\/(.+)/)) {
+            const timeout = parseInt(m[1]);
+            await already_1.delay(timeout);
+            const responseHeaders = {
+                ':status': 200,
+            };
+            [HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH]
+                .forEach(name => {
+                responseHeaders[name] = headers[name];
+            });
+            try {
+                stream.respond(responseHeaders);
+                stream.pipe(stream);
+            }
+            catch (err) 
+            // We ignore errors since this route is used to intentionally
+            // timeout, which causes us to try to write to a closed stream.
+            { }
         }
         else if (path === '/sha256') {
             const hash = crypto_1.createHash('sha256');

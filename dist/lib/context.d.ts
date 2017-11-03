@@ -17,7 +17,7 @@ export declare class Context {
     private connect(url, options?);
     private getOrCreate(origin, options, created?);
     private get(url, options?);
-    private handleDisconnect(eventualH2session);
+    private handleDisconnect(sessionItem);
     fetch(input: string | Request, init?: Partial<FetchInit>): Promise<Response>;
     disconnect(url: string): Promise<void>;
     disconnectAll(): Promise<void>;

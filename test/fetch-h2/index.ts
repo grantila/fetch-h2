@@ -22,6 +22,19 @@ import {
 
 afterEach( disconnectAll );
 
+async function getRejection< T >( promise: Promise< T > ): Promise< Error >
+{
+	try
+	{
+		await promise;
+	}
+	catch ( err )
+	{
+		return err;
+	}
+	throw new Error( "Expected exception" );
+}
+
 function ensureStatusSuccess( response: Response ): Response
 {
 	if ( response.status < 200 || response.status >= 300 )
@@ -156,6 +169,25 @@ describe( 'basic', ( ) =>
 
 		const data = await response.text( );
 		expect( data ).to.equal( "foobar" );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should timeout on a slow request', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/wait/10`,
+			{
+				method: 'POST',
+				timeout: 8,
+			}
+		);
+
+		const err = await getRejection( eventual_response );
+
+		expect( err.message ).to.contain( "timed out" );
 
 		await server.shutdown( );
 	} );

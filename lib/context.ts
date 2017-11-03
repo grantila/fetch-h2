@@ -12,7 +12,7 @@ import {
 
 import { URL } from 'url'
 
-import { FetchInit, SimpleSession } from './core'
+import { FetchInit, SimpleSession, TimeoutError } from './core'
 import { Request } from './request'
 import { Response } from './response'
 import { version } from './generated/version'
@@ -41,9 +41,27 @@ export interface ContextOptions
 	cookieJar: CookieJar;
 }
 
+interface SessionItem
+{
+	session: ClientHttp2Session;
+	promise: Promise< ClientHttp2Session >;
+}
+
+function makeOkError( err: Error ): Error
+{
+	( < any >err ).metaData = ( < any >err ).metaData || { };
+	( < any >err ).metaData.ok = true;
+	return err;
+}
+
+function isOkError( err: Error ): boolean
+{
+	return ( < any >err ).metaData && ( < any >err ).metaData.ok;
+}
+
 export class Context
 {
-	private _h2sessions: Map< string, Promise< ClientHttp2Session > >;
+	private _h2sessions: Map< string, SessionItem >;
 	private _userAgent: string;
 	private _accept: string;
 	private _cookieJar: CookieJar;
@@ -77,19 +95,43 @@ export class Context
 		url: string | URL,
 		options?: SessionOptions | SecureClientSessionOptions
 	)
-	: Promise< ClientHttp2Session >
+	: SessionItem
 	{
 		const _url = 'string' === typeof url ? url : url.toString( );
 
-		return new Promise< ClientHttp2Session >( ( resolve, reject ) =>
-		{
-			const h2session: ClientHttp2Session =
-				options
-				? http2Connect( _url, options, ( ) => resolve( h2session ) )
-				: http2Connect( _url, ( ) => resolve( h2session ) );
+		const makeConnectionTimeout = ( ) =>
+			new TimeoutError( `Connection timeout to ${_url}` );
 
-			h2session.once( 'error', reject );
-		} );
+		const makeError = ( event?: string ) =>
+			event
+			? new Error( `Unknown connection error (${event}): ${_url}` )
+			: new Error( `Connection closed` );
+
+		let session: ClientHttp2Session;
+
+		const promise = new Promise< ClientHttp2Session >(
+			( resolve, reject ) =>
+			{
+				session =
+					options
+					? http2Connect( _url, options, ( ) => resolve( session ) )
+					: http2Connect( _url, ( ) => resolve( session ) );
+
+				session.once( 'close', ( ) =>
+					reject( makeOkError( makeError( ) ) ) );
+
+				session.once( 'timeout', ( ) =>
+					reject( makeConnectionTimeout( ) ) );
+
+				session.once( 'frameError', ( frameType, errorCode, stream ) =>
+					reject( makeError(
+						`frameError ${errorCode} [type ${frameType}]` ) ) );
+
+				session.once( 'error', reject );
+			}
+		);
+
+		return { promise, session };
 	}
 
 	private getOrCreate(
@@ -103,10 +145,12 @@ export class Context
 
 		if ( willCreate )
 		{
-			const h2Session = this.connect( origin, options );
+			const sessionItem = this.connect( origin, options );
+
+			const { promise } = sessionItem;
 
 			// Handle session closure (delete from store)
-			h2Session
+			promise
 			.then( session =>
 			{
 				session.once( 'close', ( ) => this.disconnect( origin ) );
@@ -116,10 +160,10 @@ export class Context
 				this.disconnect( origin )
 			} );
 
-			this._h2sessions.set( origin, h2Session );
+			this._h2sessions.set( origin, sessionItem );
 		}
 
-		return this._h2sessions.get( origin )
+		return this._h2sessions.get( origin ).promise
 		.catch( err =>
 		{
 			if ( willCreate || created )
@@ -141,17 +185,19 @@ export class Context
 		return this.getOrCreate( origin, options );
 	}
 
-	private handleDisconnect(
-		eventualH2session: Promise< ClientHttp2Session >
-	)
-	: Promise< void >
+	private handleDisconnect( sessionItem: SessionItem ): Promise< void >
 	{
-		return eventualH2session
-		.then( h2session =>
+		const { promise, session } = sessionItem;
+
+		session.destroy( );
+
+		return promise
+		.then( h2session => { } )
+		.catch( err =>
 		{
-			h2session.destroy( );
-		} )
-		.catch( err => { } );
+			if ( !isOkError( err ) )
+				console.warn( "Disconnect error", err );
+		} );
 	}
 
 	fetch( input: string | Request, init?: Partial< FetchInit > )

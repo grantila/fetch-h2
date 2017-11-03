@@ -12,6 +12,8 @@ import {
 
 import { createHash } from 'crypto'
 
+import { delay } from 'already'
+
 const {
 	HTTP2_HEADER_PATH,
 	HTTP2_HEADER_CONTENT_TYPE,
@@ -30,17 +32,29 @@ export class Server
 		this._sessions = new Set( );
 		this.port = null;
 
-		this._server.on( 'stream', this.onStream.bind( this ) );
+		this._server.on( 'stream', ( stream, headers ) =>
+		{
+			this.onStream( stream, headers )
+			.catch( err =>
+			{
+				console.error( "Unit test server failed", err );
+				process.exit( 1 );
+			} )
+		} );
 	}
 
-	private onStream( stream: ServerHttp2Stream, headers: IncomingHttpHeaders )
-	: void
+	private async onStream(
+		stream: ServerHttp2Stream,
+		headers: IncomingHttpHeaders
+	)
+	: Promise< void >
 	{
 		this._sessions.add( stream.session );
 		stream.session.once( 'close', ( ) =>
 			this._sessions.delete( stream.session) );
 
-		const path = headers[ HTTP2_HEADER_PATH ];
+		const path = headers[ HTTP2_HEADER_PATH ] as string;
+		let m;
 
 		if ( path === '/headers' )
 		{
@@ -64,6 +78,30 @@ export class Server
 
 			stream.respond( responseHeaders );
 			stream.pipe( stream );
+		}
+		else if ( m = path.match( /\/wait\/(.+)/ ) )
+		{
+			const timeout = parseInt( m[ 1 ] );
+			await delay( timeout );
+
+			const responseHeaders = {
+				':status': 200,
+			};
+			[ HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH ]
+			.forEach( name =>
+			{
+				responseHeaders[ name ] = headers[ name ];
+			} );
+
+			try
+			{
+				stream.respond( responseHeaders );
+				stream.pipe( stream );
+			}
+			catch ( err )
+			// We ignore errors since this route is used to intentionally
+			// timeout, which causes us to try to write to a closed stream.
+			{ }
 		}
 		else if ( path === '/sha256' )
 		{

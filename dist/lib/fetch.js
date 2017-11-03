@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const url_1 = require("url");
-const abort_controller_1 = require("abort-controller");
 const already_1 = require("already");
 const callguard_1 = require("callguard");
 const utils_1 = require("./utils");
@@ -76,6 +75,36 @@ async function fetchImpl(session, input, init = {}, extra) {
         headersToSend[HTTP2_HEADER_CONTENT_LENGTH] = '' + inspector.length;
     if (!endStream && !req.headers.has('content-type') && inspector.mime)
         headersToSend[HTTP2_HEADER_CONTENT_TYPE] = inspector.mime;
+    function timeoutError() {
+        return new core_1.TimeoutError(`${method} ${url} timed out after ${init.timeout} ms`);
+    }
+    const timeoutAt = extra.timeoutAt || ('timeout' in init
+        // Setting the timeoutAt here at first time allows async cookie
+        // jar to not take part of timeout for at least the first request
+        // (in a potential redirect chain)
+        ? Date.now() + init.timeout
+        : null);
+    function setupTimeout() {
+        if (!timeoutAt)
+            return null;
+        const now = Date.now();
+        if (now >= timeoutAt)
+            throw timeoutError();
+        let timerId;
+        return {
+            clear: () => {
+                if (timerId)
+                    clearTimeout(timerId);
+            },
+            promise: new Promise((resolve, reject) => {
+                timerId = setTimeout(() => {
+                    timerId = null;
+                    reject(timeoutError());
+                }, timeoutAt - now);
+            })
+        };
+    }
+    const timeoutInfo = setupTimeout();
     function abortError() {
         return new core_1.AbortError(`${method} ${url} aborted`);
     }
@@ -89,7 +118,9 @@ async function fetchImpl(session, input, init = {}, extra) {
                 };
             })
         : null;
-    function cleanupSignals() {
+    function cleanup() {
+        if (timeoutInfo && timeoutInfo.clear)
+            timeoutInfo.clear();
         if (signal)
             signal.onabort = null;
     }
@@ -194,7 +225,10 @@ async function fetchImpl(session, input, init = {}, extra) {
                         return reject(new Error(`URL got redirected to ${location}, which ` +
                             `'fetch-h2' doesn't support for ${method}`));
                     stream.destroy();
-                    resolve(fetchImpl(session, req.clone(location), {}, { redirected: redirected.concat(url) }));
+                    resolve(fetchImpl(session, req.clone(location), {}, {
+                        timeoutAt,
+                        redirected: redirected.concat(url)
+                    }));
                 }));
             });
             if (!endStream)
@@ -207,31 +241,15 @@ async function fetchImpl(session, input, init = {}, extra) {
     }
     return Promise.race([
         signalPromise,
+        timeoutInfo && timeoutInfo.promise,
         doFetch(),
     ]
         .filter(promise => promise))
-        .then(...already_1.Finally(cleanupSignals));
+        .then(...already_1.Finally(cleanup));
 }
 function fetch(session, input, init) {
-    if (init && init.signal && 'timeout' in init)
-        throw new Error("Cannot provide both 'timeout' and 'signal' to fetch()");
-    if (init && 'timeout' in init) {
-        const timeout = init.timeout;
-        const newInit = Object.assign({}, init);
-        delete newInit.timeout;
-        const abortController = new abort_controller_1.default();
-        newInit.signal = abortController.signal;
-        let timerId = setTimeout(() => {
-            timerId = null;
-            abortController.abort();
-        }, timeout);
-        return fetch(session, input, newInit)
-            .then(...already_1.Finally(() => {
-            if (timerId)
-                clearTimeout(timerId);
-        }));
-    }
-    return fetchImpl(session, input, init, { redirected: [] });
+    const timeoutAt = null;
+    return fetchImpl(session, input, init, { timeoutAt, redirected: [] });
 }
 exports.fetch = fetch;
 //# sourceMappingURL=fetch.js.map

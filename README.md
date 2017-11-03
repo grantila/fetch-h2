@@ -96,8 +96,8 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * When `redirect` is set to `manual`, the response is supposed to be empty and useless, with no status code or anything (according to spec). In `fetch-h2`, it's a normal *useful* `Response` object.
  * The `body` that can be sent in a Request, and that is available on the Response, can be a Node.js `ReadableStream`. You can thereby stream data with a request, and stream the response body.
  * The `body` that can be sent in a Request can be a [`Body`](https://developer.mozilla.org/docs/Web/API/Body) object. There's an extended `JsonBody` class (extending `Body`) which represents an object (that will be JSON stringified). This is useful to e.g. `POST` an object. The `fetch` implementation will detect this `JsonBody` and apply the right `content-type` if it isn't already set.
- * `fetch()` has an extra option, `timeout` which can be used (although not together with `signal`), which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `AbortError`).
- + `fetch()` has an extra option, `onPush` which is an optional callback that will be called when pushes are performed for a certain fetch operation. This callback should take a `PushMessage` argument, which will contain `{url, method, statusCode, headers}`. `fetch-h2` performs absolutely no push magic.
+ * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `TimeoutError`).
+ * `fetch()` has an extra option, `onPush` which is an optional callback that will be called when pushes are performed for a certain fetch operation. This callback should take a `PushMessage` argument, which will contain `{url, method, statusCode, headers}`. `fetch-h2` performs absolutely no push magic.
  * The `Request.clone()` member function has an optional `url` argument.
 
 

@@ -9,6 +9,15 @@ const crypto_1 = require("crypto");
 const server_1 = require("../lib/server");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);
+async function getRejection(promise) {
+    try {
+        await promise;
+    }
+    catch (err) {
+        return err;
+    }
+    throw new Error("Expected exception");
+}
 function ensureStatusSuccess(response) {
     if (response.status < 200 || response.status >= 300)
         throw new Error("Status not 2xx");
@@ -85,6 +94,16 @@ describe('basic', () => {
         const response = ensureStatusSuccess(await eventual_response);
         const data = await response.text();
         chai_1.expect(data).to.equal("foobar");
+        await server.shutdown();
+    });
+    it('should timeout on a slow request', async () => {
+        const { server, port } = await server_1.makeServer();
+        const eventual_response = _1.fetch(`http://localhost:${port}/wait/10`, {
+            method: 'POST',
+            timeout: 8,
+        });
+        const err = await getRejection(eventual_response);
+        chai_1.expect(err.message).to.contain("timed out");
         await server.shutdown();
     });
     it.skip('should be able to POST large stream with known length', async () => {
