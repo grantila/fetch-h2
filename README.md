@@ -85,11 +85,11 @@ await disconnectAll( );
  * There is no automatic CORS handling, since you don't have the concept of web pages with *cross-origin resource **sharing***. You have full control over your code, at least that's what `fetch-h2` believes.
  * The `Body` class/mixin doesn't support the `formData()` function. This can be added if someone really wants it - PR's are welcome.
  * The `Body` class/mixin doesn't support the `blob()` function. This type of buffer doesn't exist in Node.js, use `arrayBuffer()` instead.
- * Automatic redirection (3xx codes) are only supported for `HEAD` and `GET` requests. If e.g. a `POST` request gets a 3xx-code response and `redirect` is set to `follow`, the result is an error. Redirections for non-idempotent requests are only allowed if `redirect` is `error` or `manual` (which is the default). Note that the default for `redirect` is different among browsers (and even versions of them). The specs are non-obvious but seems to suggest `manual` initially, followed by `redirect`. It's a good idea to explicitly set `mode` and not depend on any default.
- * The `credentials` option is currently not implemented since `fetch-h2` has no cookie jar ('yet').
+ * Automatic redirection (3xx codes) are only supported for `HEAD` and `GET` requests. If e.g. a `POST` request gets a 3xx-code response and `redirect` is set to `follow`, the result is an error. Redirections for non-idempotent requests are only allowed if `redirect` is `error` or `manual` (which is the default). Note that the default for `redirect` is different among browsers (and even versions of them). The specs are non-obvious but seems to suggest `manual` initially, followed by `follow`. It's a good idea to explicitly set `redirect` and not depend on any default.
+ * The `credentials` option is currently not used. Cookies are always sent to the same origin, and not to others.
  * The `cache` option is unused, as `fetch-h2` has no built-in cache.
  * The `referrer` and `referrerPolicy` are unused, as `fetch-h2` operates outside the concept of "web pages".
- * The `integrity` option **is actually implemented** but no validation is performed if the result body is read through the Node.js `ReadableStream` (using `response.readable( )`). The body **is** validated if `arrayBuffer( )`, `blob( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise.
+ * The `integrity` option **is actually implemented** but no validation is performed if the result body is read through the Node.js `ReadableStream` (using `response.readable( )`). The body **is** validated if `arrayBuffer( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise.
 
 
 ## Extensions
