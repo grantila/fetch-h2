@@ -199,9 +199,9 @@ async function fetchImpl(session, input, init = {}, extra) {
                         stream.destroy();
                         return;
                     }
-                    const status = parseInt('' + headers[HTTP2_HEADER_STATUS]);
+                    const status = '' + headers[HTTP2_HEADER_STATUS];
                     const location = '' + headers[HTTP2_HEADER_LOCATION];
-                    const isRedirected = isRedirectStatus['' + status];
+                    const isRedirected = isRedirectStatus[status];
                     if (headers[HTTP2_HEADER_SET_COOKIE]) {
                         const setCookies = utils_1.arrayify(headers[HTTP2_HEADER_SET_COOKIE]);
                         session.cookieJar.setCookies(setCookies, url);

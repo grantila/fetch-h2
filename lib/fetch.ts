@@ -337,11 +337,10 @@ async function fetchImpl(
 						return;
 					}
 
-					const status =
-						parseInt( '' + headers[ HTTP2_HEADER_STATUS ] );
+					const status = '' + headers[ HTTP2_HEADER_STATUS ];
 					const location = '' + headers[ HTTP2_HEADER_LOCATION ];
 
-					const isRedirected = isRedirectStatus[ '' + status ];
+					const isRedirected = isRedirectStatus[ status ];
 
 					if ( headers[ HTTP2_HEADER_SET_COOKIE ] )
 					{
