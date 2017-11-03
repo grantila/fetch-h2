@@ -106,6 +106,16 @@ describe('basic', () => {
         chai_1.expect(err.message).to.contain("timed out");
         await server.shutdown();
     });
+    it('should not timeout on a fast request', async () => {
+        const { server, port } = await server_1.makeServer();
+        const eventual_response = _1.fetch(`http://localhost:${port}/wait/1`, {
+            method: 'POST',
+            timeout: 100,
+        });
+        const data = await eventual_response;
+        chai_1.expect(data.status).to.equal(200);
+        await server.shutdown();
+    });
     it.skip('should be able to POST large stream with known length', async () => {
         const { server, port } = await server_1.makeServer();
         const chunkSize = 16 * 1024;

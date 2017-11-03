@@ -192,6 +192,25 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
+	it( 'should not timeout on a fast request', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/wait/1`,
+			{
+				method: 'POST',
+				timeout: 100,
+			}
+		);
+
+		const data = await eventual_response;
+
+		expect( data.status ).to.equal( 200 );
+
+		await server.shutdown( );
+	} );
+
 	it.skip( 'should be able to POST large stream with known length', async ( ) =>
 	{
 		const { server, port } = await makeServer( );
