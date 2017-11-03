@@ -12,6 +12,8 @@ import {
 
 import { createHash } from 'crypto'
 
+import { buffer as getStreamAsBuffer } from 'get-stream'
+
 import { delay } from 'already'
 
 const {
@@ -102,6 +104,31 @@ export class Server
 			// We ignore errors since this route is used to intentionally
 			// timeout, which causes us to try to write to a closed stream.
 			{ }
+		}
+		else if ( path === '/trailers' )
+		{
+			const hash = createHash( 'sha256' );
+
+			const responseHeaders = {
+				':status': 200,
+			};
+
+			const data = await getStreamAsBuffer( stream );
+			const json = JSON.parse( data.toString( ) );
+
+			stream.respond(
+				responseHeaders,
+				{
+					getTrailers( trailers )
+					{
+						Object.assign( trailers, json );
+					}
+				}
+			);
+
+			stream.write( "trailers will be sent" );
+
+			stream.end( );
 		}
 		else if ( path === '/sha256' )
 		{

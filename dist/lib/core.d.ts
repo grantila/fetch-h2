@@ -47,10 +47,13 @@ export interface RequestInit extends RequestInitWithoutBody {
     body: BodyTypes | IBody;
     json: any;
 }
+export declare type OnPush = (message: PushMessage) => void;
+export declare type OnTrailers = (headers: Headers) => void;
 export interface FetchInit extends RequestInit {
     signal: Signal;
     timeout: number;
-    onPush: (message: PushMessage) => void;
+    onPush: OnPush;
+    onTrailers: OnTrailers;
 }
 export interface ResponseInit {
     status: number;

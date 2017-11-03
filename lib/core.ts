@@ -138,6 +138,10 @@ export interface RequestInit extends RequestInitWithoutBody
 	json: any;
 }
 
+export type OnPush = ( message: PushMessage ) => void;
+
+export type OnTrailers = ( headers: Headers ) => void;
+
 export interface FetchInit extends RequestInit
 {
 	signal: Signal;
@@ -148,7 +152,10 @@ export interface FetchInit extends RequestInit
 	timeout: number;
 
 	// Callback for push messages
-	onPush: ( message: PushMessage ) => void;
+	onPush: OnPush;
+
+	// Callback for trailing headers
+	onTrailers: OnTrailers;
 }
 
 export interface ResponseInit

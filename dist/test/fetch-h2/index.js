@@ -157,6 +157,27 @@ describe('basic', () => {
         chai_1.expect(data).to.equal("foobar");
         await server.shutdown();
     });
+    it('should trigger onTrailers', async () => {
+        const { server, port } = await server_1.makeServer();
+        const trailers = { foo: 'bar' };
+        let onTrailers;
+        const trailerPromise = new Promise(resolve => {
+            onTrailers = resolve;
+        });
+        const response = await _1.fetch(`http://localhost:${port}/trailers`, {
+            method: 'POST',
+            json: trailers,
+            onTrailers,
+        });
+        const data = await response.text();
+        const receivedTrailers = await trailerPromise;
+        chai_1.expect(data).to.not.be.empty;
+        Object.keys(trailers)
+            .forEach(key => {
+            chai_1.expect(receivedTrailers.get(key)).to.equal(trailers[key]);
+        });
+        await server.shutdown();
+    });
     it('should timeout on a slow request', async () => {
         const { server, port } = await server_1.makeServer();
         const eventual_response = _1.fetch(`http://localhost:${port}/wait/10`, {

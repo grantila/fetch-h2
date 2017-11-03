@@ -4,7 +4,14 @@ import { Body, JsonBody, StreamBody, DataBody } from './lib/body'
 import { RawHeaders, Headers } from './lib/headers'
 import { Request } from './lib/request'
 import { Response } from './lib/response'
-import { AbortError, TimeoutError, PushMessage, FetchInit } from './lib/core'
+import {
+	AbortError,
+	TimeoutError,
+	PushMessage,
+	FetchInit,
+	OnPush,
+	OnTrailers,
+} from './lib/core'
 import { Context, ContextOptions } from './lib/context'
 
 
@@ -47,4 +54,6 @@ export {
 	AbortError,
 	TimeoutError,
 	PushMessage,
+	OnPush,
+	OnTrailers,
 }

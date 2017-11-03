@@ -38,11 +38,17 @@ import {
     Response,
     AbortError,
     TimeoutError,
+
+    // TypeScript types:
     PushMessage,
+    OnPush,
+    OnTrailers,
 } from 'fetch-h2'
 ```
 
-Apart from the obvious `fetch`, the functions `context`, `disconnect` and `disconnectAll` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out. The `PushMessage` is an interface for `onPush` callbacks, mentioned below.
+Apart from the obvious `fetch`, the functions `context`, `disconnect` and `disconnectAll` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
+
+The `PushMessage` is an interface for `onPush` callbacks, mentioned below. The `onPush` callback is of type `OnPush`, which may be useful to TypeScript users. The `OnTrailers` is the type for the `onTrailers` callback.
 
 
 ## Usage
@@ -93,9 +99,10 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * When `redirect` is set to `manual`, the response is supposed to be empty and useless, with no status code or anything (according to spec). In `fetch-h2`, it's a normal *useful* `Response` object.
  * The `body` that can be sent in a Request, and that is available on the Response, can be a Node.js `ReadableStream`. You can thereby stream data with a request, and stream the response body.
  * The `body` that can be sent in a Request can be a [`Body`](https://developer.mozilla.org/docs/Web/API/Body) object. It can also be a string or buffer.
- * There is a `json` property that can be used instead of `body` to send an object that will be JSON stringified. The appropriate `content-type` will be set if it isn't already.
+ * `fetch()` has an extra option, `json` that can be used instead of `body` to send an object that will be JSON stringified. The appropriate `content-type` will be set if it isn't already.
  * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `TimeoutError`).
  * `fetch()` has an extra option, `onPush` which is an optional callback that will be called when pushes are performed for a certain fetch operation. This callback should take a `PushMessage` argument, which will contain `{url, method, statusCode, headers}`. `fetch-h2` performs absolutely no push magic.
+ * `fetch()` has an extra option, `onTrailers` (of the type `OnTrailers`) which is a callback that will receive trailing headers.
  * The `Request.clone()` member function has an optional `url` argument.
 
 

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const crypto_1 = require("crypto");
+const get_stream_1 = require("get-stream");
 const already_1 = require("already");
 const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, } = http2_1.constants;
 class Server {
@@ -58,6 +59,21 @@ class Server {
             // We ignore errors since this route is used to intentionally
             // timeout, which causes us to try to write to a closed stream.
             { }
+        }
+        else if (path === '/trailers') {
+            const hash = crypto_1.createHash('sha256');
+            const responseHeaders = {
+                ':status': 200,
+            };
+            const data = await get_stream_1.buffer(stream);
+            const json = JSON.parse(data.toString());
+            stream.respond(responseHeaders, {
+                getTrailers(trailers) {
+                    Object.assign(trailers, json);
+                }
+            });
+            stream.write("trailers will be sent");
+            stream.end();
         }
         else if (path === '/sha256') {
             const hash = crypto_1.createHash('sha256');

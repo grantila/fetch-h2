@@ -18,6 +18,9 @@ import {
 	StreamBody,
 	DataBody,
 	Response,
+	Headers,
+	OnPush,
+	OnTrailers,
 } from '../../';
 
 afterEach( disconnectAll );
@@ -280,6 +283,41 @@ describe( 'basic', ( ) =>
 		const data = await response.text( );
 
 		expect( data ).to.equal( "foobar" );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should trigger onTrailers', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const trailers = { foo: 'bar' };
+
+		let onTrailers: OnTrailers;
+		const trailerPromise = new Promise< Headers >( resolve =>
+		{
+			onTrailers = resolve;
+		} );
+
+		const response = await fetch(
+			`http://localhost:${port}/trailers`,
+			{
+				method: 'POST',
+				json: trailers,
+				onTrailers,
+			}
+		);
+
+		const data = await response.text( );
+		const receivedTrailers = await trailerPromise;
+
+		expect( data ).to.not.be.empty;
+
+		Object.keys( trailers )
+		.forEach( key =>
+		{
+			expect( receivedTrailers.get( key ) ).to.equal( trailers[ key ] );
+		} );
 
 		await server.shutdown( );
 	} );

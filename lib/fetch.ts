@@ -92,7 +92,7 @@ async function fetchImpl(
 
 	const { url, method, redirect } = req;
 
-	const { signal, onPush } = init;
+	const { signal, onPush, onTrailers } = init;
 
 	const {
 		protocol,
@@ -262,9 +262,31 @@ async function fetchImpl(
 					reject( new TimeoutError( "Request timed out" ) );
 				} ) );
 
-				stream.on( 'trailers', guard( ( headers, flags ) =>
+				stream.on( 'trailers', guard( ( _headers, flags ) =>
 				{
-					console.error("Not yet handled 'trailers'", headers, flags);
+					if ( !onTrailers )
+						return;
+					try
+					{
+						const headers = new GuardedHeaders( 'response' );
+
+						Object.keys( _headers ).forEach( key =>
+						{
+							if ( Array.isArray( _headers[ key ] ) )
+								( < Array< string > >_headers[ key ] )
+									.forEach( value =>
+										headers.append( key, value ) );
+							else
+								headers.set( key, '' + _headers[ key ] );
+						} );
+
+						onTrailers( headers );
+					}
+					catch ( err )
+					{
+						// TODO: Implement #8
+						console.warn( "Trailer handling failed", err );
+					}
 				} ) );
 
 				// ClientHttp2Stream events
@@ -289,9 +311,8 @@ async function fetchImpl(
 				{
 					if ( !onPush )
 					{
-						// TODO: Signal context-specific/global
-						//       onhandled-push-handler.
-						//       Ugly console.log for now.
+						// TODO: Consider if a warn-handler should be added
+						//       to #8. Otherwise, remove this completely.
 						console.log(
 							"No onPush handler registered, " +
 							"will drop the PUSH_PROMISE" );
@@ -319,6 +340,7 @@ async function fetchImpl(
 					}
 					catch ( err )
 					{
+						// TODO: Implement #8
 						console.error(
 							"onPush callback threw error, goodbye!",
 							err
