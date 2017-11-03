@@ -18,7 +18,7 @@ function parseIntegrity(integrity) {
 function validateIntegrity(data, integrity) {
     if (!integrity)
         // This is valid
-        return;
+        return data;
     const { algorithm, hash: expectedHash } = parseIntegrity(integrity);
     const hash = crypto_1.createHash(algorithm)
         .update(data instanceof ArrayBuffer

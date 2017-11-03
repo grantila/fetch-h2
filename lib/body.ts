@@ -34,7 +34,7 @@ function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
 {
 	if ( !integrity )
 		// This is valid
-		return;
+		return data;
 
 	const { algorithm, hash: expectedHash } = parseIntegrity( integrity );
 
