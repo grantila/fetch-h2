@@ -174,10 +174,22 @@ const response = await fetch( url, { method, json } );
 Similarly to posting JSON, posting a buffer, string or readable string can be done through the `body` property.
 
 ```ts
+import * as fs from 'fs'
 import { fetch } from 'fetch-h2'
 
 const method = 'POST';
-const body = getStringOrBufferOrReadableStream( );
+
+const body = "some data";
+const response = await fetch( url, { method, body } );
+
+// or
+
+const body = fs.readFileSync( 'my-file' );
+const response = await fetch( url, { method, body } );
+
+// or
+
+const body = fs.createReadStream( 'my-file' );
 const response = await fetch( url, { method, body } );
 ```
 
