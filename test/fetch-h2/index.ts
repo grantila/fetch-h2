@@ -358,12 +358,15 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it.skip( 'should be able to POST large stream with known length', async ( ) =>
+	it( 'should be able to POST large (16MiB) stream with known length',
+		async function( )
 	{
+		this.timeout( 2000 );
+
 		const { server, port } = await makeServer( );
 
-		const chunkSize = 16 * 1024;
-		const chunks = 1024;
+		const chunkSize = 1024 * 1024;
+		const chunks = 16;
 		const chunk = Buffer.allocUnsafe( chunkSize );
 
 		const hash = createHash( 'sha256' );
@@ -402,8 +405,49 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it.skip( 'should be able to POST large stream with unknown length', async ( ) =>
+	it( 'should be able to POST large (16MiB) stream with unknown length',
+		async function( )
 	{
-		//
+		this.timeout( 2000 );
+
+		const { server, port } = await makeServer( );
+
+		const chunkSize = 1024 * 1024;
+		const chunks = 16;
+		const chunk = Buffer.allocUnsafe( chunkSize );
+
+		const hash = createHash( 'sha256' );
+		let referenceHash;
+
+		let chunkNum = 0;
+		const stream = from2( ( size, next ) =>
+		{
+			if ( chunkNum++ === chunks )
+			{
+				next( null, null );
+				referenceHash = hash.digest( "hex" );
+				return;
+			}
+
+			hash.update( chunk );
+			next( null, chunk );
+		} );
+
+		const eventual_response = fetch(
+			`http://localhost:${port}/sha256`,
+			{
+				method: 'POST',
+				body: new StreamBody( stream ),
+			}
+		);
+
+		await delay( 1 );
+
+		const response = ensureStatusSuccess( await eventual_response );
+
+		const data = await response.text( );
+		expect( data ).to.equal( referenceHash );
+
+		await server.shutdown( );
 	} );
 } );
