@@ -118,7 +118,6 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * The `body` that can be sent in a Request can be a [`Body`](https://developer.mozilla.org/docs/Web/API/Body) object. It can also be a string or buffer.
  * `fetch()` has an extra option, `json` that can be used instead of `body` to send an object that will be JSON stringified. The appropriate `content-type` will be set if it isn't already.
  * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `TimeoutError`).
- * `fetch()` has an extra option, `onPush` which is an optional callback that will be called when pushes are performed for a certain fetch operation. This callback should take a `PushMessage` argument, which will contain `{url, method, statusCode, headers}`. `fetch-h2` performs absolutely no push magic.
  * `fetch()` has an extra option, `onTrailers` (of the type `OnTrailers`) which is a callback that will receive trailing headers.
  * The `Request.clone()` member function has an optional `url` argument.
 
