@@ -26,12 +26,6 @@ export interface Signal {
     readonly aborted: boolean;
     onabort: () => void;
 }
-export interface PushMessage {
-    url: string;
-    method: Method;
-    statusCode: number;
-    headers: Headers;
-}
 export interface RequestInitWithoutBody {
     method: Method;
     headers: RawHeaders | Headers;
@@ -47,12 +41,10 @@ export interface RequestInit extends RequestInitWithoutBody {
     body: BodyTypes | IBody;
     json: any;
 }
-export declare type OnPush = (message: PushMessage) => void;
 export declare type OnTrailers = (headers: Headers) => void;
 export interface FetchInit extends RequestInit {
     signal: Signal;
     timeout: number;
-    onPush: OnPush;
     onTrailers: OnTrailers;
 }
 export interface ResponseInit {

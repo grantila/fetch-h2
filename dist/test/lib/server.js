@@ -61,7 +61,6 @@ class Server {
             { }
         }
         else if (path === '/trailers') {
-            const hash = crypto_1.createHash('sha256');
             const responseHeaders = {
                 ':status': 200,
             };
@@ -89,6 +88,24 @@ class Server {
                 }
             });
             stream.pipe(hash);
+        }
+        else if (path === '/push') {
+            const responseHeaders = {
+                ':status': 200,
+            };
+            const data = await get_stream_1.buffer(stream);
+            const json = JSON.parse(data.toString());
+            json.forEach(pushable => {
+                function cb(pushStream) {
+                    if (pushable.data)
+                        pushStream.write(pushable.data);
+                    pushStream.end();
+                }
+                stream.pushStream(pushable.headers || {}, cb);
+            });
+            stream.respond(responseHeaders);
+            stream.write("push-route");
+            stream.end();
         }
         else {
             stream.respond({ ':status': 400 });

@@ -6,18 +6,29 @@ import {
 	SecureClientSessionOptions,
 	ClientHttp2Session,
 	OutgoingHttpHeaders,
+	ClientHttp2Stream,
 	IncomingHttpHeaders as IncomingHttp2Headers,
 	constants as h2constants,
 } from 'http2'
-
 import { URL } from 'url'
+import { EventEmitter } from 'events'
+import { syncGuard, asyncGuard } from 'callguard'
 
-import { FetchInit, SimpleSession, TimeoutError } from './core'
+import {
+	FetchInit,
+	SimpleSession,
+	TimeoutError,
+	AbortError,
+} from './core'
 import { Request } from './request'
-import { Response } from './response'
+import { Response, H2StreamResponse } from './response'
 import { version } from './generated/version'
 import { fetch } from './fetch'
 import { CookieJar } from './cookie-jar'
+
+const {
+	HTTP2_HEADER_PATH,
+} = h2constants;
 
 
 function makeDefaultUserAgent( ): string
@@ -59,12 +70,20 @@ function isOkError( err: Error ): boolean
 	return ( < any >err ).metaData && ( < any >err ).metaData.ok;
 }
 
+export type PushHandler =
+	(
+		origin: string,
+		request: Request,
+		getResponse: ( ) => Promise< Response >
+	) => void;
+
 export class Context
 {
 	private _h2sessions: Map< string, SessionItem >;
 	private _userAgent: string;
 	private _accept: string;
 	private _cookieJar: CookieJar;
+	private _pushHandler: PushHandler;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
@@ -91,41 +110,97 @@ export class Context
 			: new CookieJar( );
 	}
 
+	public onPush( pushHandler: PushHandler )
+	{
+		this._pushHandler = pushHandler;
+	}
+
+	private handlePush(
+		origin: string,
+		pushedStream: ClientHttp2Stream,
+		requestHeaders: IncomingHttp2Headers
+	)
+	{
+		if ( !this._pushHandler )
+			return; // Drop push. TODO: Signal through error log: #8
+
+		const path = requestHeaders[ HTTP2_HEADER_PATH ] as string;
+
+		// Remove pseudo-headers
+		Object.keys( requestHeaders )
+		.filter( name => name.charAt( 0 ) === ':' )
+		.forEach( name => { delete requestHeaders[ name ]; } );
+
+		const pushedRequest = new Request( path, { headers: requestHeaders } );
+
+		const futureResponse = new Promise< Response >( ( resolve, reject ) =>
+		{
+			const guard = syncGuard( reject, { catchAsync: true } );
+
+			pushedStream.once( 'aborted', ( ) =>
+				reject( new AbortError( "Response aborted" ) )
+			);
+			pushedStream.once( 'frameError', ( ) =>
+				reject( new Error( "Push request failed" ) )
+			);
+			pushedStream.once( 'error', reject );
+
+			pushedStream.once( 'push', guard( responseHeaders =>
+			{
+				const response = new H2StreamResponse(
+					path, pushedStream, responseHeaders, false );
+
+				resolve( response );
+			} ) );
+		} );
+
+		futureResponse
+		.catch( err => { } ); // TODO: #8
+
+		const getResponse = ( ) => futureResponse;
+
+		return this._pushHandler( origin, pushedRequest, getResponse );
+	}
+
 	private connect(
-		url: string | URL,
+		origin: string,
 		options?: SessionOptions | SecureClientSessionOptions
 	)
 	: SessionItem
 	{
-		const _url = 'string' === typeof url ? url : url.toString( );
-
 		const makeConnectionTimeout = ( ) =>
-			new TimeoutError( `Connection timeout to ${_url}` );
+			new TimeoutError( `Connection timeout to ${origin}` );
 
 		const makeError = ( event?: string ) =>
 			event
-			? new Error( `Unknown connection error (${event}): ${_url}` )
+			? new Error( `Unknown connection error (${event}): ${origin}` )
 			: new Error( `Connection closed` );
 
 		let session: ClientHttp2Session;
+
+		// TODO: #8
+		const aGuard = asyncGuard( console.error.bind( console ) );
+
+		const pushHandler = aGuard(
+			( stream: ClientHttp2Stream, headers: IncomingHttp2Headers ) =>
+				this.handlePush( origin, stream, headers )
+		);
 
 		const promise = new Promise< ClientHttp2Session >(
 			( resolve, reject ) =>
 			{
 				session =
 					options
-					? http2Connect( _url, options, ( ) => resolve( session ) )
-					: http2Connect( _url, ( ) => resolve( session ) );
+					? http2Connect( origin, options, ( ) => resolve( session ) )
+					: http2Connect( origin, ( ) => resolve( session ) );
+
+				session.on( 'stream', pushHandler );
 
 				session.once( 'close', ( ) =>
 					reject( makeOkError( makeError( ) ) ) );
 
 				session.once( 'timeout', ( ) =>
 					reject( makeConnectionTimeout( ) ) );
-
-				session.once( 'frameError', ( frameType, errorCode, stream ) =>
-					reject( makeError(
-						`frameError ${errorCode} [type ${frameType}]` ) ) );
 
 				session.once( 'error', reject );
 			}

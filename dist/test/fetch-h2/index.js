@@ -254,5 +254,30 @@ describe('basic', () => {
         chai_1.expect(data).to.equal(referenceHash);
         await server.shutdown();
     });
+    it('should be able to receive pushed request', async () => {
+        const { server, port } = await server_1.makeServer();
+        const onPushPromise = new Promise((resolve, reject) => {
+            _1.onPush((origin, request, getResponse) => {
+                getResponse().then(resolve, reject);
+            });
+        });
+        const data = { foo: 'bar' };
+        const response = ensureStatusSuccess(await _1.fetch(`http://localhost:${port}/push`, {
+            method: 'POST',
+            json: [
+                {
+                    data: JSON.stringify(data),
+                    headers: { 'content-type': 'application/json' },
+                }
+            ],
+        }));
+        const responseText = await response.text();
+        chai_1.expect(responseText).to.equal("push-route");
+        const pushedResponse = await onPushPromise;
+        const pushedData = await pushedResponse.json();
+        chai_1.expect(pushedData).to.deep.equal(data);
+        _1.onPush(null);
+        await server.shutdown();
+    });
 });
 //# sourceMappingURL=index.js.map

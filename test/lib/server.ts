@@ -107,8 +107,6 @@ export class Server
 		}
 		else if ( path === '/trailers' )
 		{
-			const hash = createHash( 'sha256' );
-
 			const responseHeaders = {
 				':status': 200,
 			};
@@ -150,6 +148,30 @@ export class Server
 			} );
 
 			stream.pipe( hash );
+		}
+		else if ( path === '/push' )
+		{
+			const responseHeaders = {
+				':status': 200,
+			};
+
+			const data = await getStreamAsBuffer( stream );
+			const json = JSON.parse( data.toString( ) );
+
+			json.forEach( pushable =>
+			{
+				function cb( pushStream: ServerHttp2Stream )
+				{
+					if ( pushable.data )
+						pushStream.write( pushable.data );
+					pushStream.end( );
+				}
+				stream.pushStream( pushable.headers || { }, cb );
+			} );
+
+			stream.respond( responseHeaders );
+			stream.write( "push-route" );
+			stream.end( );
 		}
 		else
 		{

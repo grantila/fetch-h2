@@ -7,12 +7,10 @@ import { Response } from './lib/response'
 import {
 	AbortError,
 	TimeoutError,
-	PushMessage,
 	FetchInit,
-	OnPush,
 	OnTrailers,
 } from './lib/core'
-import { Context, ContextOptions } from './lib/context'
+import { Context, ContextOptions, PushHandler } from './lib/context'
 
 
 const defaultContext = new Context( );
@@ -26,6 +24,9 @@ const disconnect =
 const disconnectAll =
 	( ) =>
 		defaultContext.disconnectAll( );
+const onPush =
+	( handler: PushHandler ) =>
+		defaultContext.onPush( handler );
 
 function context( opts?: ContextOptions )
 {
@@ -34,6 +35,7 @@ function context( opts?: ContextOptions )
 		fetch: ctx.fetch.bind( ctx ) as typeof fetch,
 		disconnect: ctx.disconnect.bind( ctx ) as typeof disconnect,
 		disconnectAll: ctx.disconnectAll.bind( ctx ) as typeof disconnectAll,
+		onPush: ctx.onPush.bind( ctx ) as typeof onPush,
 	};
 }
 
@@ -42,6 +44,7 @@ export {
 	fetch,
 	disconnect,
 	disconnectAll,
+	onPush,
 
 	// Re-export
 	Body,
@@ -53,7 +56,5 @@ export {
 	Response,
 	AbortError,
 	TimeoutError,
-	PushMessage,
-	OnPush,
 	OnTrailers,
 }

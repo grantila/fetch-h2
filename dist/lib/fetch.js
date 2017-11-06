@@ -45,7 +45,7 @@ async function fetchImpl(session, input, init = {}, extra) {
     ensureNotCircularRedirection(redirected);
     const req = new request_1.Request(input, init);
     const { url, method, redirect } = req;
-    const { signal, onPush, onTrailers } = init;
+    const { signal, onTrailers } = init;
     const { protocol, host, pathname, search, hash } = new url_1.URL(url);
     const path = pathname + search + hash;
     const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
@@ -179,35 +179,6 @@ async function fetchImpl(session, input, init = {}, extra) {
                     reject(new Error(`Request failed with a ${code} status. ` +
                         "Any 1xx error is unexpected to fetch() and " +
                         "shouldn't happen."));
-                }));
-                stream.on('push', guard((_headers, flags) => {
-                    if (!onPush) {
-                        // TODO: Consider if a warn-handler should be added
-                        //       to #8. Otherwise, remove this completely.
-                        console.log("No onPush handler registered, " +
-                            "will drop the PUSH_PROMISE");
-                        return;
-                    }
-                    const headers = new headers_1.GuardedHeaders('response');
-                    Object.keys(_headers).forEach(key => {
-                        if (Array.isArray(_headers[key]))
-                            _headers[key]
-                                .forEach(value => headers.append(key, value));
-                        else
-                            headers.set(key, '' + _headers[key]);
-                    });
-                    const url = '' + _headers[HTTP2_HEADER_PATH];
-                    const method = _headers[HTTP2_HEADER_METHOD];
-                    const statusCode = parseInt('' + _headers[HTTP2_HEADER_STATUS]);
-                    try {
-                        onPush({ url, headers, method, statusCode });
-                    }
-                    catch (err) {
-                        // TODO: Implement #8
-                        console.error("onPush callback threw error, goodbye!", err);
-                        // Stop throwing in callbacks you lunatic
-                        process.exit(1);
-                    }
                 }));
                 stream.on('response', guard(headers => {
                     if (signal && signal.aborted) {

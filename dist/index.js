@@ -22,12 +22,15 @@ const disconnect = (url) => defaultContext.disconnect(url);
 exports.disconnect = disconnect;
 const disconnectAll = () => defaultContext.disconnectAll();
 exports.disconnectAll = disconnectAll;
+const onPush = (handler) => defaultContext.onPush(handler);
+exports.onPush = onPush;
 function context(opts) {
     const ctx = new context_1.Context(opts);
     return {
         fetch: ctx.fetch.bind(ctx),
         disconnect: ctx.disconnect.bind(ctx),
         disconnectAll: ctx.disconnectAll.bind(ctx),
+        onPush: ctx.onPush.bind(ctx),
     };
 }
 exports.context = context;

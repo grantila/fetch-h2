@@ -57,7 +57,7 @@ function isSimpleHeader(name, value) {
 }
 function filterName(name) {
     if (/[^A-Za-z0-9\-#$%&'*+.\^_`|~]/.test(name))
-        throw new TypeError('Invalid character in header field name');
+        throw new TypeError('Invalid character in header field name: ' + name);
     return name.toLowerCase();
 }
 function _ensureGuard(guard, name, value) {

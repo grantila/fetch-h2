@@ -8,13 +8,17 @@ export interface ContextOptions {
     accept: string;
     cookieJar: CookieJar;
 }
+export declare type PushHandler = (origin: string, request: Request, getResponse: () => Promise<Response>) => void;
 export declare class Context {
     private _h2sessions;
     private _userAgent;
     private _accept;
     private _cookieJar;
+    private _pushHandler;
     constructor(opts?: Partial<ContextOptions>);
-    private connect(url, options?);
+    onPush(pushHandler: PushHandler): void;
+    private handlePush(origin, pushedStream, requestHeaders);
+    private connect(origin, options?);
     private getOrCreate(origin, options, created?);
     private get(url, options?);
     private handleDisconnect(sessionItem);

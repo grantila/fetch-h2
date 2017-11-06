@@ -92,7 +92,7 @@ async function fetchImpl(
 
 	const { url, method, redirect } = req;
 
-	const { signal, onPush, onTrailers } = init;
+	const { signal, onTrailers } = init;
 
 	const {
 		protocol,
@@ -305,49 +305,6 @@ async function fetchImpl(
 						`Request failed with a ${code} status. ` +
 						"Any 1xx error is unexpected to fetch() and " +
 						"shouldn't happen." ) );
-				} ) );
-
-				stream.on( 'push', guard( ( _headers, flags ) =>
-				{
-					if ( !onPush )
-					{
-						// TODO: Consider if a warn-handler should be added
-						//       to #8. Otherwise, remove this completely.
-						console.log(
-							"No onPush handler registered, " +
-							"will drop the PUSH_PROMISE" );
-						return;
-					}
-
-					const headers = new GuardedHeaders( 'response' );
-					Object.keys( _headers ).forEach( key =>
-					{
-						if ( Array.isArray( _headers[ key ] ) )
-							( < Array< string > >_headers[ key ] )
-								.forEach( value =>
-									headers.append( key, value ) );
-						else
-							headers.set( key, '' + _headers[ key ] );
-					} );
-					const url = '' + _headers[ HTTP2_HEADER_PATH ];
-					const method = < Method >_headers[ HTTP2_HEADER_METHOD ];
-					const statusCode =
-						parseInt( '' + _headers[ HTTP2_HEADER_STATUS ] );
-
-					try
-					{
-						onPush( { url, headers, method, statusCode } );
-					}
-					catch ( err )
-					{
-						// TODO: Implement #8
-						console.error(
-							"onPush callback threw error, goodbye!",
-							err
-						);
-						// Stop throwing in callbacks you lunatic
-						process.exit( 1 );
-					}
 				} ) );
 
 				stream.on( 'response', guard( headers =>

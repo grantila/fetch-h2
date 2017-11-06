@@ -14,7 +14,6 @@ import {
 	DataBody,
 	Response,
 	Headers,
-	OnPush,
 	OnTrailers,
 } from '../../';
 

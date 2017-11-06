@@ -32,6 +32,7 @@ import {
     fetch,
     disconnect,
     disconnectAll,
+    onPush,
     Body,
     Headers,
     Request,
@@ -40,15 +41,13 @@ import {
     TimeoutError,
 
     // TypeScript types:
-    PushMessage,
-    OnPush,
     OnTrailers,
 } from 'fetch-h2'
 ```
 
-Apart from the obvious `fetch`, the functions `context`, `disconnect` and `disconnectAll` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
+Apart from the obvious `fetch`, the functions `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
 
-The `PushMessage` is an interface for `onPush` callbacks, mentioned below. The `onPush` callback is of type `OnPush`, which may be useful to TypeScript users. The `OnTrailers` is the type for the `onTrailers` callback.
+The `OnTrailers` is the type for the `onTrailers` callback.
 
 
 ## Usage
@@ -75,6 +74,24 @@ import { disconnect, disconnectAll } from 'fetch-h2'
 await disconnect( "http://mysite.com/foo" ); // "/foo" is ignored, but allowed
 // or
 await disconnectAll( );
+```
+
+
+### Pushed requests
+
+When the server pushes a request, this can be handled using the `onPush` handler. Registering an `onPush` handler is, just like the disconnection functions, *per-context*.
+
+```ts
+import { onPush } from 'fetch-h2'
+
+onPush( async ( origin, request, getResponse ) =>
+{
+    if ( shouldReceivePush( request ) )
+    {
+        const response = await getResponse( );
+        // do something with response...
+    }
+} );
 ```
 
 
@@ -120,15 +137,16 @@ const ctx = context( /* options */ );
 ctx.fetch( url | Request, init?: InitOpts );
 ctx.disconnect( url );
 ctx.disconnectAll( );
+ctx.onPush( ... );
 ```
 
-The global `fetch`, `disconnect` and `disconnectAll` functions are default-created from a context internally. They will therefore not interfere, and `disconnect`/`disconnectAll` only applies to its own context, be it a context created by you, or the default one from `fetch-h2`.
+The global `fetch`, `disconnect`, `disconnectAll` and `onPush` functions are default-created from a context internally. They will therefore not interfere, and `disconnect`/`disconnectAll`/`onPush` only applies to its own context, be it a context created by you, or the default one from `fetch-h2`.
 
 If you want one specific context in a file, why not destructure the return in one go?
 
 ```ts
 import { context } from 'fetch-h2'
-const { fetch, disconnect, disconnectAll } = context( );
+const { fetch, disconnect, disconnectAll, onPush } = context( );
 ```
 
 
@@ -171,7 +189,7 @@ const response = await fetch( url, { method, json } );
 
 ### Post anything
 
-Similarly to posting JSON, posting a buffer, string or readable string can be done through the `body` property.
+Similarly to posting JSON, posting a buffer, string or readable stream can be done through the `body` property.
 
 ```ts
 import * as fs from 'fs'

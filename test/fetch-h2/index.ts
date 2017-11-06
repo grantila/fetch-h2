@@ -14,12 +14,12 @@ import {
 	fetch,
 	context,
 	disconnectAll,
+	onPush,
 	JsonBody,
 	StreamBody,
 	DataBody,
 	Response,
 	Headers,
-	OnPush,
 	OnTrailers,
 } from '../../';
 
@@ -447,6 +447,49 @@ describe( 'basic', ( ) =>
 
 		const data = await response.text( );
 		expect( data ).to.equal( referenceHash );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should be able to receive pushed request', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const onPushPromise = new Promise< Response >( ( resolve, reject ) =>
+		{
+			onPush( ( origin, request, getResponse ) =>
+			{
+				getResponse( ).then( resolve, reject );
+			} );
+		} );
+
+		const data = { foo: 'bar' };
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/push`,
+				{
+					method: 'POST',
+					json: [
+						{
+							data: JSON.stringify( data ),
+							headers: { 'content-type': 'application/json' },
+						}
+					],
+				}
+			)
+		);
+
+		const responseText = await response.text( );
+
+		expect( responseText ).to.equal( "push-route" );
+
+		const pushedResponse = await onPushPromise;
+		const pushedData = await pushedResponse.json( );
+
+		expect( pushedData ).to.deep.equal( data );
+
+		onPush( null );
 
 		await server.shutdown( );
 	} );

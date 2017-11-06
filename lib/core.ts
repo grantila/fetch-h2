@@ -111,14 +111,6 @@ export interface Signal
 	onabort: ( ) => void;
 }
 
-export interface PushMessage
-{
-	url: string;
-	method: Method;
-	statusCode: number;
-	headers: Headers;
-}
-
 export interface RequestInitWithoutBody
 {
 	method: Method;
@@ -138,8 +130,6 @@ export interface RequestInit extends RequestInitWithoutBody
 	json: any;
 }
 
-export type OnPush = ( message: PushMessage ) => void;
-
 export type OnTrailers = ( headers: Headers ) => void;
 
 export interface FetchInit extends RequestInit
@@ -150,9 +140,6 @@ export interface FetchInit extends RequestInit
 	// Must not be used if signal is used.
 	// In milliseconds.
 	timeout: number;
-
-	// Callback for push messages
-	onPush: OnPush;
 
 	// Callback for trailing headers
 	onTrailers: OnTrailers;
