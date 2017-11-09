@@ -279,5 +279,15 @@ describe('basic', () => {
         _1.onPush(null);
         await server.shutdown();
     });
+    it('should convert \'host\' to \':authority\'', async () => {
+        const { server, port } = await server_1.makeServer();
+        const host = 'localhost';
+        const response = ensureStatusSuccess(await _1.fetch(`http://localhost:${port}/headers`, {
+            headers: { host }
+        }));
+        const responseData = await response.json();
+        chai_1.expect(responseData[':authority']).to.equal(host);
+        await server.shutdown();
+    });
 });
 //# sourceMappingURL=index.js.map

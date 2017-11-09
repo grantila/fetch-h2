@@ -127,8 +127,14 @@ async function fetchImpl(
 		headersToSend[ HTTP2_HEADER_COOKIE ] = cookies.join( '; ' );
 
 	for ( let [ key, val ] of headers.entries( ) )
-		if ( key !== HTTP2_HEADER_COOKIE )
+	{
+		if ( key === 'host' )
+			// Convert to :authority like curl does:
+			// https://github.com/grantila/fetch-h2/issues/9
+			headersToSend[ ':authority' ] = val;
+		else if ( key !== HTTP2_HEADER_COOKIE )
 			headersToSend[ key ] = val;
+	}
 
 	const inspector = new BodyInspector( req );
 

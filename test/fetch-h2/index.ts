@@ -493,4 +493,26 @@ describe( 'basic', ( ) =>
 
 		await server.shutdown( );
 	} );
+
+	it( 'should convert \'host\' to \':authority\'', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const host = 'localhost';
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/headers`,
+				{
+					headers: { host }
+				}
+			)
+		);
+
+		const responseData = await response.json( );
+
+		expect( responseData[ ':authority' ] ).to.equal( host );
+
+		await server.shutdown( );
+	} );
 } );
