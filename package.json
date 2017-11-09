@@ -1,6 +1,6 @@
 {
   "name": "fetch-h2",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "HTTP/2-only Fetch API client for Node.js",
   "author": "Gustaf Räntilä",
   "license": "MIT",
