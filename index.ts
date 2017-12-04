@@ -28,7 +28,7 @@ const onPush =
 	( handler: PushHandler ) =>
 		defaultContext.onPush( handler );
 
-function context( opts?: ContextOptions )
+function context( opts?: Partial< ContextOptions > )
 {
 	const ctx = new Context( opts );
 	return {

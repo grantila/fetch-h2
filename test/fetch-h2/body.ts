@@ -2,10 +2,8 @@
 
 import 'mocha';
 import { expect } from 'chai';
-//import { delay } from 'already';
 import { buffer as getStreamAsBuffer } from 'get-stream';
 import * as through2 from 'through2';
-//import * as from2 from 'from2';
 import { createHash } from 'crypto';
 
 import {

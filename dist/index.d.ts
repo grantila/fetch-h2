@@ -8,7 +8,7 @@ declare const fetch: (input: string | Request, init?: Partial<FetchInit>) => Pro
 declare const disconnect: (url: string) => Promise<void>;
 declare const disconnectAll: () => Promise<void>;
 declare const onPush: (handler: PushHandler) => void;
-declare function context(opts?: ContextOptions): {
+declare function context(opts?: Partial<ContextOptions>): {
     fetch: (input: string | Request, init?: Partial<FetchInit>) => Promise<Response>;
     disconnect: (url: string) => Promise<void>;
     disconnectAll: () => Promise<void>;

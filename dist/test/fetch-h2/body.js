@@ -2,10 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("mocha");
 const chai_1 = require("chai");
-//import { delay } from 'already';
 const get_stream_1 = require("get-stream");
 const through2 = require("through2");
-//import * as from2 from 'from2';
 const crypto_1 = require("crypto");
 const _1 = require("../../");
 async function makeSync(fn) {
