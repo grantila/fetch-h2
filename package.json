@@ -16,14 +16,18 @@
   },
   "scripts": {
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
-    "test": "node --expose-http2 node_modules/.bin/_mocha dist/test",
-    "buildtest": "npm run build && npm run test",
-    "buildtestfast": "npm run build && node --expose-http2 node_modules/.bin/_mocha --grep basic dist/test",
+    "test": "node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --bail --check-leaks dist/test",
+    "testfast": "node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
+    "test-nocov": "node_modules/.bin/mocha -- --bail --check-leaks dist/test",
+    "buildtest": "npm run build && npm run test-nocov",
+    "buildtestfast": "npm run build && node_modules/.bin/mocha -i --grep nghttp2.org dist/test",
+    "buildtestcov": "npm run build && npm run test",
+    "buildtestfastcov": "npm run build && npm run testfast",
     "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/grantila/fetch-h2.git"
+    "url": "git+https://github.com/grantila/fetch-h2"
   },
   "keywords": [
     "fetch",
@@ -42,7 +46,9 @@
     "@types/through2": "2.x",
     "@types/tough-cookie": "2.x",
     "chai": "4.x",
+    "coveralls": "2.x",
     "from2": "2.x",
+    "istanbul": "1.1.0-alpha.1",
     "mocha": "4.x",
     "rimraf": "2.x",
     "ts-node": "3.x",

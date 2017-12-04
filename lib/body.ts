@@ -52,6 +52,12 @@ function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
 	return data;
 }
 
+function isStream( body: StorageBodyTypes ): boolean
+{
+	return body &&
+		( 'readable' in ( < NodeJS.ReadableStream >Object( body ) ) );
+}
+
 export class Body implements IBody
 {
 	private _body: StorageBodyTypes;
@@ -125,13 +131,7 @@ export class Body implements IBody
 		if ( this._body == null )
 			return validateIntegrity( new ArrayBuffer( 0 ), this._integrity );
 
-		else if ( typeof this._body === 'string' )
-			return validateIntegrity(
-				toArrayBuffer( Buffer.from( this._body ) ),
-				this._integrity
-			);
-
-		else if ( 'readable' in ( < NodeJS.ReadableStream >this._body ) )
+		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 			.then( buffer => validateIntegrity( buffer, this._integrity ) )
 			.then( buffer => toArrayBuffer( buffer ) );
@@ -164,9 +164,7 @@ export class Body implements IBody
 
 		if ( this._body == null )
 			return Promise.resolve( this._body );
-		else if ( typeof this._body === 'string' )
-			return Promise.resolve( this._body ).then( JSON.parse );
-		else if ( 'readable' in ( < NodeJS.ReadableStream >this._body ) )
+		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else if ( isBuffer( this._body ) )
@@ -182,33 +180,30 @@ export class Body implements IBody
 
 		if ( this._body == null )
 			return Promise.resolve( null );
-		else if ( typeof this._body === 'string' )
-			return Promise.resolve( this._body );
-		else if ( 'readable' in ( < NodeJS.ReadableStream >this._body ) )
+		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( buffer => buffer.toString( ) );
 		else if ( isBuffer( this._body ) )
 			return Promise.resolve( this._body.toString( ) );
 		else
-			throwUnknownData( );
+			return throwUnknownData( );
 	}
 
 	async readable( ): Promise< NodeJS.ReadableStream >
 	{
 		this._ensureUnused( );
 
-		const stream = through2( );
-
 		if ( this._body == null )
 		{
+			const stream = through2( );
 			stream.end( );
 			return Promise.resolve( stream );
 		}
-		else if ( 'readable' in Object( < NodeJS.ReadableStream >this._body ) )
+		else if ( isStream( this._body ) )
 			return Promise.resolve( < NodeJS.ReadableStream >this._body );
-		else if ( isBuffer( this._body ) || typeof this._body === 'string' )
-			return Promise.resolve( )
-				.then( ( ) =>
+		else if ( isBuffer( this._body ) )
+			return Promise.resolve( through2( ) )
+				.then( stream =>
 				{
 					stream.write( this._body );
 					stream.end( );
