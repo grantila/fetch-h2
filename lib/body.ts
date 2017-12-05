@@ -6,6 +6,7 @@ import { buffer as getStreamAsBuffer } from 'get-stream'
 import * as through2 from 'through2'
 import * as isBuffer from 'is-buffer'
 import * as toArrayBuffer from 'to-arraybuffer'
+import { tap } from 'already'
 
 import { IBody, BodyTypes, StorageBodyTypes } from './core'
 
@@ -163,12 +164,19 @@ export class Body implements IBody
 		this._ensureUnused( );
 
 		if ( this._body == null )
-			return Promise.resolve( this._body );
+			return Promise.resolve( validateIntegrity( "", this._integrity ) )
+				.then( ( ) => this._body );
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
+				.then( tap( buffer =>
+					validateIntegrity( buffer, this._integrity )
+				) )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else if ( isBuffer( this._body ) )
 			return Promise.resolve( this._body.toString( ) )
+				.then( tap( string =>
+					validateIntegrity( string, this._integrity )
+				) )
 				.then( JSON.parse );
 		else
 			throwUnknownData( );
@@ -179,12 +187,19 @@ export class Body implements IBody
 		this._ensureUnused( );
 
 		if ( this._body == null )
-			return Promise.resolve( null );
+			return Promise.resolve( validateIntegrity( "", this._integrity ) )
+				.then( ( ) => < string >< BodyTypes >this._body );
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
+				.then( tap( buffer =>
+					validateIntegrity( buffer, this._integrity )
+				) )
 				.then( buffer => buffer.toString( ) );
 		else if ( isBuffer( this._body ) )
-			return Promise.resolve( this._body.toString( ) );
+			return Promise.resolve( this._body.toString( ) )
+				.then( tap( string =>
+					validateIntegrity( string, this._integrity )
+				) );
 		else
 			return throwUnknownData( );
 	}

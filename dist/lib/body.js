@@ -5,6 +5,7 @@ const get_stream_1 = require("get-stream");
 const through2 = require("through2");
 const isBuffer = require("is-buffer");
 const toArrayBuffer = require("to-arraybuffer");
+const already_1 = require("already");
 function throwUnknownData() {
     throw new Error("Unknown body data");
 }
@@ -95,12 +96,15 @@ class Body {
     async json() {
         this._ensureUnused();
         if (this._body == null)
-            return Promise.resolve(this._body);
+            return Promise.resolve(validateIntegrity("", this._integrity))
+                .then(() => this._body);
         else if (isStream(this._body))
             return get_stream_1.buffer(this._body)
+                .then(already_1.tap(buffer => validateIntegrity(buffer, this._integrity)))
                 .then(buffer => JSON.parse(buffer.toString()));
         else if (isBuffer(this._body))
             return Promise.resolve(this._body.toString())
+                .then(already_1.tap(string => validateIntegrity(string, this._integrity)))
                 .then(JSON.parse);
         else
             throwUnknownData();
@@ -108,12 +112,15 @@ class Body {
     async text() {
         this._ensureUnused();
         if (this._body == null)
-            return Promise.resolve(null);
+            return Promise.resolve(validateIntegrity("", this._integrity))
+                .then(() => this._body);
         else if (isStream(this._body))
             return get_stream_1.buffer(this._body)
+                .then(already_1.tap(buffer => validateIntegrity(buffer, this._integrity)))
                 .then(buffer => buffer.toString());
         else if (isBuffer(this._body))
-            return Promise.resolve(this._body.toString());
+            return Promise.resolve(this._body.toString())
+                .then(already_1.tap(string => validateIntegrity(string, this._integrity)));
         else
             return throwUnknownData();
     }

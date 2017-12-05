@@ -34,6 +34,32 @@ async function makeSync< T >( fn: ( ) => PromiseLike< T > )
 	}
 }
 
+function setHash( body: any, data, phonyHashType = 'sha256' )
+{
+	const hash = createHash( 'sha256' );
+	hash.update( data );
+	const v = phonyHashType + "-" + hash.digest( "base64" );
+	body._integrity = v;
+}
+
+class IntegrityBody extends Body
+{
+	constructor(
+		data: string | Buffer | NodeJS.ReadableStream,
+		hashData: string,
+		integrityHashType = 'sha256'
+	)
+	{
+		super( );
+
+		const hash = createHash( 'sha256' );
+		hash.update( hashData );
+		const v = integrityHashType + "-" + hash.digest( "base64" );
+
+		this.setBody( data, null, v );
+	}
+}
+
 describe( 'body', ( ) =>
 {
 	describe( 'multiple reads', ( ) =>
@@ -139,32 +165,6 @@ describe( 'body', ( ) =>
 			} );
 		} );
 
-		function setHash( body: any, data, phonyHashType = 'sha256' )
-		{
-			const hash = createHash( 'sha256' );
-			hash.update( data );
-			const v = phonyHashType + "-" + hash.digest( "base64" );
-			body._integrity = v;
-		}
-
-		class IntegrityBody extends Body
-		{
-			constructor(
-				data: string | Buffer | NodeJS.ReadableStream,
-				hashData: string,
-				integrityHashType = 'sha256'
-			)
-			{
-				super( );
-
-				const hash = createHash( 'sha256' );
-				hash.update( hashData );
-				const v = integrityHashType + "-" + hash.digest( "base64" );
-
-				this.setBody( data, null, v );
-			}
-		}
-
 		describe( 'matching validation', ( ) =>
 		{
 			it( 'handle null', async ( ) =>
@@ -249,85 +249,258 @@ describe( 'body', ( ) =>
 
 	describe( 'json', ( ) =>
 	{
-		it( 'handle null', async ( ) =>
+		describe( 'without validation', ( ) =>
 		{
-			const body = new DataBody( null );
-			expect( await body.json( ) ).to.be.null;
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				expect( await body.json( ) ).to.be.null;
+			} );
+
+			it( 'handle invalid string', async ( ) =>
+			{
+				const body = new DataBody( "invalid json" );
+				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+			} );
+
+			it( 'handle valid string', async ( ) =>
+			{
+				const body = new DataBody( '{"foo":"bar"}' );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle invalid buffer', async ( ) =>
+			{
+				const body = new DataBody( Buffer.from( "invalid json" ) );
+				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+			} );
+
+			it( 'handle valid buffer', async ( ) =>
+			{
+				const body = new DataBody( Buffer.from( '{"foo":"bar"}' ) );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle valid JsonBody', async ( ) =>
+			{
+				const body = new JsonBody( { foo: "bar" } );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle invalid stream', async ( ) =>
+			{
+				const stream = through2( );
+				stream.end( "invalid json" );
+				const body = new StreamBody( stream );
+				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+			} );
+
+			it( 'handle valid stream', async ( ) =>
+			{
+				const stream = through2( );
+				stream.end( '{"foo":"bar"}' );
+				const body = new StreamBody( stream );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
 		} );
 
-		it( 'handle invalid string', async ( ) =>
+		describe( 'matching validation', ( ) =>
 		{
-			const body = new DataBody( "invalid json" );
-			expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				setHash( body, '' );
+				expect( await body.json( ) ).to.be.null;
+			} );
+
+			it( 'handle string', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const body = new DataBody( testData );
+				setHash( body, testData );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle buffer', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const body = new DataBody( Buffer.from( testData ) );
+				setHash( body, testData );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle JsonBody', async ( ) =>
+			{
+				const body = new JsonBody( { foo: "bar" } );
+				setHash( body, '{"foo":"bar"}' );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
+
+			it( 'handle stream', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const stream = through2( );
+				stream.end( testData );
+				const body = new StreamBody( stream );
+				setHash( body, testData );
+				expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			} );
 		} );
 
-		it( 'handle valid string', async ( ) =>
+		describe( 'mismatching validation', ( ) =>
 		{
-			const body = new DataBody( '{"foo":"bar"}' );
-			expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
-		} );
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				setHash( body, '' + "x" );
+				expect( await makeSync( ( ) => body.json( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 
-		it( 'handle invalid buffer', async ( ) =>
-		{
-			const body = new DataBody( Buffer.from( "invalid json" ) );
-			expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
-		} );
+			it( 'handle string', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const body = new DataBody( testData );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.json( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 
-		it( 'handle valid buffer', async ( ) =>
-		{
-			const body = new DataBody( Buffer.from( '{"foo":"bar"}' ) );
-			expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
-		} );
+			it( 'handle buffer', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const body = new DataBody( Buffer.from( testData ) );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.json( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 
-		it( 'handle valid JsonBody', async ( ) =>
-		{
-			const body = new JsonBody( { foo: "bar" } );
-			expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
-		} );
+			it( 'handle JsonBody', async ( ) =>
+			{
+				const body = new JsonBody( { foo: "bar" } );
+				setHash( body, '{"foo":"bar"}' + "x" );
+				expect( await makeSync( ( ) => body.json( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 
-		it( 'handle invalid stream', async ( ) =>
-		{
-			const stream = through2( );
-			stream.end( "invalid json" );
-			const body = new StreamBody( stream );
-			expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
-		} );
-
-		it( 'handle valid stream', async ( ) =>
-		{
-			const stream = through2( );
-			stream.end( '{"foo":"bar"}' );
-			const body = new StreamBody( stream );
-			expect( await body.json( ) ).to.deep.equal( { foo: 'bar' } );
+			it( 'handle stream', async ( ) =>
+			{
+				const testData = '{"foo":"bar"}';
+				const stream = through2( );
+				stream.end( testData );
+				const body = new StreamBody( stream );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.json( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 		} );
 	} );
 
 	describe( 'text', ( ) =>
 	{
-		it( 'handle null', async ( ) =>
+		describe( 'without validation', ( ) =>
 		{
-			const body = new DataBody( null );
-			expect( await body.text( ) ).to.be.null;
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				expect( await body.text( ) ).to.be.null;
+			} );
+
+			it( 'handle string', async ( ) =>
+			{
+				const body = new DataBody( "foo" );
+				expect( await body.text( ) ).to.equal( "foo" );
+			} );
+
+			it( 'handle buffer', async ( ) =>
+			{
+				const body = new DataBody( Buffer.from( "foo" ) );
+				expect( await body.text( ) ).to.equal( "foo" );
+			} );
+
+			it( 'handle stream', async ( ) =>
+			{
+				const stream = through2( );
+				stream.end( "foo" );
+				const body = new StreamBody( stream );
+				expect( await body.text( ) ).to.equal( "foo" );
+			} );
 		} );
 
-		it( 'handle string', async ( ) =>
+		describe( 'matching validation', ( ) =>
 		{
-			const body = new DataBody( "foo" );
-			expect( await body.text( ) ).to.equal( "foo" );
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				setHash( body, "" );
+				expect( await body.text( ) ).to.be.null;
+			} );
+
+			it( 'handle string', async ( ) =>
+			{
+				const testData = "foo";
+				const body = new DataBody( testData );
+				setHash( body, testData );
+				expect( await body.text( ) ).to.equal( testData );
+			} );
+
+			it( 'handle buffer', async ( ) =>
+			{
+				const testData = "foo";
+				const body = new DataBody( Buffer.from( testData ) );
+				setHash( body, testData );
+				expect( await body.text( ) ).to.equal( testData );
+			} );
+
+			it( 'handle stream', async ( ) =>
+			{
+				const testData = "foo";
+				const stream = through2( );
+				stream.end( testData );
+				const body = new StreamBody( stream );
+				setHash( body, testData );
+				expect( await body.text( ) ).to.equal( testData );
+			} );
 		} );
 
-		it( 'handle buffer', async ( ) =>
+		describe( 'mismatching validation', ( ) =>
 		{
-			const body = new DataBody( Buffer.from( "foo" ) );
-			expect( await body.text( ) ).to.equal( "foo" );
-		} );
+			it( 'handle null', async ( ) =>
+			{
+				const body = new DataBody( null );
+				setHash( body, "" + "x" );
+				expect( await makeSync( ( ) => body.text( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 
-		it( 'handle stream', async ( ) =>
-		{
-			const stream = through2( );
-			stream.end( "foo" );
-			const body = new StreamBody( stream );
-			expect( await body.text( ) ).to.equal( "foo" );
+			it( 'handle string', async ( ) =>
+			{
+				const testData = "foo";
+				const body = new DataBody( testData );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.text( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
+
+			it( 'handle buffer', async ( ) =>
+			{
+				const testData = "foo";
+				const body = new DataBody( Buffer.from( testData ) );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.text( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
+
+			it( 'handle stream', async ( ) =>
+			{
+				const testData = "foo";
+				const stream = through2( );
+				stream.end( testData );
+				const body = new StreamBody( stream );
+				setHash( body, testData + "x" );
+				expect( await makeSync( ( ) => body.text( ) ) )
+					.to.throw( "Resource integrity mismatch" );
+			} );
 		} );
 	} );
 
