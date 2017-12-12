@@ -228,7 +228,7 @@ async function fetchImpl(
 
 	function doFetch( ): Promise< Response >
 	{
-		return session.get( url )
+		return session.get( url, init )
 		.then( async h2session =>
 		{
 			const stream = h2session.request( headersToSend, { endStream } );
