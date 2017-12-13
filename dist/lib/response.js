@@ -1,7 +1,8 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
-const { HTTP2_HEADER_LOCATION, HTTP2_HEADER_STATUS, HTTP2_HEADER_CONTENT_TYPE, } = http2_1.constants;
+const zlib_1 = require("zlib");
+const { HTTP2_HEADER_LOCATION, HTTP2_HEADER_STATUS, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_ENCODING, } = http2_1.constants;
 const headers_1 = require("./headers");
 const body_1 = require("./body");
 class Response extends body_1.Body {
@@ -95,13 +96,28 @@ function makeInit(inHeaders) {
     const headers = makeHeadersFromH2Headers(inHeaders);
     return { status, statusText, headers };
 }
-function makeExtra(url, stream, headers, redirected) {
+function makeExtra(url, headers, redirected) {
     const type = 'basic'; // TODO: Implement CORS
     return { redirected, type, url };
 }
+function handleEncoding(stream, headers) {
+    const contentEncoding = headers[HTTP2_HEADER_CONTENT_ENCODING];
+    if (!contentEncoding)
+        return stream;
+    const decoders = {
+        gzip: (stream) => stream.pipe(zlib_1.createGunzip()),
+        deflate: (stream) => stream.pipe(zlib_1.createInflate()),
+    };
+    const decoder = decoders[contentEncoding];
+    if (!decoder)
+        // We haven't asked for this encoding, and we can't handle it.
+        // Pushing raw encoded stream through...
+        return stream;
+    return decoder(stream);
+}
 class H2StreamResponse extends Response {
     constructor(url, stream, headers, redirected) {
-        super(stream, makeInit(headers), makeExtra(url, stream, headers, redirected));
+        super(handleEncoding(stream, headers), makeInit(headers), makeExtra(url, headers, redirected));
     }
 }
 exports.H2StreamResponse = H2StreamResponse;

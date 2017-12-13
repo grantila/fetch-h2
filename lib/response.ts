@@ -6,10 +6,16 @@ import {
 	IncomingHttpHeaders,
 } from 'http2'
 
+import {
+	createGunzip,
+	createInflate,
+} from 'zlib'
+
 const {
 	HTTP2_HEADER_LOCATION,
 	HTTP2_HEADER_STATUS,
 	HTTP2_HEADER_CONTENT_TYPE,
+	HTTP2_HEADER_CONTENT_ENCODING,
 } = h2constants;
 
 
@@ -167,7 +173,6 @@ function makeInit( inHeaders: IncomingHttpHeaders ): Partial< ResponseInit >
 
 function makeExtra(
 	url: string,
-	stream: ClientHttp2Stream,
 	headers: IncomingHttpHeaders,
 	redirected: boolean
 )
@@ -176,6 +181,34 @@ function makeExtra(
 	const type = 'basic'; // TODO: Implement CORS
 
 	return { redirected, type, url };
+}
+
+function handleEncoding(
+	stream: NodeJS.ReadableStream,
+	headers: IncomingHttpHeaders
+)
+: NodeJS.ReadableStream
+{
+	const contentEncoding = headers[ HTTP2_HEADER_CONTENT_ENCODING ] as string;
+
+	if ( !contentEncoding )
+		return stream;
+
+	const decoders = {
+		gzip: ( stream: NodeJS.ReadableStream ) =>
+			stream.pipe( createGunzip( ) ),
+		deflate: ( stream: NodeJS.ReadableStream ) =>
+			stream.pipe( createInflate( ) ),
+	};
+
+	const decoder = decoders[ contentEncoding ];
+
+	if ( !decoder )
+		// We haven't asked for this encoding, and we can't handle it.
+		// Pushing raw encoded stream through...
+		return stream;
+
+	return decoder( stream );
 }
 
 export class H2StreamResponse extends Response
@@ -188,9 +221,9 @@ export class H2StreamResponse extends Response
 	)
 	{
 		super(
-			< NodeJS.ReadableStream >stream,
+			handleEncoding( < NodeJS.ReadableStream >stream, headers ),
 			makeInit( headers ),
-			makeExtra( url, stream, headers, redirected )
+			makeExtra( url, headers, redirected )
 		);
 	}
 }

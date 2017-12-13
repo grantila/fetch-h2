@@ -36,6 +36,7 @@ const {
 	HTTP2_HEADER_COOKIE,
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_CONTENT_LENGTH,
+	HTTP2_HEADER_ACCEPT_ENCODING,
 
 	// Responses
 	HTTP2_HEADER_STATUS,
@@ -121,6 +122,7 @@ async function fetchImpl(
 		// Set default headers
 		[ HTTP2_HEADER_ACCEPT ]: session.accept( ),
 		[ HTTP2_HEADER_USER_AGENT ]: session.userAgent( ),
+		[ HTTP2_HEADER_ACCEPT_ENCODING ]: 'gzip;q=1.0, deflate;q=0.5',
 	};
 
 	if ( cookies.length > 0 )

@@ -6,6 +6,7 @@ const already_1 = require("already");
 const through2 = require("through2");
 const from2 = require("from2");
 const crypto_1 = require("crypto");
+const get_stream_1 = require("get-stream");
 const server_1 = require("../lib/server");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);
@@ -178,7 +179,8 @@ describe('basic', () => {
         });
         await server.shutdown();
     });
-    it('should timeout on a slow request', async () => {
+    it('should timeout on a slow request', async function () {
+        this.timeout(500);
         const { server, port } = await server_1.makeServer();
         const eventual_response = _1.fetch(`http://localhost:${port}/wait/10`, {
             method: 'POST',
@@ -287,6 +289,40 @@ describe('basic', () => {
         }));
         const responseData = await response.json();
         chai_1.expect(responseData[':authority']).to.equal(host);
+        await server.shutdown();
+    });
+    it('should send accept-encoding', async () => {
+        const { server, port } = await server_1.makeServer();
+        const host = 'localhost';
+        const response = ensureStatusSuccess(await _1.fetch(`http://localhost:${port}/headers`));
+        const responseData = await response.json();
+        chai_1.expect(responseData['accept-encoding']).to.contain("gzip");
+        await server.shutdown();
+    });
+    it('should accept content-encoding (gzip)', async () => {
+        const { server, port } = await server_1.makeServer();
+        const host = 'localhost';
+        const testData = { foo: "bar" };
+        const response = ensureStatusSuccess(await _1.fetch(`http://localhost:${port}/compressed/gzip`, {
+            method: 'POST',
+            json: testData,
+        }));
+        const stream = await response.readable();
+        const data = await get_stream_1.buffer(stream);
+        chai_1.expect(JSON.parse(data.toString())).to.deep.equal(testData);
+        await server.shutdown();
+    });
+    it('should accept content-encoding (deflate)', async () => {
+        const { server, port } = await server_1.makeServer();
+        const host = 'localhost';
+        const testData = { foo: "bar" };
+        const response = ensureStatusSuccess(await _1.fetch(`http://localhost:${port}/compressed/deflate`, {
+            method: 'POST',
+            json: testData,
+        }));
+        const stream = await response.readable();
+        const data = await get_stream_1.buffer(stream);
+        chai_1.expect(JSON.parse(data.toString())).to.deep.equal(testData);
         await server.shutdown();
     });
 });

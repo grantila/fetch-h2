@@ -11,6 +11,7 @@ import {
 } from 'http2'
 
 import { createHash } from 'crypto'
+import { createGzip, createDeflate } from 'zlib'
 
 import { buffer as getStreamAsBuffer } from 'get-stream'
 
@@ -20,6 +21,7 @@ const {
 	HTTP2_HEADER_PATH,
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_CONTENT_LENGTH,
+	HTTP2_HEADER_ACCEPT_ENCODING,
 } = constants;
 
 export class Server
@@ -172,6 +174,33 @@ export class Server
 			stream.respond( responseHeaders );
 			stream.write( "push-route" );
 			stream.end( );
+		}
+		else if ( path.startsWith( '/compressed/' ) )
+		{
+			const encoding = path.replace( '/compressed/', '' );
+
+			const accept = headers[ HTTP2_HEADER_ACCEPT_ENCODING ] as string;
+
+			if ( !accept.includes( encoding ) )
+			{
+				stream.destroy( );
+				return;
+			}
+
+			const encoder =
+				encoding === 'gzip'
+				? createGzip( )
+				: encoding === 'deflate'
+				? createDeflate( )
+				: null;
+
+			const responseHeaders = {
+				':status': 200,
+				'content-encoding': encoding,
+			};
+
+			stream.respond( responseHeaders );
+			stream.pipe( encoder ).pipe( stream );
 		}
 		else
 		{

@@ -2,9 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const crypto_1 = require("crypto");
+const zlib_1 = require("zlib");
 const get_stream_1 = require("get-stream");
 const already_1 = require("already");
-const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, } = http2_1.constants;
+const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, HTTP2_HEADER_ACCEPT_ENCODING, } = http2_1.constants;
 class Server {
     constructor() {
         this._server = http2_1.createServer();
@@ -106,6 +107,25 @@ class Server {
             stream.respond(responseHeaders);
             stream.write("push-route");
             stream.end();
+        }
+        else if (path.startsWith('/compressed/')) {
+            const encoding = path.replace('/compressed/', '');
+            const accept = headers[HTTP2_HEADER_ACCEPT_ENCODING];
+            if (!accept.includes(encoding)) {
+                stream.destroy();
+                return;
+            }
+            const encoder = encoding === 'gzip'
+                ? zlib_1.createGzip()
+                : encoding === 'deflate'
+                    ? zlib_1.createDeflate()
+                    : null;
+            const responseHeaders = {
+                ':status': 200,
+                'content-encoding': encoding,
+            };
+            stream.respond(responseHeaders);
+            stream.pipe(encoder).pipe(stream);
         }
         else {
             stream.respond({ ':status': 400 });

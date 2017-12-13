@@ -7,6 +7,7 @@ import { buffer } from 'get-stream';
 import * as through2 from 'through2';
 import * as from2 from 'from2';
 import { createHash } from 'crypto'
+import { buffer as getStreamAsBuffer } from 'get-stream'
 
 import { makeServer } from '../lib/server';
 
@@ -322,8 +323,10 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should timeout on a slow request', async ( ) =>
+	it( 'should timeout on a slow request', async function( )
 	{
+		this.timeout( 500 );
+
 		const { server, port } = await makeServer( );
 
 		const eventual_response = fetch(
@@ -512,6 +515,75 @@ describe( 'basic', ( ) =>
 		const responseData = await response.json( );
 
 		expect( responseData[ ':authority' ] ).to.equal( host );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should send accept-encoding', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const host = 'localhost';
+
+		const response = ensureStatusSuccess(
+			await fetch( `http://localhost:${port}/headers` )
+		);
+
+		const responseData = await response.json( );
+
+		expect( responseData[ 'accept-encoding' ] ).to.contain( "gzip" );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should accept content-encoding (gzip)', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const host = 'localhost';
+		const testData = { foo: "bar" };
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/compressed/gzip`,
+				{
+					method: 'POST',
+					json: testData,
+				}
+			)
+		);
+
+		const stream = await response.readable( );
+
+		const data = await getStreamAsBuffer( stream );
+
+		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
+
+		await server.shutdown( );
+	} );
+
+	it( 'should accept content-encoding (deflate)', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const host = 'localhost';
+		const testData = { foo: "bar" };
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`http://localhost:${port}/compressed/deflate`,
+				{
+					method: 'POST',
+					json: testData,
+				}
+			)
+		);
+
+		const stream = await response.readable( );
+
+		const data = await getStreamAsBuffer( stream );
+
+		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
 
 		await server.shutdown( );
 	} );
