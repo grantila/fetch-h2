@@ -24,14 +24,31 @@ const {
 	HTTP2_HEADER_ACCEPT_ENCODING,
 } = constants;
 
+export interface MatchData
+{
+	path: string;
+	stream: ServerHttp2Stream;
+	headers: IncomingHttpHeaders;
+}
+
+export type Matcher = ( matchData: MatchData ) => boolean;
+
+export interface ServerOptions
+{
+	port?: number;
+	matchers?: ReadonlyArray< Matcher >;
+}
+
 export class Server
 {
+	private _opts: ServerOptions;
 	private _server: Http2Server;
 	private _sessions: Set< Http2Session >;
 	port: number;
 
-	constructor( )
+	constructor( opts: ServerOptions )
 	{
+		this._opts = opts || { };
 		this._server = createServer( );
 		this._sessions = new Set( );
 		this.port = null;
@@ -204,8 +221,14 @@ export class Server
 		}
 		else
 		{
-			stream.respond( { ':status': 400 } );
-			stream.end( );
+			const matched = ( this._opts.matchers || [ ] )
+				.some( matcher => matcher( { path, stream, headers } ) );
+
+			if ( !matched )
+			{
+				stream.respond( { ':status': 400 } );
+				stream.end( );
+			}
 		}
 	}
 
@@ -236,11 +259,12 @@ export class Server
 	}
 }
 
-
-export async function makeServer( port: number = null )
+export async function makeServer( opts: ServerOptions = { } )
 : Promise< { server: Server; port: number; } >
 {
-	const server = new Server( );
-	await server.listen( port );
+	opts = opts || { };
+
+	const server = new Server( opts );
+	await server.listen( opts.port );
 	return { server, port: server.port };
 }

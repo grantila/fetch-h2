@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("mocha");
 const chai_1 = require("chai");
-//import { buffer as getStreamAsBuffer } from 'get-stream';
-//import * as through2 from 'through2';
-//import { createHash } from 'crypto';
 const server_1 = require("../lib/server");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);

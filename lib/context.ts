@@ -17,6 +17,7 @@ import { syncGuard, asyncGuard } from 'callguard'
 import {
 	FetchInit,
 	SimpleSession,
+	Decoder,
 	TimeoutError,
 	AbortError,
 } from './core'
@@ -50,6 +51,7 @@ export interface ContextOptions
 	overwriteUserAgent: boolean;
 	accept: string;
 	cookieJar: CookieJar;
+	decoders: ReadonlyArray< Decoder >;
 }
 
 interface SessionItem
@@ -84,30 +86,41 @@ export class Context
 	private _accept: string;
 	private _cookieJar: CookieJar;
 	private _pushHandler: PushHandler;
+	private _decoders: ReadonlyArray< Decoder >;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
 		this._h2sessions = new Map( );
 
+		this.setup( opts );
+	}
+
+	public setup( opts?: Partial< ContextOptions > )
+	{
+		opts = opts || { };
+
 		this._userAgent =
 			(
-				opts &&
 				'userAgent' in opts &&
 				'overwriteUserAgent' in opts &&
 				opts.overwriteUserAgent
 			)
 			? opts.userAgent
-			: opts && 'userAgent' in opts
+			: 'userAgent' in opts
 			? opts.userAgent + " " + defaultUserAgent
 			: defaultUserAgent;
 
-		this._accept = opts && 'accept' in opts
+		this._accept = 'accept' in opts
 			? opts.accept
 			: defaultAccept;
 
-		this._cookieJar = opts && 'cookieJar' in opts
+		this._cookieJar = 'cookieJar' in opts
 			? opts.cookieJar
 			: new CookieJar( );
+
+		this._decoders = 'decoders' in opts
+			? opts.decoders || [ ]
+			: [ ];
 	}
 
 	public onPush( pushHandler: PushHandler )
@@ -148,7 +161,12 @@ export class Context
 			pushedStream.once( 'push', guard( responseHeaders =>
 			{
 				const response = new H2StreamResponse(
-					path, pushedStream, responseHeaders, false );
+					this._decoders,
+					path,
+					pushedStream,
+					responseHeaders,
+					false
+				);
 
 				resolve( response );
 			} ) );
@@ -249,13 +267,12 @@ export class Context
 		} );
 	}
 
-	private get(
-		url: string,
-		options?: SessionOptions | SecureClientSessionOptions
-	)
+	private get( url: string )
 	: Promise< ClientHttp2Session >
 	{
 		const { origin } = new URL( url );
+
+		const options: SessionOptions | SecureClientSessionOptions = null;
 
 		return this.getOrCreate( origin, options );
 	}
@@ -279,13 +296,11 @@ export class Context
 	: Promise< Response >
 	{
 		const sessionGetter: SimpleSession = {
-			get: (
-					url: string,
-					options?: SessionOptions | SecureClientSessionOptions
-				) => this.get( url, options ),
+			get: ( url: string ) => this.get( url ),
 			userAgent: ( ) => this._userAgent,
 			accept: ( ) => this._accept,
 			cookieJar: this._cookieJar,
+			contentDecoders: ( ) => this._decoders,
 		};
 		return fetch( sessionGetter, input, init );
 	}

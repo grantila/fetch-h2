@@ -58,9 +58,15 @@ export declare class AbortError extends Error {
 export declare class TimeoutError extends Error {
     constructor(message: string);
 }
+export declare type DecodeFunction = (stream: NodeJS.ReadableStream) => NodeJS.ReadableStream;
+export interface Decoder {
+    name: string;
+    decode: DecodeFunction;
+}
 export interface SimpleSession {
     get(url: string | URL, options?: SessionOptions | SecureClientSessionOptions): Promise<ClientHttp2Session>;
     userAgent(): string;
     accept(): string;
     cookieJar: CookieJar;
+    contentDecoders(): ReadonlyArray<Decoder>;
 }

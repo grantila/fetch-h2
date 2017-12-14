@@ -30,21 +30,27 @@ function isOkError(err) {
 class Context {
     constructor(opts) {
         this._h2sessions = new Map();
+        this.setup(opts);
+    }
+    setup(opts) {
+        opts = opts || {};
         this._userAgent =
-            (opts &&
-                'userAgent' in opts &&
+            ('userAgent' in opts &&
                 'overwriteUserAgent' in opts &&
                 opts.overwriteUserAgent)
                 ? opts.userAgent
-                : opts && 'userAgent' in opts
+                : 'userAgent' in opts
                     ? opts.userAgent + " " + defaultUserAgent
                     : defaultUserAgent;
-        this._accept = opts && 'accept' in opts
+        this._accept = 'accept' in opts
             ? opts.accept
             : defaultAccept;
-        this._cookieJar = opts && 'cookieJar' in opts
+        this._cookieJar = 'cookieJar' in opts
             ? opts.cookieJar
             : new cookie_jar_1.CookieJar();
+        this._decoders = 'decoders' in opts
+            ? opts.decoders || []
+            : [];
     }
     onPush(pushHandler) {
         this._pushHandler = pushHandler;
@@ -64,7 +70,7 @@ class Context {
             pushedStream.once('frameError', () => reject(new Error("Push request failed")));
             pushedStream.once('error', reject);
             pushedStream.once('push', guard(responseHeaders => {
-                const response = new response_1.H2StreamResponse(path, pushedStream, responseHeaders, false);
+                const response = new response_1.H2StreamResponse(this._decoders, path, pushedStream, responseHeaders, false);
                 resolve(response);
             }));
         });
@@ -118,8 +124,9 @@ class Context {
             return this.getOrCreate(origin, options, true);
         });
     }
-    get(url, options) {
+    get(url) {
         const { origin } = new url_1.URL(url);
+        const options = null;
         return this.getOrCreate(origin, options);
     }
     handleDisconnect(sessionItem) {
@@ -134,10 +141,11 @@ class Context {
     }
     fetch(input, init) {
         const sessionGetter = {
-            get: (url, options) => this.get(url, options),
+            get: (url) => this.get(url),
             userAgent: () => this._userAgent,
             accept: () => this._accept,
             cookieJar: this._cookieJar,
+            contentDecoders: () => this._decoders,
         };
         return fetch_1.fetch(sessionGetter, input, init);
     }

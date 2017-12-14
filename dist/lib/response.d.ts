@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { ClientHttp2Stream, IncomingHttpHeaders } from 'http2';
-import { BodyTypes, ResponseInit, ResponseTypes } from './core';
+import { BodyTypes, ResponseInit, ResponseTypes, Decoder } from './core';
 import { Headers } from './headers';
 import { Body } from './body';
 export declare class Response extends Body {
@@ -18,5 +18,5 @@ export declare class Response extends Body {
     static redirect(url: string, status?: number): Response;
 }
 export declare class H2StreamResponse extends Response {
-    constructor(url: string, stream: ClientHttp2Stream, headers: IncomingHttpHeaders, redirected: boolean);
+    constructor(contentDecoders: ReadonlyArray<Decoder>, url: string, stream: ClientHttp2Stream, headers: IncomingHttpHeaders, redirected: boolean);
 }

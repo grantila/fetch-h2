@@ -9,12 +9,17 @@ import {
 	TimeoutError,
 	FetchInit,
 	OnTrailers,
+	DecodeFunction,
+	Decoder,
 } from './lib/core'
 import { Context, ContextOptions, PushHandler } from './lib/context'
 
 
 const defaultContext = new Context( );
 
+const setup =
+	( opts: ContextOptions ) =>
+		defaultContext.setup( opts );
 const fetch =
 	( input: string | Request, init?: Partial< FetchInit > ) =>
 		defaultContext.fetch( input, init );
@@ -32,6 +37,7 @@ function context( opts?: Partial< ContextOptions > )
 {
 	const ctx = new Context( opts );
 	return {
+		setup: ctx.setup.bind( ctx ) as typeof setup,
 		fetch: ctx.fetch.bind( ctx ) as typeof fetch,
 		disconnect: ctx.disconnect.bind( ctx ) as typeof disconnect,
 		disconnectAll: ctx.disconnectAll.bind( ctx ) as typeof disconnectAll,
@@ -40,6 +46,7 @@ function context( opts?: Partial< ContextOptions > )
 }
 
 export {
+	setup,
 	context,
 	fetch,
 	disconnect,
@@ -57,4 +64,7 @@ export {
 	AbortError,
 	TimeoutError,
 	OnTrailers,
+	ContextOptions,
+	DecodeFunction,
+	Decoder,
 }

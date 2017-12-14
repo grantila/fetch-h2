@@ -52,6 +52,12 @@ async function fetchImpl(session, input, init = {}, extra) {
     const headers = new headers_1.Headers(req.headers);
     const cookies = (await session.cookieJar.getCookies(url))
         .map(cookie => cookie.cookieString());
+    const contentDecoders = session.contentDecoders();
+    const acceptEncoding = contentDecoders.length === 0
+        ? 'gzip;q=1.0, deflate;q=0.5'
+        : contentDecoders
+            .map(decoder => `${decoder.name};q=1.0`)
+            .join(', ') + ', gzip;q=0.8, deflate;q=0.5';
     if (headers.has(HTTP2_HEADER_COOKIE))
         cookies.push(...utils_1.arrayify(headers.get(HTTP2_HEADER_COOKIE)));
     const headersToSend = {
@@ -62,7 +68,7 @@ async function fetchImpl(session, input, init = {}, extra) {
         // Set default headers
         [HTTP2_HEADER_ACCEPT]: session.accept(),
         [HTTP2_HEADER_USER_AGENT]: session.userAgent(),
-        [HTTP2_HEADER_ACCEPT_ENCODING]: 'gzip;q=1.0, deflate;q=0.5',
+        [HTTP2_HEADER_ACCEPT_ENCODING]: acceptEncoding,
     };
     if (cookies.length > 0)
         headersToSend[HTTP2_HEADER_COOKIE] = cookies.join('; ');
@@ -205,7 +211,7 @@ async function fetchImpl(session, input, init = {}, extra) {
                         return reject(new Error("Server responded illegally with a " +
                             "redirect code but missing 'location' header"));
                     if (!isRedirected || redirect === 'manual')
-                        return resolve(new response_1.H2StreamResponse(url, stream, headers, redirect === 'manual'
+                        return resolve(new response_1.H2StreamResponse(contentDecoders, url, stream, headers, redirect === 'manual'
                             ? false
                             : extra.redirected.length > 0));
                     if (redirect === 'error')

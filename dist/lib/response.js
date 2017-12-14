@@ -100,7 +100,7 @@ function makeExtra(url, headers, redirected) {
     const type = 'basic'; // TODO: Implement CORS
     return { redirected, type, url };
 }
-function handleEncoding(stream, headers) {
+function handleEncoding(contentDecoders, stream, headers) {
     const contentEncoding = headers[HTTP2_HEADER_CONTENT_ENCODING];
     if (!contentEncoding)
         return stream;
@@ -108,6 +108,9 @@ function handleEncoding(stream, headers) {
         gzip: (stream) => stream.pipe(zlib_1.createGunzip()),
         deflate: (stream) => stream.pipe(zlib_1.createInflate()),
     };
+    contentDecoders.forEach(decoder => {
+        decoders[decoder.name] = decoder.decode;
+    });
     const decoder = decoders[contentEncoding];
     if (!decoder)
         // We haven't asked for this encoding, and we can't handle it.
@@ -116,8 +119,8 @@ function handleEncoding(stream, headers) {
     return decoder(stream);
 }
 class H2StreamResponse extends Response {
-    constructor(url, stream, headers, redirected) {
-        super(handleEncoding(stream, headers), makeInit(headers), makeExtra(url, headers, redirected));
+    constructor(contentDecoders, url, stream, headers, redirected) {
+        super(handleEncoding(contentDecoders, stream, headers), makeInit(headers), makeExtra(url, headers, redirected));
     }
 }
 exports.H2StreamResponse = H2StreamResponse;

@@ -12,9 +12,9 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 `fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
 
-**NOTE;** HTTP/2 support was recently introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag.
+By default, `fetch-h2` will accept `gzip` and `deflate` encodings, and decode transparently. If you also want to allow Brotli (`br`), use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
 
-**DISCLAIMER: This is an early project, don't expect everything to "just work".**
+**NOTE;** HTTP/2 support was recently introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag.
 
 
 ## Imports
@@ -29,6 +29,7 @@ const { fetch } = require( 'fetch-h2' );
 
 ```ts
 import {
+    setup,
     context,
     fetch,
     disconnect,
@@ -41,12 +42,18 @@ import {
     AbortError,
     TimeoutError,
 
+    ContextOptions,
+    DecodeFunction,
+    Decoder,
+
     // TypeScript types:
     OnTrailers,
 } from 'fetch-h2'
 ```
 
-Apart from the obvious `fetch`, the functions `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
+Apart from the obvious `fetch`, the functions `setup`, `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
+
+The `ContextOptions`, `DecodeFunction` and `Decoder` types are described below.
 
 The `OnTrailers` is the type for the `onTrailers` callback.
 
@@ -148,6 +155,36 @@ If you want one specific context in a file, why not destructure the return in on
 import { context } from 'fetch-h2'
 const { fetch, disconnect, disconnectAll, onPush } = context( );
 ```
+
+Contexts can be configured with options when constructed. The default context can be configured using the `setup( )` function, but if this function is used, call it only once, and before any usage of `fetch-h2`, or the result is undefined.
+
+### Context configuration
+
+The options to `setup( )` are the same as those to `context( )` and is available as a TypeScript type `ContextOptions`.
+
+```ts
+// The options object
+interface ContextOptions
+{
+    userAgent: string;
+    overwriteUserAgent: boolean;
+    accept: string;
+    //cookieJar: CookieJar;
+    decoders: ReadonlyArray< Decoder >;
+}
+```
+
+By specifying a `userAgent` string, this will be added to the built-in `user-agent` header. If defined, and `overwriteUserAgent` is true, the built-in user agent string will not be sent.
+
+`accept` can be specified, which is the `accept` header. The default is:
+
+```
+application/json, text/*;0.9, */*;q=0.8
+```
+
+`cookieJar` can be set to a custom cookie jar. This logic is currently not decided upon, don't use this.
+
+`decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
 
 
 ## Errors

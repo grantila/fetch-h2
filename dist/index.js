@@ -16,6 +16,8 @@ exports.AbortError = core_1.AbortError;
 exports.TimeoutError = core_1.TimeoutError;
 const context_1 = require("./lib/context");
 const defaultContext = new context_1.Context();
+const setup = (opts) => defaultContext.setup(opts);
+exports.setup = setup;
 const fetch = (input, init) => defaultContext.fetch(input, init);
 exports.fetch = fetch;
 const disconnect = (url) => defaultContext.disconnect(url);
@@ -27,6 +29,7 @@ exports.onPush = onPush;
 function context(opts) {
     const ctx = new context_1.Context(opts);
     return {
+        setup: ctx.setup.bind(ctx),
         fetch: ctx.fetch.bind(ctx),
         disconnect: ctx.disconnect.bind(ctx),
         disconnectAll: ctx.disconnectAll.bind(ctx),

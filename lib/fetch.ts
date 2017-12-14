@@ -110,6 +110,15 @@ async function fetchImpl(
 	const cookies = ( await session.cookieJar.getCookies( url ) )
 		.map( cookie => cookie.cookieString( ) );
 
+	const contentDecoders = session.contentDecoders( );
+
+	const acceptEncoding =
+		contentDecoders.length === 0
+		? 'gzip;q=1.0, deflate;q=0.5'
+		: contentDecoders
+			.map( decoder => `${decoder.name};q=1.0` )
+			.join( ', ' ) + ', gzip;q=0.8, deflate;q=0.5';
+
 	if ( headers.has( HTTP2_HEADER_COOKIE ) )
 		cookies.push( ...arrayify( headers.get( HTTP2_HEADER_COOKIE ) ) );
 
@@ -122,7 +131,7 @@ async function fetchImpl(
 		// Set default headers
 		[ HTTP2_HEADER_ACCEPT ]: session.accept( ),
 		[ HTTP2_HEADER_USER_AGENT ]: session.userAgent( ),
-		[ HTTP2_HEADER_ACCEPT_ENCODING ]: 'gzip;q=1.0, deflate;q=0.5',
+		[ HTTP2_HEADER_ACCEPT_ENCODING ]: acceptEncoding,
 	};
 
 	if ( cookies.length > 0 )
@@ -350,6 +359,7 @@ async function fetchImpl(
 					if ( !isRedirected || redirect === 'manual' )
 						return resolve(
 							new H2StreamResponse(
+								contentDecoders,
 								url,
 								stream,
 								headers,

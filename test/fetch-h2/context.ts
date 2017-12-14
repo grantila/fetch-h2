@@ -2,9 +2,6 @@
 
 import 'mocha';
 import { expect } from 'chai';
-//import { buffer as getStreamAsBuffer } from 'get-stream';
-//import * as through2 from 'through2';
-//import { createHash } from 'crypto';
 
 import { makeServer } from '../lib/server';
 

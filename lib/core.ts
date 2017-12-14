@@ -170,6 +170,15 @@ export class TimeoutError extends Error
 	}
 }
 
+export type DecodeFunction =
+	( stream: NodeJS.ReadableStream ) => NodeJS.ReadableStream;
+
+export interface Decoder
+{
+	name: string;
+	decode: DecodeFunction;
+}
+
 export interface SimpleSession
 {
 	get(
@@ -181,4 +190,6 @@ export interface SimpleSession
 	accept( ): string;
 
 	cookieJar: CookieJar;
+
+	contentDecoders( ): ReadonlyArray< Decoder >;
 }

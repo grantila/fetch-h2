@@ -23,6 +23,8 @@ import {
 	BodyTypes,
 	ResponseInit,
 	ResponseTypes,
+	Decoder,
+	DecodeFunction,
 } from './core'
 
 import {
@@ -184,6 +186,7 @@ function makeExtra(
 }
 
 function handleEncoding(
+	contentDecoders: ReadonlyArray< Decoder >,
 	stream: NodeJS.ReadableStream,
 	headers: IncomingHttpHeaders
 )
@@ -194,12 +197,17 @@ function handleEncoding(
 	if ( !contentEncoding )
 		return stream;
 
-	const decoders = {
+	const decoders: { [ name: string ]: DecodeFunction; } = {
 		gzip: ( stream: NodeJS.ReadableStream ) =>
 			stream.pipe( createGunzip( ) ),
 		deflate: ( stream: NodeJS.ReadableStream ) =>
 			stream.pipe( createInflate( ) ),
 	};
+
+	contentDecoders.forEach( decoder =>
+	{
+		decoders[ decoder.name ] = decoder.decode;
+	} );
 
 	const decoder = decoders[ contentEncoding ];
 
@@ -214,6 +222,7 @@ function handleEncoding(
 export class H2StreamResponse extends Response
 {
 	constructor(
+		contentDecoders: ReadonlyArray< Decoder >,
 		url: string,
 		stream: ClientHttp2Stream,
 		headers: IncomingHttpHeaders,
@@ -221,7 +230,11 @@ export class H2StreamResponse extends Response
 	)
 	{
 		super(
-			handleEncoding( < NodeJS.ReadableStream >stream, headers ),
+			handleEncoding(
+				contentDecoders,
+				< NodeJS.ReadableStream >stream,
+				headers
+			),
 			makeInit( headers ),
 			makeExtra( url, headers, redirected )
 		);

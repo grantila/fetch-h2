@@ -52,7 +52,7 @@
     "mocha": "4.x",
     "rimraf": "2.x",
     "ts-node": "3.x",
-    "typescript": "2.5.x"
+    "typescript": "2.6.x"
   },
   "dependencies": {
     "already": "0.x",

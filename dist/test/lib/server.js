@@ -7,7 +7,8 @@ const get_stream_1 = require("get-stream");
 const already_1 = require("already");
 const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, HTTP2_HEADER_ACCEPT_ENCODING, } = http2_1.constants;
 class Server {
-    constructor() {
+    constructor(opts) {
+        this._opts = opts || {};
         this._server = http2_1.createServer();
         this._sessions = new Set();
         this.port = null;
@@ -128,8 +129,12 @@ class Server {
             stream.pipe(encoder).pipe(stream);
         }
         else {
-            stream.respond({ ':status': 400 });
-            stream.end();
+            const matched = (this._opts.matchers || [])
+                .some(matcher => matcher({ path, stream, headers }));
+            if (!matched) {
+                stream.respond({ ':status': 400 });
+                stream.end();
+            }
         }
     }
     listen(port = void 0) {
@@ -152,9 +157,10 @@ class Server {
     }
 }
 exports.Server = Server;
-async function makeServer(port = null) {
-    const server = new Server();
-    await server.listen(port);
+async function makeServer(opts = {}) {
+    opts = opts || {};
+    const server = new Server(opts);
+    await server.listen(opts.port);
     return { server, port: server.port };
 }
 exports.makeServer = makeServer;
