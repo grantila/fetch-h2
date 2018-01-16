@@ -339,4 +339,13 @@ describe('basic', () => {
         await server.shutdown();
     });
 });
+describe('response', () => {
+    it('should have a proper url', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url = `http://localhost:${port}/headers`;
+        const response = ensureStatusSuccess(await _1.fetch(url));
+        chai_1.expect(response.url).to.equal(url);
+        await server.shutdown();
+    });
+});
 //# sourceMappingURL=index.js.map

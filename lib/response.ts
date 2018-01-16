@@ -75,7 +75,7 @@ export class Response extends Body
 
 		const type = _extra.type || 'basic';
 		const redirected = !!_extra.redirected || false;
-		const url = !!_extra.url || '';
+		const url = _extra.url || '';
 
 		Object.defineProperties( this, {
 			headers: {

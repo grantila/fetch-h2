@@ -611,3 +611,19 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 } );
+
+describe( 'response', ( ) =>
+{
+	it( 'should have a proper url', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const url = `http://localhost:${port}/headers`;
+
+		const response = ensureStatusSuccess( await fetch( url ) );
+
+		expect( response.url ).to.equal( url );
+
+		await server.shutdown( );
+	} );
+} );

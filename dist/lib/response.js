@@ -18,7 +18,7 @@ class Response extends body_1.Body {
         const _extra = (extra || {});
         const type = _extra.type || 'basic';
         const redirected = !!_extra.redirected || false;
-        const url = !!_extra.url || '';
+        const url = _extra.url || '';
         Object.defineProperties(this, {
             headers: {
                 enumerable: true,
