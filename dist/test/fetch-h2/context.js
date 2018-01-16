@@ -14,7 +14,7 @@ function ensureStatusSuccess(response) {
 const key = fs_1.readFileSync(__dirname + "/../../../certs/key.pem");
 const cert = fs_1.readFileSync(__dirname + "/../../../certs/cert.pem");
 describe('context', function () {
-    this.timeout(300);
+    this.timeout(500);
     describe('options', () => {
         it('should be able to overwrite default user agent', async () => {
             const { server, port } = await server_1.makeServer();

@@ -36,7 +36,7 @@ const cert = readFileSync( __dirname + "/../../../certs/cert.pem" );
 
 describe( 'context', function( )
 {
-	this.timeout( 300 );
+	this.timeout( 500 );
 
 	describe( 'options', ( ) =>
 	{
