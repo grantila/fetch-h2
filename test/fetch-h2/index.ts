@@ -90,6 +90,29 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
+	it( 'should be able to get upper-case headers', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const json = { foo: 'bar' };
+
+		const response = await fetch(
+			`http://localhost:${port}/echo`,
+			{
+				method: 'POST',
+				json
+			}
+		);
+
+		const data = await response.json( );
+		const { headers } = response;
+
+		expect( headers.get( 'Content-Type' ) ).to.equal( 'application/json' );
+		expect( data ).to.deep.equal( json );
+
+		await server.shutdown( );
+	} );
+
 	it( 'should be able to set numeric headers', async ( ) =>
 	{
 		const { server, port } = await makeServer( );

@@ -118,8 +118,8 @@ class Headers {
     }
     get(name) {
         const _name = filterName(name);
-        return this._data.has(name)
-            ? this._data.get(name).join(',')
+        return this._data.has(_name)
+            ? this._data.get(_name).join(',')
             : null;
     }
     has(name) {
