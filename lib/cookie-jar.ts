@@ -7,14 +7,19 @@ export class CookieJar
 {
 	private _jar: ToughCookieJar;
 
-	constructor( )
+	constructor( jar = new ToughCookieJar( ) )
 	{
-		this._jar = new ToughCookieJar( );
+		this.reset( jar );
 	}
 
-	setCookie( cookie: string | Cookie, url: string ): Promise< any >
+	reset( jar = new ToughCookieJar( ) )
 	{
-		return new Promise< any >( ( resolve, reject ) =>
+		this._jar = jar;
+	}
+
+	setCookie( cookie: string | Cookie, url: string ): Promise< Cookie >
+	{
+		return new Promise< Cookie >( ( resolve, reject ) =>
 		{
 			this._jar.setCookie( cookie, url, ( err, cookie ) =>
 			{
@@ -25,23 +30,23 @@ export class CookieJar
 		} );
 	}
 
-	async setCookies( cookies: ReadonlyArray< string | Cookie >, url: string )
-	: Promise< any >
+	setCookies( cookies: ReadonlyArray< string | Cookie >, url: string )
+	: Promise< ReadonlyArray< Cookie > >
 	{
-		await Promise.all(
+		return Promise.all(
 			cookies.map( cookie => this.setCookie( cookie, url ) )
 		);
 	}
 
-	getCookies( url: string ): Promise< any >
+	getCookies( url: string ): Promise< ReadonlyArray< Cookie > >
 	{
-		return new Promise< any >( ( resolve, reject ) =>
+		return new Promise< ReadonlyArray< Cookie > >( ( resolve, reject ) =>
 		{
-			this._jar.getCookies( url, ( err, cookie ) =>
+			this._jar.getCookies( url, ( err, cookies ) =>
 			{
 				if ( err )
 					return reject( err );
-				resolve( cookie );
+				resolve( cookies );
 			} );
 		} );
 	}

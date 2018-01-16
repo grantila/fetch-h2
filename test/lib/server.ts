@@ -24,6 +24,7 @@ const {
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_CONTENT_LENGTH,
 	HTTP2_HEADER_ACCEPT_ENCODING,
+	HTTP2_HEADER_SET_COOKIE,
 } = constants;
 
 export interface MatchData
@@ -105,6 +106,23 @@ export class Server
 
 			stream.respond( responseHeaders );
 			stream.pipe( stream );
+		}
+		else if ( path === '/set-cookie' )
+		{
+			const responseHeaders: any = {
+				':status': 200,
+				[ HTTP2_HEADER_SET_COOKIE ]: [ ],
+			};
+
+			const data = await getStreamAsBuffer( stream );
+			const json = JSON.parse( data.toString( ) );
+			json.forEach( cookie =>
+			{
+				responseHeaders[ HTTP2_HEADER_SET_COOKIE ].push( cookie )
+			} );
+
+			stream.respond( responseHeaders );
+			stream.end( );
 		}
 		else if ( m = path.match( /\/wait\/(.+)/ ) )
 		{

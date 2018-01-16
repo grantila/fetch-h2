@@ -13,6 +13,7 @@ import {
 	Decoder,
 } from './lib/core'
 import { Context, ContextOptions, PushHandler } from './lib/context'
+import { CookieJar } from './lib/cookie-jar'
 
 
 const defaultContext = new Context( );
@@ -67,4 +68,5 @@ export {
 	ContextOptions,
 	DecodeFunction,
 	Decoder,
+	CookieJar,
 }

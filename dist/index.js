@@ -15,6 +15,8 @@ const core_1 = require("./lib/core");
 exports.AbortError = core_1.AbortError;
 exports.TimeoutError = core_1.TimeoutError;
 const context_1 = require("./lib/context");
+const cookie_jar_1 = require("./lib/cookie-jar");
+exports.CookieJar = cookie_jar_1.CookieJar;
 const defaultContext = new context_1.Context();
 const setup = (opts) => defaultContext.setup(opts);
 exports.setup = setup;

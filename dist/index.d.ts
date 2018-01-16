@@ -4,6 +4,7 @@ import { Request } from './lib/request';
 import { Response } from './lib/response';
 import { AbortError, TimeoutError, FetchInit, OnTrailers, DecodeFunction, Decoder } from './lib/core';
 import { ContextOptions, PushHandler } from './lib/context';
+import { CookieJar } from './lib/cookie-jar';
 declare const setup: (opts: ContextOptions) => void;
 declare const fetch: (input: string | Request, init?: Partial<FetchInit>) => Promise<Response>;
 declare const disconnect: (url: string) => Promise<void>;
@@ -16,4 +17,4 @@ declare function context(opts?: Partial<ContextOptions>): {
     disconnectAll: () => Promise<void>;
     onPush: (handler: PushHandler) => void;
 };
-export { setup, context, fetch, disconnect, disconnectAll, onPush, Body, JsonBody, StreamBody, DataBody, Headers, Request, Response, AbortError, TimeoutError, OnTrailers, ContextOptions, DecodeFunction, Decoder };
+export { setup, context, fetch, disconnect, disconnectAll, onPush, Body, JsonBody, StreamBody, DataBody, Headers, Request, Response, AbortError, TimeoutError, OnTrailers, ContextOptions, DecodeFunction, Decoder, CookieJar };

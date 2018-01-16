@@ -46,6 +46,8 @@ import {
     DecodeFunction,
     Decoder,
 
+    CookieJar,
+
     // TypeScript types:
     OnTrailers,
 } from 'fetch-h2'
@@ -54,6 +56,8 @@ import {
 Apart from the obvious `fetch`, the functions `setup`, `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
 
 The `ContextOptions`, `DecodeFunction` and `Decoder` types are described below.
+
+The `CookieJar` class can be used to control cookie handling (e.g. to read the cookies manually).
 
 The `OnTrailers` is the type for the `onTrailers` callback.
 
@@ -169,7 +173,7 @@ interface ContextOptions
     userAgent: string;
     overwriteUserAgent: boolean;
     accept: string;
-    //cookieJar: CookieJar;
+    cookieJar: CookieJar;
     decoders: ReadonlyArray< Decoder >;
     session: SecureClientSessionOptions;
 }
@@ -183,7 +187,18 @@ By specifying a `userAgent` string, this will be added to the built-in `user-age
 application/json, text/*;0.9, */*;q=0.8
 ```
 
-`cookieJar` can be set to a custom cookie jar. This logic is currently not decided upon, don't use this.
+`cookieJar` can be set to a custom cookie jar, constructed as `new CookieJar( )`. `CookieJar` is a class exported by `fetch-h2` and has three functions:
+
+```ts
+{
+    setCookie( cookie: string | Cookie, url: string ): Promise< Cookie >;
+    setCookies( cookies: ReadonlyArray< string | Cookie >, url: string ): Promise< Cookie >;
+    getCookies( url: string ): Promise< ReadonlyArray< Cookie > >;
+    reset( ); // Clears all cookies
+}
+```
+
+where `Cookie` is a [`tough-cookie` Cookie](https://www.npmjs.com/package/tough-cookie#cookie).
 
 `decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
 

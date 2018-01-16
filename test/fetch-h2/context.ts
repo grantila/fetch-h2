@@ -18,6 +18,7 @@ import {
 	Response,
 	Headers,
 	OnTrailers,
+	CookieJar,
 } from '../../';
 
 afterEach( disconnectAll );
@@ -148,6 +149,66 @@ describe( 'context', ( ) =>
 
 			const res = await response.json( );
 			expect( res[ 'user-agent' ] ).to.equal( 'foobar' );
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+	} );
+
+	describe( 'cookies', ( ) =>
+	{
+		it( 'should be able to specify custom cookie jar', async ( ) =>
+		{
+			const { server, port } = await makeServer( );
+
+			const cookieJar = new CookieJar( );
+
+			expect(
+				await cookieJar.getCookies( `http://localhost:${port}/` )
+			).to.be.empty;
+
+			const { disconnectAll, fetch } = context( {
+				userAgent: 'foobar',
+				overwriteUserAgent: true,
+				cookieJar,
+			} );
+
+			const response =
+				await fetch( `http://localhost:${port}/set-cookie`, {
+					json: [ "a=b" , "c=d" ],
+					method: 'POST',
+				} );
+
+			const cookies =
+				await cookieJar.getCookies( `http://localhost:${port}/` );
+
+			expect( cookies ).to.not.be.empty;
+			expect( cookies[ 0 ].key ).to.equal( "a" );
+			expect( cookies[ 0 ].value ).to.equal( "b" );
+			expect( cookies[ 1 ].key ).to.equal( "c" );
+			expect( cookies[ 1 ].value ).to.equal( "d" );
+
+			// Next request should maintain cookies
+
+			const response2 = await fetch( `http://localhost:${port}/echo` );
+
+			const cookies2 =
+				await cookieJar.getCookies( `http://localhost:${port}/` );
+
+			expect( cookies2 ).to.not.be.empty;
+
+			// If we manually clear the cookie jar, subsequent requests
+			// shouldn't have any cookies
+
+			cookieJar.reset( );
+
+			const response3 = await fetch( `http://localhost:${port}/echo` );
+
+			const cookies3 =
+				await cookieJar.getCookies( `http://localhost:${port}/` );
+
+			expect( cookies3 ).to.be.empty;
 
 			disconnectAll( );
 

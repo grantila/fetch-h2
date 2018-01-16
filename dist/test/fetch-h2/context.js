@@ -86,5 +86,39 @@ describe('context', () => {
             await server.shutdown();
         });
     });
+    describe('cookies', () => {
+        it('should be able to specify custom cookie jar', async () => {
+            const { server, port } = await server_1.makeServer();
+            const cookieJar = new _1.CookieJar();
+            chai_1.expect(await cookieJar.getCookies(`http://localhost:${port}/`)).to.be.empty;
+            const { disconnectAll, fetch } = _1.context({
+                userAgent: 'foobar',
+                overwriteUserAgent: true,
+                cookieJar,
+            });
+            const response = await fetch(`http://localhost:${port}/set-cookie`, {
+                json: ["a=b", "c=d"],
+                method: 'POST',
+            });
+            const cookies = await cookieJar.getCookies(`http://localhost:${port}/`);
+            chai_1.expect(cookies).to.not.be.empty;
+            chai_1.expect(cookies[0].key).to.equal("a");
+            chai_1.expect(cookies[0].value).to.equal("b");
+            chai_1.expect(cookies[1].key).to.equal("c");
+            chai_1.expect(cookies[1].value).to.equal("d");
+            // Next request should maintain cookies
+            const response2 = await fetch(`http://localhost:${port}/echo`);
+            const cookies2 = await cookieJar.getCookies(`http://localhost:${port}/`);
+            chai_1.expect(cookies2).to.not.be.empty;
+            // If we manually clear the cookie jar, subsequent requests
+            // shouldn't have any cookies
+            cookieJar.reset();
+            const response3 = await fetch(`http://localhost:${port}/echo`);
+            const cookies3 = await cookieJar.getCookies(`http://localhost:${port}/`);
+            chai_1.expect(cookies3).to.be.empty;
+            disconnectAll();
+            await server.shutdown();
+        });
+    });
 });
 //# sourceMappingURL=context.js.map

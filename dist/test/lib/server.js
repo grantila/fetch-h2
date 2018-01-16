@@ -5,7 +5,7 @@ const crypto_1 = require("crypto");
 const zlib_1 = require("zlib");
 const get_stream_1 = require("get-stream");
 const already_1 = require("already");
-const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, HTTP2_HEADER_ACCEPT_ENCODING, } = http2_1.constants;
+const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, HTTP2_HEADER_ACCEPT_ENCODING, HTTP2_HEADER_SET_COOKIE, } = http2_1.constants;
 class Server {
     constructor(opts) {
         this._opts = opts || {};
@@ -45,6 +45,19 @@ class Server {
             });
             stream.respond(responseHeaders);
             stream.pipe(stream);
+        }
+        else if (path === '/set-cookie') {
+            const responseHeaders = {
+                ':status': 200,
+                [HTTP2_HEADER_SET_COOKIE]: [],
+            };
+            const data = await get_stream_1.buffer(stream);
+            const json = JSON.parse(data.toString());
+            json.forEach(cookie => {
+                responseHeaders[HTTP2_HEADER_SET_COOKIE].push(cookie);
+            });
+            stream.respond(responseHeaders);
+            stream.end();
         }
         else if (m = path.match(/\/wait\/(.+)/)) {
             const timeout = parseInt(m[1]);

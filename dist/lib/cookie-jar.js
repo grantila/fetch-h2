@@ -2,8 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const tough_cookie_1 = require("tough-cookie");
 class CookieJar {
-    constructor() {
-        this._jar = new tough_cookie_1.CookieJar();
+    constructor(jar = new tough_cookie_1.CookieJar()) {
+        this.reset(jar);
+    }
+    reset(jar = new tough_cookie_1.CookieJar()) {
+        this._jar = jar;
     }
     setCookie(cookie, url) {
         return new Promise((resolve, reject) => {
@@ -14,15 +17,15 @@ class CookieJar {
             });
         });
     }
-    async setCookies(cookies, url) {
-        await Promise.all(cookies.map(cookie => this.setCookie(cookie, url)));
+    setCookies(cookies, url) {
+        return Promise.all(cookies.map(cookie => this.setCookie(cookie, url)));
     }
     getCookies(url) {
         return new Promise((resolve, reject) => {
-            this._jar.getCookies(url, (err, cookie) => {
+            this._jar.getCookies(url, (err, cookies) => {
                 if (err)
                     return reject(err);
-                resolve(cookie);
+                resolve(cookies);
             });
         });
     }
