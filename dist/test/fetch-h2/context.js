@@ -50,8 +50,7 @@ describe('context', () => {
             await server.shutdown();
         });
     });
-    describe('network settings', function () {
-        this.timeout(200);
+    describe('network settings', () => {
         it('should not be able to connect over unauthorized ssl', async () => {
             const { server, port } = await server_1.makeServer({
                 serverOptions: { key, cert }
@@ -65,7 +64,7 @@ describe('context', () => {
                 chai_1.expect(true).to.be.false;
             }
             catch (err) {
-                chai_1.expect(err.message).to.contain('prematurely closed');
+                chai_1.expect(err.message).to.contain('closed');
             }
             disconnectAll();
             await server.shutdown();

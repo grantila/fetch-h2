@@ -101,10 +101,8 @@ describe( 'context', ( ) =>
 		} );
 	} );
 
-	describe( 'network settings', function( )
+	describe( 'network settings', ( ) =>
 	{
-		this.timeout( 200 );
-
 		it( 'should not be able to connect over unauthorized ssl', async ( ) =>
 		{
 			const { server, port } = await makeServer( {
@@ -123,7 +121,7 @@ describe( 'context', ( ) =>
 			}
 			catch ( err )
 			{
-				expect( err.message ).to.contain( 'prematurely closed' );
+				expect( err.message ).to.contain( 'closed' );
 			}
 
 			disconnectAll( );
