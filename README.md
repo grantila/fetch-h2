@@ -171,6 +171,7 @@ interface ContextOptions
     accept: string;
     //cookieJar: CookieJar;
     decoders: ReadonlyArray< Decoder >;
+    session: SecureClientSessionOptions;
 }
 ```
 
@@ -185,6 +186,8 @@ application/json, text/*;0.9, */*;q=0.8
 `cookieJar` can be set to a custom cookie jar. This logic is currently not decided upon, don't use this.
 
 `decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
+
+`session` can be used for lower-level Node.js settings. This is the options to [`http2::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/http2.html#http2_http2_connect_authority_options_listener) (including the [`net::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/net.html#net_net_connect) and [`tls::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/tls.html#tls_tls_connect_options_callback) options). Use this option to specify `{rejectUnauthorized: false}` if you want to allow unauthorized (e.g. self-signed) certificates.
 
 
 ## Errors

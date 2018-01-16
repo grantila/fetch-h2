@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { ServerHttp2Stream, IncomingHttpHeaders } from 'http2';
+import { ServerHttp2Stream, IncomingHttpHeaders, SecureServerOptions } from 'http2';
 export interface MatchData {
     path: string;
     stream: ServerHttp2Stream;
@@ -9,6 +9,7 @@ export declare type Matcher = (matchData: MatchData) => boolean;
 export interface ServerOptions {
     port?: number;
     matchers?: ReadonlyArray<Matcher>;
+    serverOptions?: SecureServerOptions;
 }
 export declare class Server {
     private _opts;

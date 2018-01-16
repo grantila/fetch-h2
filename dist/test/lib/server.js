@@ -9,7 +9,10 @@ const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGT
 class Server {
     constructor(opts) {
         this._opts = opts || {};
-        this._server = http2_1.createServer();
+        if (this._opts.serverOptions)
+            this._server = http2_1.createSecureServer(this._opts.serverOptions);
+        else
+            this._server = http2_1.createServer();
         this._sessions = new Set();
         this.port = null;
         this._server.on('stream', (stream, headers) => {

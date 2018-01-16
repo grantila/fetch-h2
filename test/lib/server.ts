@@ -2,11 +2,13 @@
 
 import {
 	createServer,
+	createSecureServer,
 	Http2Server,
 	Http2Session,
 	Http2Stream,
 	ServerHttp2Stream,
 	IncomingHttpHeaders,
+	SecureServerOptions,
 	constants,
 } from 'http2'
 
@@ -37,6 +39,7 @@ export interface ServerOptions
 {
 	port?: number;
 	matchers?: ReadonlyArray< Matcher >;
+	serverOptions?: SecureServerOptions;
 }
 
 export class Server
@@ -49,7 +52,10 @@ export class Server
 	constructor( opts: ServerOptions )
 	{
 		this._opts = opts || { };
-		this._server = createServer( );
+		if ( this._opts.serverOptions )
+			this._server = createSecureServer( this._opts.serverOptions );
+		else
+			this._server = createServer( );
 		this._sessions = new Set( );
 		this.port = null;
 

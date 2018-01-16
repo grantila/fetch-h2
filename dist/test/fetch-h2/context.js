@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("mocha");
 const chai_1 = require("chai");
+const fs_1 = require("fs");
 const server_1 = require("../lib/server");
 const _1 = require("../../");
 afterEach(_1.disconnectAll);
@@ -10,6 +11,8 @@ function ensureStatusSuccess(response) {
         throw new Error("Status not 2xx");
     return response;
 }
+const key = fs_1.readFileSync(__dirname + "/../../../certs/key.pem");
+const cert = fs_1.readFileSync(__dirname + "/../../../certs/cert.pem");
 describe('context', () => {
     describe('options', () => {
         it('should be able to overwrite default user agent', async () => {
@@ -43,6 +46,42 @@ describe('context', () => {
             const response = ensureStatusSuccess(await fetch(`http://localhost:${port}/headers`));
             const res = await response.json();
             chai_1.expect(res['accept']).to.equal(accept);
+            disconnectAll();
+            await server.shutdown();
+        });
+    });
+    describe('network settings', function () {
+        this.timeout(200);
+        it('should not be able to connect over unauthorized ssl', async () => {
+            const { server, port } = await server_1.makeServer({
+                serverOptions: { key, cert }
+            });
+            const { disconnectAll, fetch } = _1.context({
+                userAgent: 'foobar',
+                overwriteUserAgent: true,
+            });
+            try {
+                await fetch(`https://localhost:${port}/headers`);
+                chai_1.expect(true).to.be.false;
+            }
+            catch (err) {
+                chai_1.expect(err.message).to.contain('prematurely closed');
+            }
+            disconnectAll();
+            await server.shutdown();
+        });
+        it('should be able to connect over unauthorized ssl', async () => {
+            const { server, port } = await server_1.makeServer({
+                serverOptions: { key, cert }
+            });
+            const { disconnectAll, fetch } = _1.context({
+                userAgent: 'foobar',
+                overwriteUserAgent: true,
+                session: { rejectUnauthorized: false },
+            });
+            const response = ensureStatusSuccess(await fetch(`https://localhost:${port}/headers`));
+            const res = await response.json();
+            chai_1.expect(res['user-agent']).to.equal('foobar');
             disconnectAll();
             await server.shutdown();
         });

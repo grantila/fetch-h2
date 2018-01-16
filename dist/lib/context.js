@@ -51,6 +51,9 @@ class Context {
         this._decoders = 'decoders' in opts
             ? opts.decoders || []
             : [];
+        this._sessionOptions = 'session' in opts
+            ? opts.session || {}
+            : {};
     }
     onPush(pushHandler) {
         this._pushHandler = pushHandler;
@@ -79,7 +82,7 @@ class Context {
         const getResponse = () => futureResponse;
         return this._pushHandler(origin, pushedRequest, getResponse);
     }
-    connect(origin, options) {
+    connect(origin) {
         const makeConnectionTimeout = () => new core_1.TimeoutError(`Connection timeout to ${origin}`);
         const makeError = (event) => event
             ? new Error(`Unknown connection error (${event}): ${origin}`)
@@ -88,11 +91,10 @@ class Context {
         // TODO: #8
         const aGuard = callguard_1.asyncGuard(console.error.bind(console));
         const pushHandler = aGuard((stream, headers) => this.handlePush(origin, stream, headers));
+        const options = this._sessionOptions;
         const promise = new Promise((resolve, reject) => {
             session =
-                options
-                    ? http2_1.connect(origin, options, () => resolve(session))
-                    : http2_1.connect(origin, () => resolve(session));
+                http2_1.connect(origin, options, () => resolve(session));
             session.on('stream', pushHandler);
             session.once('close', () => reject(makeOkError(makeError())));
             session.once('timeout', () => reject(makeConnectionTimeout()));
@@ -100,10 +102,10 @@ class Context {
         });
         return { promise, session };
     }
-    getOrCreate(origin, options, created = false) {
+    getOrCreate(origin, created = false) {
         const willCreate = !this._h2sessions.has(origin);
         if (willCreate) {
-            const sessionItem = this.connect(origin, options);
+            const sessionItem = this.connect(origin);
             const { promise } = sessionItem;
             // Handle session closure (delete from store)
             promise
@@ -121,13 +123,12 @@ class Context {
                 // Created in this request, forward error
                 throw err;
             // Not created in this request, try again
-            return this.getOrCreate(origin, options, true);
+            return this.getOrCreate(origin, true);
         });
     }
     get(url) {
         const { origin } = new url_1.URL(url);
-        const options = null;
-        return this.getOrCreate(origin, options);
+        return this.getOrCreate(origin);
     }
     handleDisconnect(sessionItem) {
         const { promise, session } = sessionItem;

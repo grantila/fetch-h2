@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { SecureClientSessionOptions } from 'http2';
 import { FetchInit, Decoder } from './core';
 import { Request } from './request';
 import { Response } from './response';
@@ -8,6 +10,7 @@ export interface ContextOptions {
     accept: string;
     cookieJar: CookieJar;
     decoders: ReadonlyArray<Decoder>;
+    session: SecureClientSessionOptions;
 }
 export declare type PushHandler = (origin: string, request: Request, getResponse: () => Promise<Response>) => void;
 export declare class Context {
@@ -17,12 +20,13 @@ export declare class Context {
     private _cookieJar;
     private _pushHandler;
     private _decoders;
+    private _sessionOptions;
     constructor(opts?: Partial<ContextOptions>);
     setup(opts?: Partial<ContextOptions>): void;
     onPush(pushHandler: PushHandler): void;
     private handlePush(origin, pushedStream, requestHeaders);
-    private connect(origin, options?);
-    private getOrCreate(origin, options, created?);
+    private connect(origin);
+    private getOrCreate(origin, created?);
     private get(url);
     private handleDisconnect(sessionItem);
     fetch(input: string | Request, init?: Partial<FetchInit>): Promise<Response>;

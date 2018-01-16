@@ -2,7 +2,6 @@
 
 import {
 	connect as http2Connect,
-	SessionOptions,
 	SecureClientSessionOptions,
 	ClientHttp2Session,
 	OutgoingHttpHeaders,
@@ -31,7 +30,6 @@ const {
 	HTTP2_HEADER_PATH,
 } = h2constants;
 
-
 function makeDefaultUserAgent( ): string
 {
 	const name = `fetch-h2/${version} (+https://github.com/grantila/fetch-h2)`;
@@ -52,6 +50,7 @@ export interface ContextOptions
 	accept: string;
 	cookieJar: CookieJar;
 	decoders: ReadonlyArray< Decoder >;
+	session: SecureClientSessionOptions;
 }
 
 interface SessionItem
@@ -87,6 +86,7 @@ export class Context
 	private _cookieJar: CookieJar;
 	private _pushHandler: PushHandler;
 	private _decoders: ReadonlyArray< Decoder >;
+	private _sessionOptions: SecureClientSessionOptions;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
@@ -121,6 +121,10 @@ export class Context
 		this._decoders = 'decoders' in opts
 			? opts.decoders || [ ]
 			: [ ];
+
+		this._sessionOptions = 'session' in opts
+			? opts.session || { }
+			: { };
 	}
 
 	public onPush( pushHandler: PushHandler )
@@ -180,10 +184,7 @@ export class Context
 		return this._pushHandler( origin, pushedRequest, getResponse );
 	}
 
-	private connect(
-		origin: string,
-		options?: SessionOptions | SecureClientSessionOptions
-	)
+	private connect( origin: string )
 	: SessionItem
 	{
 		const makeConnectionTimeout = ( ) =>
@@ -204,13 +205,13 @@ export class Context
 				this.handlePush( origin, stream, headers )
 		);
 
+		const options = this._sessionOptions;
+
 		const promise = new Promise< ClientHttp2Session >(
 			( resolve, reject ) =>
 			{
 				session =
-					options
-					? http2Connect( origin, options, ( ) => resolve( session ) )
-					: http2Connect( origin, ( ) => resolve( session ) );
+					http2Connect( origin, options, ( ) => resolve( session ) );
 
 				session.on( 'stream', pushHandler );
 
@@ -227,18 +228,14 @@ export class Context
 		return { promise, session };
 	}
 
-	private getOrCreate(
-		origin: string,
-		options: SessionOptions | SecureClientSessionOptions,
-		created = false
-	)
+	private getOrCreate( origin: string, created = false )
 	: Promise< ClientHttp2Session >
 	{
 		const willCreate = !this._h2sessions.has( origin );
 
 		if ( willCreate )
 		{
-			const sessionItem = this.connect( origin, options );
+			const sessionItem = this.connect( origin );
 
 			const { promise } = sessionItem;
 
@@ -263,7 +260,7 @@ export class Context
 				// Created in this request, forward error
 				throw err;
 			// Not created in this request, try again
-			return this.getOrCreate( origin, options, true );
+			return this.getOrCreate( origin, true );
 		} );
 	}
 
@@ -272,9 +269,7 @@ export class Context
 	{
 		const { origin } = new URL( url );
 
-		const options: SessionOptions | SecureClientSessionOptions = null;
-
-		return this.getOrCreate( origin, options );
+		return this.getOrCreate( origin );
 	}
 
 	private handleDisconnect( sessionItem: SessionItem ): Promise< void >
