@@ -34,8 +34,10 @@ const key = readFileSync( __dirname + "/../../../certs/key.pem" );
 const cert = readFileSync( __dirname + "/../../../certs/cert.pem" );
 
 
-describe( 'context', ( ) =>
+describe( 'context', function( )
 {
+	this.timeout( 300 );
+
 	describe( 'options', ( ) =>
 	{
 		it( 'should be able to overwrite default user agent', async ( ) =>
