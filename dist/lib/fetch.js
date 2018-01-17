@@ -137,7 +137,7 @@ async function fetchImpl(session, input, init = {}, extra) {
             signal.onabort = null;
     }
     function doFetch() {
-        return session.get(url)
+        return session.get(url, init)
             .then(async (h2session) => {
             const stream = h2session.request(headersToSend, { endStream });
             const response = new Promise((resolve, reject) => {
