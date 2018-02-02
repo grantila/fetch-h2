@@ -276,7 +276,8 @@ export class Context
 	{
 		const { promise, session } = sessionItem;
 
-		session.destroy( );
+		if ( session )
+			session.destroy( );
 
 		return promise
 		.then( h2session => { } )

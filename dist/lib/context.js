@@ -132,11 +132,13 @@ class Context {
     }
     handleDisconnect(sessionItem) {
         const { promise, session } = sessionItem;
-        session.destroy();
+        if (session)
+            session.destroy();
         return promise
             .then(h2session => { })
             .catch(err => {
-            if (!isOkError(err))
+            const debugMode = false;
+            if (debugMode)
                 console.warn("Disconnect error", err);
         });
     }

@@ -215,4 +215,44 @@ describe( 'context', function( )
 			await server.shutdown( );
 		} );
 	} );
+
+	describe( 'disconnection', ( ) =>
+	{
+		it( 'should be able to disconnect non-connection',
+			async ( ) =>
+		{
+			const { server, port } = await makeServer( );
+
+			const { disconnectAll, fetch } = context( );
+
+			const awaitFetch = fetch( "http://localhost:0" );
+
+			disconnectAll( );
+
+			await awaitFetch.catch( ( ) => { } );
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+
+		it( 'should be able to disconnect invalid url',
+			async ( ) =>
+		{
+			const { server, port } = await makeServer( );
+
+			const { disconnectAll, fetch } =
+				context( { session: { port: -1, host: < any >{ } } } );
+
+			const awaitFetch = fetch( "ftp://localhost" );
+
+			disconnectAll( );
+
+			await awaitFetch.catch( ( ) => { } );
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+	} );
 } );
