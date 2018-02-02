@@ -282,7 +282,8 @@ export class Context
 		.then( h2session => { } )
 		.catch( err =>
 		{
-			if ( !isOkError( err ) )
+			const debugMode = false;
+			if ( debugMode )
 				console.warn( "Disconnect error", err );
 		} );
 	}
