@@ -1,7 +1,7 @@
 [![npm version][npm-image]][npm-url]
 [![build status][travis-image]][travis-url]
 [![coverage status][coverage-image]][coverage-url]
-[![Greenkeeper badge][greenkeeper-image]][greenkeeper-url]
+[![Greenkeeper badge](https://badges.greenkeeper.io/grantila/fetch-h2.svg)](https://greenkeeper.io/)
 
 
 # fetch-h2
@@ -279,5 +279,3 @@ const response = await fetch( url, { method, body } );
 [travis-url]: https://travis-ci.org/grantila/fetch-h2
 [coverage-image]: https://coveralls.io/repos/github/grantila/fetch-h2/badge.svg?branch=master
 [coverage-url]: https://coveralls.io/github/grantila/fetch-h2?branch=master
-[greenkeeper-image]: https://badges.greenkeeper.io/grantila/fetch-h2.svg
-[greenkeeper-url]: https://greenkeeper.io/
