@@ -19,7 +19,7 @@ import { CookieJar } from './lib/cookie-jar'
 const defaultContext = new Context( );
 
 const setup =
-	( opts: ContextOptions ) =>
+	( opts: Partial< ContextOptions > ) =>
 		defaultContext.setup( opts );
 const fetch =
 	( input: string | Request, init?: Partial< FetchInit > ) =>
