@@ -5,13 +5,13 @@ import { Response } from './lib/response';
 import { AbortError, TimeoutError, FetchInit, OnTrailers, DecodeFunction, Decoder } from './lib/core';
 import { ContextOptions, PushHandler } from './lib/context';
 import { CookieJar } from './lib/cookie-jar';
-declare const setup: (opts: ContextOptions) => void;
+declare const setup: (opts: Partial<ContextOptions>) => void;
 declare const fetch: (input: string | Request, init?: Partial<FetchInit>) => Promise<Response>;
 declare const disconnect: (url: string) => Promise<void>;
 declare const disconnectAll: () => Promise<void>;
 declare const onPush: (handler: PushHandler) => void;
 declare function context(opts?: Partial<ContextOptions>): {
-    setup: (opts: ContextOptions) => void;
+    setup: (opts: Partial<ContextOptions>) => void;
     fetch: (input: string | Request, init?: Partial<FetchInit>) => Promise<Response>;
     disconnect: (url: string) => Promise<void>;
     disconnectAll: () => Promise<void>;
