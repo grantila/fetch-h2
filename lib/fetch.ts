@@ -1,7 +1,7 @@
 'use strict'
 
 import { constants as h2constants } from 'http2'
-import { URL } from 'url'
+import { URL, parse } from 'url'
 
 import { Finally } from 'already'
 import { syncGuard } from 'callguard'
@@ -334,7 +334,14 @@ async function fetchImpl(
 					}
 
 					const status = '' + headers[ HTTP2_HEADER_STATUS ];
-					const location = '' + headers[ HTTP2_HEADER_LOCATION ];
+					let location = '' + headers[ HTTP2_HEADER_LOCATION ];
+					const locationHeader = '' + headers[ HTTP2_HEADER_LOCATION ];
+					const parsedLocation = parse(locationHeader);
+					// Some sites can send a relative path in the location header.
+					if ( parsedLocation.hostname === null) {
+						const parsedUrl = parse(url);
+						location = `${parsedUrl.protocol}//${parsedUrl.host}${headers[ HTTP2_HEADER_LOCATION ]}`;
+					}
 
 					const isRedirected = isRedirectStatus[ status ];
 
