@@ -334,14 +334,15 @@ async function fetchImpl(
 					}
 
 					const status = '' + headers[ HTTP2_HEADER_STATUS ];
-					let location = '' + headers[ HTTP2_HEADER_LOCATION ];
-					const locationHeader = '' + headers[ HTTP2_HEADER_LOCATION ];
-					const parsedLocation = parse(locationHeader);
+					let location = headers[ HTTP2_HEADER_LOCATION ];
 					// Some sites can send a relative path in the location header.
-					if ( parsedLocation.hostname === null) {
-						const parsedUrl = parse(url);
-						location = `${parsedUrl.protocol}//${parsedUrl.host}${headers[ HTTP2_HEADER_LOCATION ]}`;
-					}
+					try {
+						const parsedLocation = parse(location);
+						if ( parsedLocation.hostname === null ) {
+							const parsedUrl = parse(url);
+							location = ( location ) ? `${parsedUrl.protocol}//${parsedUrl.hostname}${location}` : undefined;
+						}
+					} catch (TypeError) {}
 
 					const isRedirected = isRedirectStatus[ status ];
 
