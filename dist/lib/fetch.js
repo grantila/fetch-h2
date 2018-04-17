@@ -199,7 +199,7 @@ async function fetchImpl(session, input, init = {}, extra) {
                         return;
                     }
                     const status = '' + headers[HTTP2_HEADER_STATUS];
-                    const location = '' + headers[HTTP2_HEADER_LOCATION];
+                    const location = utils_1.parseLocation(headers[HTTP2_HEADER_LOCATION], url);
                     const isRedirected = isRedirectStatus[status];
                     if (headers[HTTP2_HEADER_SET_COOKIE]) {
                         const setCookies = utils_1.arrayify(headers[HTTP2_HEADER_SET_COOKIE]);

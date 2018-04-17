@@ -115,7 +115,7 @@ describe( 'nghttp2.org/httpbin', function( )
 
 		const responseSet = await fetch(
 			'https://nghttp2.org/httpbin/cookies/set?foo=bar',
-			{ redirect:'manual' } );
+			{ redirect: 'manual' } );
 
 		expect( responseSet.headers.has( 'location' ) ).to.be.true;
 		const redirectedTo = responseSet.headers.get( 'location' );
@@ -127,5 +127,18 @@ describe( 'nghttp2.org/httpbin', function( )
 
 		await disconnectAll( );
 	} );
-} );
 
+	it( 'should handle (and follow) relative paths', async ( ) =>
+	{
+		const { fetch, disconnectAll } = context( );
+
+		const response = await fetch(
+			'https://nghttp2.org/httpbin/relative-redirect/2',
+			{ redirect: 'follow' } );
+
+		expect( response.url ).to.equal( "https://nghttp2.org/httpbin/get" );
+		await response.text( );
+
+		await disconnectAll( );
+	} );
+} );

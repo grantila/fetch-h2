@@ -72,5 +72,12 @@ describe('nghttp2.org/httpbin', function () {
         chai_1.expect(data.cookies).to.deep.equal({ foo: 'bar' });
         await disconnectAll();
     });
+    it('should handle (and follow) relative paths', async () => {
+        const { fetch, disconnectAll } = _1.context();
+        const response = await fetch('https://nghttp2.org/httpbin/relative-redirect/2', { redirect: 'follow' });
+        chai_1.expect(response.url).to.equal("https://nghttp2.org/httpbin/get");
+        await response.text();
+        await disconnectAll();
+    });
 });
 //# sourceMappingURL=nghttp2.org.js.map

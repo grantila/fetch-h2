@@ -6,7 +6,7 @@ import { URL } from 'url'
 import { Finally } from 'already'
 import { syncGuard } from 'callguard'
 
-import { arrayify } from './utils'
+import { arrayify, parseLocation } from './utils'
 import {
 	Method,
 	FetchInit,
@@ -334,7 +334,10 @@ async function fetchImpl(
 					}
 
 					const status = '' + headers[ HTTP2_HEADER_STATUS ];
-					const location = '' + headers[ HTTP2_HEADER_LOCATION ];
+					const location = parseLocation(
+						headers[ HTTP2_HEADER_LOCATION ],
+						url
+					);
 
 					const isRedirected = isRedirectStatus[ status ];
 
