@@ -123,7 +123,11 @@ describe( 'context', function( )
 			}
 			catch ( err )
 			{
-				expect( err.message ).to.contain( 'closed' );
+				expect( err.message ).to.satisfy( ( message: string ) =>
+					message.includes( 'closed' )
+					||
+					message.includes( 'expired' )
+				);
 			}
 
 			disconnectAll( );

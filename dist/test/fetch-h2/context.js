@@ -65,7 +65,9 @@ describe('context', function () {
                 chai_1.expect(true).to.be.false;
             }
             catch (err) {
-                chai_1.expect(err.message).to.contain('closed');
+                chai_1.expect(err.message).to.satisfy((message) => message.includes('closed')
+                    ||
+                        message.includes('expired'));
             }
             disconnectAll();
             await server.shutdown();
