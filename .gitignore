@@ -1,2 +1,5 @@
 coverage/
 node_modules/
+.node-version
+.nyc_output/
+yarn.lock

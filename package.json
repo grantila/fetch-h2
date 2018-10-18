@@ -16,13 +16,15 @@
   },
   "scripts": {
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
-    "test": "node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --bail --check-leaks dist/test",
-    "testfast": "node_modules/.bin/istanbul cover node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
+    "mocha": "node_modules/.bin/mocha --bail --check-leaks dist/test",
+    "test": "node_modules/.bin/nyc npm run mocha",
+    "testfast": "node_modules/.bin/nyc node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
     "test-nocov": "node_modules/.bin/mocha --bail --check-leaks dist/test",
     "buildtest": "npm run build && npm run test-nocov",
     "buildtestfast": "npm run build && node_modules/.bin/mocha -i --grep nghttp2.org dist/test",
     "buildtestcov": "npm run build && npm run test",
     "buildtestfastcov": "npm run build && npm run testfast",
+    "coverage": "node_modules/.bin/nyc report --reporter=html",
     "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh"
   },
   "repository": {
@@ -48,7 +50,7 @@
     "chai": "4.x",
     "coveralls": "3.x",
     "from2": "2.x",
-    "istanbul": "1.1.0-alpha.1",
+    "nyc": "11.x",
     "mocha": "5.x",
     "rimraf": "2.x",
     "source-map-support": "0.x",
