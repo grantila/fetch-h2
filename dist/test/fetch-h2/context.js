@@ -4,8 +4,8 @@ require("mocha");
 const chai_1 = require("chai");
 const fs_1 = require("fs");
 const server_1 = require("../lib/server");
-const _1 = require("../../");
-afterEach(_1.disconnectAll);
+const __1 = require("../../");
+afterEach(__1.disconnectAll);
 function ensureStatusSuccess(response) {
     if (response.status < 200 || response.status >= 300)
         throw new Error("Status not 2xx");
@@ -18,7 +18,7 @@ describe('context', function () {
     describe('options', () => {
         it('should be able to overwrite default user agent', async () => {
             const { server, port } = await server_1.makeServer();
-            const { disconnectAll, fetch } = _1.context({
+            const { disconnectAll, fetch } = __1.context({
                 userAgent: 'foobar',
                 overwriteUserAgent: true,
             });
@@ -30,7 +30,7 @@ describe('context', function () {
         });
         it('should be able to set (combined) user agent', async () => {
             const { server, port } = await server_1.makeServer();
-            const { disconnectAll, fetch } = _1.context({
+            const { disconnectAll, fetch } = __1.context({
                 userAgent: 'foobar'
             });
             const response = ensureStatusSuccess(await fetch(`http://localhost:${port}/headers`));
@@ -43,7 +43,7 @@ describe('context', function () {
         it('should be able to set default accept header', async () => {
             const { server, port } = await server_1.makeServer();
             const accept = 'application/foobar, text/*;0.9';
-            const { disconnectAll, fetch } = _1.context({ accept });
+            const { disconnectAll, fetch } = __1.context({ accept });
             const response = ensureStatusSuccess(await fetch(`http://localhost:${port}/headers`));
             const res = await response.json();
             chai_1.expect(res['accept']).to.equal(accept);
@@ -56,7 +56,7 @@ describe('context', function () {
             const { server, port } = await server_1.makeServer({
                 serverOptions: { key, cert }
             });
-            const { disconnectAll, fetch } = _1.context({
+            const { disconnectAll, fetch } = __1.context({
                 userAgent: 'foobar',
                 overwriteUserAgent: true,
             });
@@ -76,7 +76,7 @@ describe('context', function () {
             const { server, port } = await server_1.makeServer({
                 serverOptions: { key, cert }
             });
-            const { disconnectAll, fetch } = _1.context({
+            const { disconnectAll, fetch } = __1.context({
                 userAgent: 'foobar',
                 overwriteUserAgent: true,
                 session: { rejectUnauthorized: false },
@@ -91,9 +91,9 @@ describe('context', function () {
     describe('cookies', () => {
         it('should be able to specify custom cookie jar', async () => {
             const { server, port } = await server_1.makeServer();
-            const cookieJar = new _1.CookieJar();
+            const cookieJar = new __1.CookieJar();
             chai_1.expect(await cookieJar.getCookies(`http://localhost:${port}/`)).to.be.empty;
-            const { disconnectAll, fetch } = _1.context({
+            const { disconnectAll, fetch } = __1.context({
                 userAgent: 'foobar',
                 overwriteUserAgent: true,
                 cookieJar,
@@ -125,7 +125,7 @@ describe('context', function () {
     describe('disconnection', () => {
         it('should be able to disconnect non-connection', async () => {
             const { server, port } = await server_1.makeServer();
-            const { disconnectAll, fetch } = _1.context();
+            const { disconnectAll, fetch } = __1.context();
             const awaitFetch = fetch("http://localhost:0");
             disconnectAll();
             await awaitFetch.catch(() => { });
@@ -134,7 +134,7 @@ describe('context', function () {
         });
         it('should be able to disconnect invalid url', async () => {
             const { server, port } = await server_1.makeServer();
-            const { disconnectAll, fetch } = _1.context({ session: { port: -1, host: {} } });
+            const { disconnectAll, fetch } = __1.context({ session: { port: -1, host: {} } });
             const awaitFetch = fetch("ftp://localhost");
             disconnectAll();
             await awaitFetch.catch(() => { });

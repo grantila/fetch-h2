@@ -157,13 +157,17 @@ export class Server
 			const data = await getStreamAsBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 
+			stream.once( 'wantTrailers', ( ) =>
+			{
+				// TODO: Fix when @types/node is fixed
+				(<any>stream).sendTrailers( json );
+			} );
+
 			stream.respond(
 				responseHeaders,
-				{
-					getTrailers( trailers )
-					{
-						Object.assign( trailers, json );
-					}
+				// TODO: Fix when @types/node is fixed
+				<any>{
+					waitForTrailers: true,
 				}
 			);
 
@@ -203,8 +207,10 @@ export class Server
 
 			json.forEach( pushable =>
 			{
-				function cb( pushStream: ServerHttp2Stream )
+				function cb( err: Error, pushStream: ServerHttp2Stream )
 				{
+					if ( err )
+						return;
 					if ( pushable.data )
 						pushStream.write( pushable.data );
 					pushStream.end( );
@@ -262,7 +268,13 @@ export class Server
 		{
 			this._server.listen( port, '0.0.0.0', resolve );
 		} )
-		.then( ( ) => this._server.address( ).port )
+		.then( ( ) =>
+		{
+			const address = this._server.address( );
+			if ( typeof address === 'string' )
+				return 0;
+			return address.port;
+		} )
 		.then( port =>
 		{
 			this.port = port;

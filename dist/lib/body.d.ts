@@ -10,9 +10,9 @@ export declare class Body implements IBody {
     constructor();
     protected hasBody(): boolean;
     protected setBody(body: BodyTypes | IBody, mime?: string, integrity?: string): void;
-    private _ensureUnused();
+    private _ensureUnused;
     arrayBuffer(): Promise<ArrayBuffer>;
-    private blob();
+    private blob;
     formData(): Promise<never>;
     json(): Promise<any>;
     text(): Promise<string>;
@@ -30,8 +30,8 @@ export declare class DataBody extends Body {
 export declare class BodyInspector extends Body {
     private _ref;
     constructor(body: Body);
-    private _getMime();
-    private _getLength();
+    private _getMime;
+    private _getLength;
     readonly mime: any;
     readonly length: any;
 }
