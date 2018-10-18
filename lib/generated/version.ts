@@ -1,3 +1,3 @@
 'use strict'
 
-export const version = '0.2.6';
+export const version = '1.0.0';
