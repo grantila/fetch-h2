@@ -50,7 +50,7 @@
     "chai": "4.x",
     "coveralls": "3.x",
     "from2": "2.x",
-    "nyc": "11.x",
+    "nyc": "13.x",
     "mocha": "5.x",
     "rimraf": "2.x",
     "source-map-support": "0.x",
