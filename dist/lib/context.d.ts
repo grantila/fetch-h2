@@ -24,11 +24,11 @@ export declare class Context {
     constructor(opts?: Partial<ContextOptions>);
     setup(opts?: Partial<ContextOptions>): void;
     onPush(pushHandler: PushHandler): void;
-    private handlePush(origin, pushedStream, requestHeaders);
-    private connect(origin);
-    private getOrCreate(origin, created?);
-    private get(url);
-    private handleDisconnect(sessionItem);
+    private handlePush;
+    private connect;
+    private getOrCreate;
+    private get;
+    private handleDisconnect;
     fetch(input: string | Request, init?: Partial<FetchInit>): Promise<Response>;
     disconnect(url: string): Promise<void>;
     disconnectAll(): Promise<void>;

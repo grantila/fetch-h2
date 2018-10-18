@@ -8,14 +8,18 @@ HTTP/2 [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) impleme
 
 The module tries to adhere to the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) very closely, but extends it slightly to fit better into Node.js (e.g. using streams).
 
-Regardless of whether you're actually interested in the Fetch API per se or not, as long as you want to handle HTTP/2 client requests in Node.js, this module is a lot easier and more natural to use than the native built-in [`http2`](https://nodejs.org/dist/latest-v8.x/docs/api/http2.html) module which is low-level in comparison.
+Regardless of whether you're actually interested in the Fetch API per se or not, as long as you want to handle HTTP/2 client requests in Node.js, this module is a lot easier and more natural to use than the native built-in [`http2`](https://nodejs.org/dist/latest-v10.x/docs/api/http2.html) module which is low-level in comparison.
 
 `fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
 
 By default, `fetch-h2` will accept `gzip` and `deflate` encodings, and decode transparently. If you also want to allow Brotli (`br`), use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
 
-**NOTE;** HTTP/2 support was recently introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag.
+**NOTE;** HTTP/2 support was introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag. The API has changed and not settled until 10.x, **and `fetch-h2` requires 10.x**.
 
+
+## Releases
+
+Since 1.0.0, `fetch-h2` requires Node.js 10.
 
 ## Imports
 
@@ -202,7 +206,7 @@ where `Cookie` is a [`tough-cookie` Cookie](https://www.npmjs.com/package/tough-
 
 `decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
 
-`session` can be used for lower-level Node.js settings. This is the options to [`http2::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/http2.html#http2_http2_connect_authority_options_listener) (including the [`net::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/net.html#net_net_connect) and [`tls::connect`](https://nodejs.org/dist/latest-v8.x/docs/api/tls.html#tls_tls_connect_options_callback) options). Use this option to specify `{rejectUnauthorized: false}` if you want to allow unauthorized (e.g. self-signed) certificates.
+`session` can be used for lower-level Node.js settings. This is the options to [`http2::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/http2.html#http2_http2_connect_authority_options_listener) (including the [`net::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/net.html#net_net_connect) and [`tls::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/tls.html#tls_tls_connect_options_callback) options). Use this option to specify `{rejectUnauthorized: false}` if you want to allow unauthorized (e.g. self-signed) certificates.
 
 
 ## Errors

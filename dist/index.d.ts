@@ -17,4 +17,4 @@ declare function context(opts?: Partial<ContextOptions>): {
     disconnectAll: () => Promise<void>;
     onPush: (handler: PushHandler) => void;
 };
-export { setup, context, fetch, disconnect, disconnectAll, onPush, Body, JsonBody, StreamBody, DataBody, Headers, Request, Response, AbortError, TimeoutError, OnTrailers, ContextOptions, DecodeFunction, Decoder, CookieJar };
+export { setup, context, fetch, disconnect, disconnectAll, onPush, Body, JsonBody, StreamBody, DataBody, Headers, Request, Response, AbortError, TimeoutError, OnTrailers, ContextOptions, DecodeFunction, Decoder, CookieJar, };

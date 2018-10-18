@@ -84,10 +84,14 @@ class Server {
             };
             const data = await get_stream_1.buffer(stream);
             const json = JSON.parse(data.toString());
-            stream.respond(responseHeaders, {
-                getTrailers(trailers) {
-                    Object.assign(trailers, json);
-                }
+            stream.once('wantTrailers', () => {
+                // TODO: Fix when @types/node is fixed
+                stream.sendTrailers(json);
+            });
+            stream.respond(responseHeaders, 
+            // TODO: Fix when @types/node is fixed
+            {
+                waitForTrailers: true,
             });
             stream.write("trailers will be sent");
             stream.end();
@@ -114,7 +118,9 @@ class Server {
             const data = await get_stream_1.buffer(stream);
             const json = JSON.parse(data.toString());
             json.forEach(pushable => {
-                function cb(pushStream) {
+                function cb(err, pushStream) {
+                    if (err)
+                        return;
                     if (pushable.data)
                         pushStream.write(pushable.data);
                     pushStream.end();
@@ -157,7 +163,12 @@ class Server {
         return new Promise((resolve, reject) => {
             this._server.listen(port, '0.0.0.0', resolve);
         })
-            .then(() => this._server.address().port)
+            .then(() => {
+            const address = this._server.address();
+            if (typeof address === 'string')
+                return 0;
+            return address.port;
+        })
             .then(port => {
             this.port = port;
             return port;

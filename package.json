@@ -12,7 +12,7 @@
   "types": "./dist/index.d.ts",
   "directories": {},
   "engines": {
-    "node": ">=8.4"
+    "node": ">=10.0"
   },
   "scripts": {
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
@@ -41,25 +41,25 @@
   "devDependencies": {
     "@types/from2": "2.x",
     "@types/get-stream": "3.x",
-    "@types/mocha": "2.x",
-    "@types/node": "8.x",
+    "@types/mocha": "5.x",
+    "@types/node": "10.x",
     "@types/through2": "2.x",
     "@types/tough-cookie": "2.x",
     "chai": "4.x",
-    "coveralls": "2.x",
+    "coveralls": "3.x",
     "from2": "2.x",
     "istanbul": "1.1.0-alpha.1",
-    "mocha": "4.x",
+    "mocha": "5.x",
     "rimraf": "2.x",
     "source-map-support": "0.x",
-    "ts-node": "3.x",
-    "typescript": "2.6.x"
+    "ts-node": "7.x",
+    "typescript": "3.x"
   },
   "dependencies": {
-    "already": "0.x",
+    "already": "1.x",
     "callguard": "1.x",
-    "get-stream": "3.x",
-    "is-buffer": "1.x",
+    "get-stream": "4.x",
+    "is-buffer": "2.x",
     "through2": "2.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "2.x"

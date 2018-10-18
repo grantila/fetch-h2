@@ -17,7 +17,7 @@ export declare class Server {
     private _sessions;
     port: number;
     constructor(opts: ServerOptions);
-    private onStream(stream, headers);
+    private onStream;
     listen(port?: number): Promise<number>;
     shutdown(): Promise<void>;
 }
