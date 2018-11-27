@@ -25,11 +25,14 @@
     "buildtestcov": "npm run build && npm run test",
     "buildtestfastcov": "npm run build && npm run testfast",
     "coverage": "node_modules/.bin/nyc report --reporter=html",
-    "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh"
+    "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh",
+    "travis-deploy-once": "travis-deploy-once",
+    "semantic-release": "semantic-release",
+    "cz": "git-cz"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/grantila/fetch-h2"
+    "url": "https://github.com/grantila/fetch-h2"
   },
   "keywords": [
     "fetch",
@@ -49,11 +52,14 @@
     "@types/tough-cookie": "2.x",
     "chai": "4.x",
     "coveralls": "3.x",
+    "cz-conventional-changelog": "^2.1.0",
     "from2": "2.x",
     "mocha": "5.x",
     "nyc": "13.x",
     "rimraf": "2.x",
+    "semantic-release": "15.x",
     "source-map-support": "0.x",
+    "travis-deploy-once": "5.x",
     "ts-node": "7.x",
     "typescript": "3.x"
   },
@@ -65,5 +71,10 @@
     "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "2.x"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
