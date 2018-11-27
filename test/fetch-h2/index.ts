@@ -624,6 +624,7 @@ describe( 'response', ( ) =>
 
 		expect( response.url ).to.equal( url );
 
+		await disconnectAll( );
 		await server.shutdown( );
 	} );
 } );

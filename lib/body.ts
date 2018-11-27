@@ -169,13 +169,13 @@ export class Body implements IBody
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
-					validateIntegrity( buffer, this._integrity )
+					< any >validateIntegrity( buffer, this._integrity )
 				) )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else if ( isBuffer( this._body ) )
 			return Promise.resolve( this._body.toString( ) )
 				.then( tap( string =>
-					validateIntegrity( string, this._integrity )
+					< any >validateIntegrity( string, this._integrity )
 				) )
 				.then( JSON.parse );
 		else
@@ -192,13 +192,13 @@ export class Body implements IBody
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
-					validateIntegrity( buffer, this._integrity )
+					< any >validateIntegrity( buffer, this._integrity )
 				) )
 				.then( buffer => buffer.toString( ) );
 		else if ( isBuffer( this._body ) )
 			return Promise.resolve( this._body.toString( ) )
 				.then( tap( string =>
-					validateIntegrity( string, this._integrity )
+					< any >validateIntegrity( string, this._integrity )
 				) );
 		else
 			return throwUnknownData( );

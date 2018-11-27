@@ -65,7 +65,9 @@ describe('context', function () {
                 chai_1.expect(true).to.be.false;
             }
             catch (err) {
-                chai_1.expect(err.message).to.satisfy((message) => message.includes('closed')
+                chai_1.expect(err.message).to.satisfy((message) => message.includes('closed') // < Node 9.4
+                    ||
+                        message.includes('self signed') // >= Node 9.4
                     ||
                         message.includes('expired'));
             }

@@ -79,7 +79,7 @@ export class Server
 	{
 		this._sessions.add( stream.session );
 		stream.session.once( 'close', ( ) =>
-			this._sessions.delete( stream.session) );
+			this._sessions.delete( stream.session ) );
 
 		const path = headers[ HTTP2_HEADER_PATH ] as string;
 		let m;

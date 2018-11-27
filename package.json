@@ -50,8 +50,8 @@
     "chai": "4.x",
     "coveralls": "3.x",
     "from2": "2.x",
-    "nyc": "13.x",
     "mocha": "5.x",
+    "nyc": "13.x",
     "rimraf": "2.x",
     "source-map-support": "0.x",
     "ts-node": "7.x",
@@ -62,7 +62,7 @@
     "callguard": "1.x",
     "get-stream": "4.x",
     "is-buffer": "2.x",
-    "through2": "2.x",
+    "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "2.x"
   }

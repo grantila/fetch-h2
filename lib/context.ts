@@ -4,13 +4,12 @@ import {
 	connect as http2Connect,
 	SecureClientSessionOptions,
 	ClientHttp2Session,
-	OutgoingHttpHeaders,
 	ClientHttp2Stream,
 	IncomingHttpHeaders as IncomingHttp2Headers,
 	constants as h2constants,
 } from 'http2'
+
 import { URL } from 'url'
-import { EventEmitter } from 'events'
 import { syncGuard, asyncGuard } from 'callguard'
 
 import {

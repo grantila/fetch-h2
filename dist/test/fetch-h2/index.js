@@ -340,11 +340,13 @@ describe('basic', () => {
     });
 });
 describe('response', () => {
+    //	this.timeout( 20000 )
     it('should have a proper url', async () => {
         const { server, port } = await server_1.makeServer();
         const url = `http://localhost:${port}/headers`;
         const response = ensureStatusSuccess(await __1.fetch(url));
         chai_1.expect(response.url).to.equal(url);
+        await __1.disconnectAll();
         await server.shutdown();
     });
 });

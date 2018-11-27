@@ -124,7 +124,9 @@ describe( 'context', function( )
 			catch ( err )
 			{
 				expect( err.message ).to.satisfy( ( message: string ) =>
-					message.includes( 'closed' )
+					message.includes( 'closed' ) // < Node 9.4
+					||
+					message.includes( 'self signed' ) // >= Node 9.4
 					||
 					message.includes( 'expired' )
 				);
