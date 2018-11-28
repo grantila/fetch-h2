@@ -8,14 +8,15 @@ export declare class Body implements IBody {
     private _integrity?;
     readonly bodyUsed: boolean;
     constructor();
+    private validateIntegrity;
     protected hasBody(): boolean;
-    protected setBody(body: BodyTypes | IBody, mime?: string, integrity?: string): void;
+    protected setBody(body: BodyTypes | IBody, mime?: string, integrity?: string, length?: number): void;
     private _ensureUnused;
-    arrayBuffer(): Promise<ArrayBuffer>;
+    arrayBuffer(allowIncomplete?: boolean): Promise<ArrayBuffer>;
     private blob;
     formData(): Promise<never>;
     json(): Promise<any>;
-    text(): Promise<string>;
+    text(allowIncomplete?: boolean): Promise<string>;
     readable(): Promise<NodeJS.ReadableStream>;
 }
 export declare class JsonBody extends Body {

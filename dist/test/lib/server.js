@@ -6,6 +6,10 @@ const zlib_1 = require("zlib");
 const get_stream_1 = require("get-stream");
 const already_1 = require("already");
 const { HTTP2_HEADER_PATH, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH, HTTP2_HEADER_ACCEPT_ENCODING, HTTP2_HEADER_SET_COOKIE, } = http2_1.constants;
+const ignoreError = (cb) => { try {
+    cb();
+}
+catch (err) { } };
 class Server {
     constructor(opts) {
         this._opts = opts || {};
@@ -149,6 +153,35 @@ class Server {
             };
             stream.respond(responseHeaders);
             stream.pipe(encoder).pipe(stream);
+        }
+        else if (path.startsWith('/goaway')) {
+            const waitMs = path.startsWith('/goaway/')
+                ? parseInt(path.replace('/goaway/', ''))
+                : 0;
+            const responseHeaders = {
+                ':status': 200,
+                [HTTP2_HEADER_CONTENT_LENGTH]: '10',
+            };
+            stream.respond(responseHeaders);
+            stream.write("abcde");
+            stream.session.goaway();
+            if (waitMs > 0)
+                await already_1.delay(waitMs);
+            ignoreError(() => stream.write("defgh"));
+            ignoreError(() => stream.end());
+        }
+        else if (path.startsWith('/slow/')) {
+            const waitMs = parseInt(path.replace('/slow/', ''));
+            const responseHeaders = {
+                ':status': 200,
+                [HTTP2_HEADER_CONTENT_LENGTH]: '10',
+            };
+            stream.respond(responseHeaders);
+            stream.write("abcde");
+            if (waitMs > 0)
+                await already_1.delay(waitMs);
+            ignoreError(() => stream.write("defgh"));
+            ignoreError(() => stream.end());
         }
         else {
             const matched = (this._opts.matchers || [])

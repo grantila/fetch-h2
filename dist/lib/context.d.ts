@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { SecureClientSessionOptions } from 'http2';
+import { SecureClientSessionOptions, ClientHttp2Session } from 'http2';
 import { FetchInit, Decoder } from './core';
 import { Request } from './request';
 import { Response } from './response';
@@ -12,9 +12,14 @@ export interface ContextOptions {
     decoders: ReadonlyArray<Decoder>;
     session: SecureClientSessionOptions;
 }
+interface SessionItem {
+    session: ClientHttp2Session;
+    promise: Promise<ClientHttp2Session>;
+}
 export declare type PushHandler = (origin: string, request: Request, getResponse: () => Promise<Response>) => void;
 export declare class Context {
     private _h2sessions;
+    private _h2staleSessions;
     private _userAgent;
     private _accept;
     private _cookieJar;
@@ -30,6 +35,11 @@ export declare class Context {
     private get;
     private handleDisconnect;
     fetch(input: string | Request, init?: Partial<FetchInit>): Promise<Response>;
-    disconnect(url: string): Promise<void>;
+    releaseSession(origin: string): void;
+    deleteActiveSession(origin: string): SessionItem | void;
+    disconnectSession(session: ClientHttp2Session): Promise<void>;
+    disconnectStaleSessions(origin: string): Promise<void>;
+    disconnect(url: string, session?: ClientHttp2Session): Promise<void>;
     disconnectAll(): Promise<void>;
 }
+export {};

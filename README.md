@@ -138,6 +138,7 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `TimeoutError`).
  * `fetch()` has an extra option, `onTrailers` (of the type `OnTrailers`) which is a callback that will receive trailing headers.
  * The `Request.clone()` member function has an optional `url` argument.
+ * The response `text()` and `arrayBuffer()` has an optional argument `allowIncomplete` which defaults to `false`. If set to `true` these function will return incomplete bodies, i.e. "as much as was read" before the stream was prematurely closed (disconnected). If integrity checks are enabled, the functions will throw anyway if the body is incomplete.
 
 
 ## Contexts

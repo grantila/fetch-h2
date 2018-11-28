@@ -9,7 +9,7 @@ import {
 	constants as h2constants,
 } from 'http2'
 
-import { URL } from 'url'
+import { URL, resolve } from 'url'
 import { syncGuard, asyncGuard } from 'callguard'
 
 import {
@@ -24,6 +24,7 @@ import { Response, H2StreamResponse } from './response'
 import { version } from './generated/version'
 import { fetch } from './fetch'
 import { CookieJar } from './cookie-jar'
+import { setGotGoaway } from './utils'
 
 const {
 	HTTP2_HEADER_PATH,
@@ -80,6 +81,7 @@ export type PushHandler =
 export class Context
 {
 	private _h2sessions: Map< string, SessionItem >;
+	private _h2staleSessions: Map< string, Set< ClientHttp2Session > >;
 	private _userAgent: string;
 	private _accept: string;
 	private _cookieJar: CookieJar;
@@ -90,6 +92,7 @@ export class Context
 	constructor( opts?: Partial< ContextOptions > )
 	{
 		this._h2sessions = new Map( );
+		this._h2staleSessions = new Map( );
 
 		this.setup( opts );
 	}
@@ -242,11 +245,28 @@ export class Context
 			promise
 			.then( session =>
 			{
-				session.once( 'close', ( ) => this.disconnect( origin ) );
+				session.once(
+					'close',
+					( ) => this.disconnect( origin, session )
+				);
+
+				session.once(
+					'goaway',
+					(
+						errorCode: number,
+						lastStreamID: number,
+						opaqueData: Buffer
+					) =>
+					{
+						setGotGoaway( session );
+						this.releaseSession( origin );
+					}
+				);
 			} )
 			.catch( ( ) =>
 			{
-				this.disconnect( origin )
+				if ( sessionItem.session )
+					this.disconnect( origin, sessionItem.session );
 			} );
 
 			this._h2sessions.set( origin, sessionItem );
@@ -301,30 +321,99 @@ export class Context
 		return fetch( sessionGetter, input, init );
 	}
 
-	disconnect( url: string ): Promise< void >
+	releaseSession( origin: string ): void
 	{
-		const { origin } = new URL( url );
+		const sessionItem = this.deleteActiveSession( origin );
 
+		if ( !sessionItem )
+			return;
+
+		if ( !this._h2staleSessions.has( origin ) )
+			this._h2staleSessions.set( origin, new Set( ) );
+
+		this._h2staleSessions.get( origin ).add( sessionItem.session );
+	}
+
+	deleteActiveSession( origin: string ): SessionItem | void
+	{
 		if ( !this._h2sessions.has( origin ) )
 			return;
 
-		const prom = this.handleDisconnect( this._h2sessions.get( origin ) );
-
+		const sessionItem = this._h2sessions.get( origin );
 		this._h2sessions.delete( origin );
 
-		return prom;
+		return sessionItem;
+	}
+
+	disconnectSession( session: ClientHttp2Session ): Promise< void >
+	{
+		return new Promise< void >( resolve =>
+		{
+			if ( session.destroyed )
+				return resolve( );
+
+			session.once( 'close', ( ) => resolve( ) );
+			session.destroy( );
+		} );
+	}
+
+	disconnectStaleSessions( origin: string ): Promise< void >
+	{
+		const promises: Array< Promise< void > > = [ ];
+
+		if ( this._h2staleSessions.has( origin ) )
+		{
+			const sessionSet = this._h2staleSessions.get( origin );
+			this._h2staleSessions.delete( origin );
+
+			for ( let session of sessionSet )
+				promises.push( this.disconnectSession( session ) );
+		}
+
+		return Promise.all( promises ).then( ( ) => { } );
+	}
+
+	disconnect( url: string, session?: ClientHttp2Session ): Promise< void >
+	{
+		const { origin } = new URL( url );
+		const promises: Array< Promise< void > > = [ ];
+
+		const sessionItem = this.deleteActiveSession( origin );
+
+		if ( sessionItem && ( !session || sessionItem.session === session ) )
+			promises.push( this.handleDisconnect( sessionItem ) );
+
+		if ( !session )
+		{
+			promises.push( this.disconnectStaleSessions( origin ) );
+		}
+		else if ( this._h2staleSessions.has( origin ) )
+		{
+			const sessionSet = this._h2staleSessions.get( origin );
+			if ( sessionSet.has( session ) )
+			{
+				sessionSet.delete( session );
+				promises.push( this.disconnectSession( session ) );
+			}
+		}
+
+		return Promise.all( promises ).then( ( ) => { } );
 	}
 
 	disconnectAll( ): Promise< void >
 	{
 		const promises: Array< Promise< void > > = [ ];
 
-		for ( let [ origin, eventualH2session ] of this._h2sessions )
+		for ( let eventualH2session of this._h2sessions.values( ) )
 		{
 			promises.push( this.handleDisconnect( eventualH2session ) );
 		}
-
 		this._h2sessions.clear( );
+
+		for ( let origin of this._h2staleSessions.keys( ) )
+		{
+			promises.push( this.disconnectStaleSessions( origin ) );
+		}
 
 		return Promise.all( promises ).then( ( ) => { } );
 	}

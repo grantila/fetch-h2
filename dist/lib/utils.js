@@ -12,4 +12,12 @@ function parseLocation(location, origin) {
     return url.href;
 }
 exports.parseLocation = parseLocation;
+function hasGotGoaway(session) {
+    return !!session.__fetch_h2_goaway;
+}
+exports.hasGotGoaway = hasGotGoaway;
+function setGotGoaway(session) {
+    session.__fetch_h2_goaway = true;
+}
+exports.setGotGoaway = setGotGoaway;
 //# sourceMappingURL=utils.js.map
