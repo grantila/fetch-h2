@@ -19,3 +19,4 @@ export declare class Headers {
 export declare class GuardedHeaders extends Headers {
     constructor(guard: GuardTypes, init?: RawHeaders | Headers);
 }
+export declare function ensureHeaders(headers: RawHeaders | Headers): Headers;

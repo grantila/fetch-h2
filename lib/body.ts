@@ -21,36 +21,16 @@ function throwIntegrityMismatch( ): never
 	throw new Error( "Resource integrity mismatch" );
 }
 
+function throwLengthMismatch( ): never
+{
+	throw new RangeError(
+		"Resource length mismatch (possibly incomplete body)" );
+}
+
 function parseIntegrity( integrity: string )
 {
 	const [ algorithm, ...expectedHash ] = integrity.split( '-' );
 	return { algorithm, hash: expectedHash.join( '-' ) };
-}
-
-function validateIntegrity< T extends Buffer | string | ArrayBuffer >(
-	data: T,
-	integrity: string
-)
-: T
-{
-	if ( !integrity )
-		// This is valid
-		return data;
-
-	const { algorithm, hash: expectedHash } = parseIntegrity( integrity );
-
-	const hash = createHash( algorithm )
-		.update(
-			data instanceof ArrayBuffer
-			? new DataView( data ) as any
-			: < Buffer | string >data
-		)
-		.digest( 'base64' );
-
-	if ( expectedHash.toLowerCase( ) !== hash.toLowerCase( ) )
-		throwIntegrityMismatch( );
-
-	return data;
 }
 
 function isStream( body: StorageBodyTypes ): boolean
@@ -58,6 +38,8 @@ function isStream( body: StorageBodyTypes ): boolean
 	return body &&
 		( 'readable' in ( < NodeJS.ReadableStream >Object( body ) ) );
 }
+
+const emptyBuffer = new ArrayBuffer( 0 );
 
 export class Body implements IBody
 {
@@ -81,6 +63,40 @@ export class Body implements IBody
 		} );
 	}
 
+	private validateIntegrity< T extends Buffer | ArrayBuffer >(
+		data: T,
+		allowIncomplete: boolean
+	)
+	: T
+	{
+		if (
+			!allowIncomplete &&
+			this._length != null &&
+			data.byteLength != this._length
+		)
+			throwLengthMismatch( );
+
+		if ( !this._integrity )
+			// This is valid
+			return data;
+
+		const { algorithm, hash: expectedHash } =
+			parseIntegrity( this._integrity );
+
+		const hash = createHash( algorithm )
+			.update(
+				data instanceof ArrayBuffer
+				? new DataView( data ) as any
+				: < Buffer >data
+			)
+			.digest( 'base64' );
+
+		if ( expectedHash.toLowerCase( ) !== hash.toLowerCase( ) )
+			throwIntegrityMismatch( );
+
+		return data;
+	}
+
 	protected hasBody( ): boolean
 	{
 		return '_body' in this;
@@ -89,12 +105,13 @@ export class Body implements IBody
 	protected setBody(
 		body: BodyTypes | IBody,
 		mime?: string,
-		integrity?: string
+		integrity?: string,
+		length: number = null
 	)
 	: void
 	{
 		this._ensureUnused( );
-		this._length = null;
+		this._length = length;
 		this._used = false;
 
 		if ( body instanceof Body )
@@ -125,22 +142,24 @@ export class Body implements IBody
 		this._used = true;
 	}
 
-	async arrayBuffer( ): Promise< ArrayBuffer >
+	async arrayBuffer( allowIncomplete = false ): Promise< ArrayBuffer >
 	{
 		this._ensureUnused( );
 
 		if ( this._body == null )
-			return validateIntegrity( new ArrayBuffer( 0 ), this._integrity );
+			return this.validateIntegrity( emptyBuffer, allowIncomplete );
 
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
-			.then( buffer => validateIntegrity( buffer, this._integrity ) )
+			.then( buffer =>
+				this.validateIntegrity( buffer, allowIncomplete )
+			)
 			.then( buffer => toArrayBuffer( buffer ) );
 
 		else if ( isBuffer( this._body ) )
-			return validateIntegrity(
+			return this.validateIntegrity(
 				toArrayBuffer( < Buffer >this._body ),
-				this._integrity
+				allowIncomplete
 			);
 
 		else
@@ -164,42 +183,47 @@ export class Body implements IBody
 		this._ensureUnused( );
 
 		if ( this._body == null )
-			return Promise.resolve( validateIntegrity( "", this._integrity ) )
-				.then( ( ) => this._body );
+			return Promise.resolve(
+				this.validateIntegrity( emptyBuffer, false )
+			)
+			.then( ( ) => this._body );
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
-					< any >validateIntegrity( buffer, this._integrity )
+					< any >this.validateIntegrity( buffer, false )
 				) )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else if ( isBuffer( this._body ) )
-			return Promise.resolve( this._body.toString( ) )
-				.then( tap( string =>
-					< any >validateIntegrity( string, this._integrity )
+			return Promise.resolve( < Buffer >this._body )
+				.then( tap( buffer =>
+					< any >this.validateIntegrity( buffer, false )
 				) )
-				.then( JSON.parse );
+				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else
 			throwUnknownData( );
 	}
 
-	async text( ): Promise< string >
+	async text( allowIncomplete = false ): Promise< string >
 	{
 		this._ensureUnused( );
 
 		if ( this._body == null )
-			return Promise.resolve( validateIntegrity( "", this._integrity ) )
-				.then( ( ) => < string >< BodyTypes >this._body );
+			return Promise.resolve(
+				this.validateIntegrity( emptyBuffer, allowIncomplete )
+			)
+			.then( ( ) => < string >< BodyTypes >this._body );
 		else if ( isStream( this._body ) )
 			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
-					< any >validateIntegrity( buffer, this._integrity )
+					< any >this.validateIntegrity( buffer, allowIncomplete )
 				) )
 				.then( buffer => buffer.toString( ) );
 		else if ( isBuffer( this._body ) )
-			return Promise.resolve( this._body.toString( ) )
-				.then( tap( string =>
-					< any >validateIntegrity( string, this._integrity )
-				) );
+			return Promise.resolve( < Buffer >this._body )
+				.then( tap( buffer =>
+					< any >this.validateIntegrity( buffer, allowIncomplete )
+				) )
+				.then( buffer => buffer.toString( ) );
 		else
 			return throwUnknownData( );
 	}

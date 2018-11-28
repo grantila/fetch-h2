@@ -225,3 +225,8 @@ export class GuardedHeaders extends Headers
 		super( ( _guard = guard, init ) );
 	}
 }
+
+export function ensureHeaders( headers: RawHeaders | Headers )
+{
+	return headers instanceof Headers ? headers : new Headers( headers );
+}

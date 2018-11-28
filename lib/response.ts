@@ -16,6 +16,7 @@ const {
 	HTTP2_HEADER_STATUS,
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_CONTENT_ENCODING,
+	HTTP2_HEADER_CONTENT_LENGTH,
 } = h2constants;
 
 
@@ -30,6 +31,7 @@ import {
 import {
 	Headers,
 	GuardedHeaders,
+	ensureHeaders,
 } from './headers'
 
 import {
@@ -62,13 +64,22 @@ export class Response extends Body
 	{
 		super( );
 
+		const headers = ensureHeaders( init.headers );
+
 		if ( body )
 		{
-			const contentType = init.headers[ HTTP2_HEADER_CONTENT_TYPE ];
+			const contentType = headers.get( HTTP2_HEADER_CONTENT_TYPE );
+			const contentLength = headers.get( HTTP2_HEADER_CONTENT_LENGTH );
+
+			const length =
+				contentLength == null
+				? null
+				: parseInt( contentLength );
+
 			if ( contentType )
-				this.setBody( body, contentType );
+				this.setBody( body, contentType, null, length );
 			else
-				this.setBody( body );
+				this.setBody( body, null, null, length );
 		}
 
 		const _extra = < Extra >( extra || { } );
@@ -80,7 +91,7 @@ export class Response extends Body
 		Object.defineProperties( this, {
 			headers: {
 				enumerable: true,
-				value: init.headers,
+				value: headers,
 			},
 			ok: {
 				enumerable: true,

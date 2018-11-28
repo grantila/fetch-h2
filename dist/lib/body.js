@@ -12,28 +12,18 @@ function throwUnknownData() {
 function throwIntegrityMismatch() {
     throw new Error("Resource integrity mismatch");
 }
+function throwLengthMismatch() {
+    throw new RangeError("Resource length mismatch (possibly incomplete body)");
+}
 function parseIntegrity(integrity) {
     const [algorithm, ...expectedHash] = integrity.split('-');
     return { algorithm, hash: expectedHash.join('-') };
-}
-function validateIntegrity(data, integrity) {
-    if (!integrity)
-        // This is valid
-        return data;
-    const { algorithm, hash: expectedHash } = parseIntegrity(integrity);
-    const hash = crypto_1.createHash(algorithm)
-        .update(data instanceof ArrayBuffer
-        ? new DataView(data)
-        : data)
-        .digest('base64');
-    if (expectedHash.toLowerCase() !== hash.toLowerCase())
-        throwIntegrityMismatch();
-    return data;
 }
 function isStream(body) {
     return body &&
         ('readable' in Object(body));
 }
+const emptyBuffer = new ArrayBuffer(0);
 class Body {
     constructor() {
         this._length = null;
@@ -45,12 +35,30 @@ class Body {
             }
         });
     }
+    validateIntegrity(data, allowIncomplete) {
+        if (!allowIncomplete &&
+            this._length != null &&
+            data.byteLength != this._length)
+            throwLengthMismatch();
+        if (!this._integrity)
+            // This is valid
+            return data;
+        const { algorithm, hash: expectedHash } = parseIntegrity(this._integrity);
+        const hash = crypto_1.createHash(algorithm)
+            .update(data instanceof ArrayBuffer
+            ? new DataView(data)
+            : data)
+            .digest('base64');
+        if (expectedHash.toLowerCase() !== hash.toLowerCase())
+            throwIntegrityMismatch();
+        return data;
+    }
     hasBody() {
         return '_body' in this;
     }
-    setBody(body, mime, integrity) {
+    setBody(body, mime, integrity, length = null) {
         this._ensureUnused();
-        this._length = null;
+        this._length = length;
         this._used = false;
         if (body instanceof Body) {
             body._ensureUnused();
@@ -73,16 +81,16 @@ class Body {
             throw new ReferenceError("Body already used");
         this._used = true;
     }
-    async arrayBuffer() {
+    async arrayBuffer(allowIncomplete = false) {
         this._ensureUnused();
         if (this._body == null)
-            return validateIntegrity(new ArrayBuffer(0), this._integrity);
+            return this.validateIntegrity(emptyBuffer, allowIncomplete);
         else if (isStream(this._body))
             return get_stream_1.buffer(this._body)
-                .then(buffer => validateIntegrity(buffer, this._integrity))
+                .then(buffer => this.validateIntegrity(buffer, allowIncomplete))
                 .then(buffer => toArrayBuffer(buffer));
         else if (isBuffer(this._body))
-            return validateIntegrity(toArrayBuffer(this._body), this._integrity);
+            return this.validateIntegrity(toArrayBuffer(this._body), allowIncomplete);
         else
             throwUnknownData();
     }
@@ -96,31 +104,32 @@ class Body {
     async json() {
         this._ensureUnused();
         if (this._body == null)
-            return Promise.resolve(validateIntegrity("", this._integrity))
+            return Promise.resolve(this.validateIntegrity(emptyBuffer, false))
                 .then(() => this._body);
         else if (isStream(this._body))
             return get_stream_1.buffer(this._body)
-                .then(already_1.tap(buffer => validateIntegrity(buffer, this._integrity)))
+                .then(already_1.tap(buffer => this.validateIntegrity(buffer, false)))
                 .then(buffer => JSON.parse(buffer.toString()));
         else if (isBuffer(this._body))
-            return Promise.resolve(this._body.toString())
-                .then(already_1.tap(string => validateIntegrity(string, this._integrity)))
-                .then(JSON.parse);
+            return Promise.resolve(this._body)
+                .then(already_1.tap(buffer => this.validateIntegrity(buffer, false)))
+                .then(buffer => JSON.parse(buffer.toString()));
         else
             throwUnknownData();
     }
-    async text() {
+    async text(allowIncomplete = false) {
         this._ensureUnused();
         if (this._body == null)
-            return Promise.resolve(validateIntegrity("", this._integrity))
+            return Promise.resolve(this.validateIntegrity(emptyBuffer, allowIncomplete))
                 .then(() => this._body);
         else if (isStream(this._body))
             return get_stream_1.buffer(this._body)
-                .then(already_1.tap(buffer => validateIntegrity(buffer, this._integrity)))
+                .then(already_1.tap(buffer => this.validateIntegrity(buffer, allowIncomplete)))
                 .then(buffer => buffer.toString());
         else if (isBuffer(this._body))
-            return Promise.resolve(this._body.toString())
-                .then(already_1.tap(string => validateIntegrity(string, this._integrity)));
+            return Promise.resolve(this._body)
+                .then(already_1.tap(buffer => this.validateIntegrity(buffer, allowIncomplete)))
+                .then(buffer => buffer.toString());
         else
             return throwUnknownData();
     }

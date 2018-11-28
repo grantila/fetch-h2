@@ -195,7 +195,7 @@ describe('basic', () => {
     it('should timeout on a slow request', async function () {
         this.timeout(500);
         const { server, port } = await server_1.makeServer();
-        const eventual_response = __1.fetch(`http://localhost:${port}/wait/10`, {
+        const eventual_response = __1.fetch(`http://localhost:${port}/wait/20`, {
             method: 'POST',
             timeout: 8,
         });
@@ -340,13 +340,58 @@ describe('basic', () => {
     });
 });
 describe('response', () => {
-    //	this.timeout( 20000 )
     it('should have a proper url', async () => {
         const { server, port } = await server_1.makeServer();
         const url = `http://localhost:${port}/headers`;
         const response = ensureStatusSuccess(await __1.fetch(url));
         chai_1.expect(response.url).to.equal(url);
         await __1.disconnectAll();
+        await server.shutdown();
+    });
+});
+describe('goaway', () => {
+    it('handle session failover (race conditioned)', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url1 = `http://localhost:${port}/goaway`;
+        const url2 = `http://localhost:${port}/headers`;
+        const response1 = ensureStatusSuccess(await __1.fetch(url1));
+        chai_1.expect(response1.url).to.equal(url1);
+        const response2 = ensureStatusSuccess(await __1.fetch(url2));
+        chai_1.expect(response2.url).to.equal(url2);
+        await response1.text();
+        await response2.text();
+        await __1.disconnectAll();
+        await server.shutdown();
+    });
+    it('handle session failover (calm)', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url1 = `http://localhost:${port}/goaway`;
+        const url2 = `http://localhost:${port}/headers`;
+        const response1 = ensureStatusSuccess(await __1.fetch(url1));
+        chai_1.expect(response1.url).to.equal(url1);
+        await already_1.delay(20);
+        const response2 = ensureStatusSuccess(await __1.fetch(url2));
+        chai_1.expect(response2.url).to.equal(url2);
+        await response1.text();
+        await response2.text();
+        await __1.disconnectAll();
+        await server.shutdown();
+    });
+    it('user-disconnect closes all sessions', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url1 = `http://localhost:${port}/goaway/50`;
+        const url2 = `http://localhost:${port}/slow/50`;
+        const response1 = ensureStatusSuccess(await __1.fetch(url1));
+        chai_1.expect(response1.url).to.equal(url1);
+        await already_1.delay(10);
+        const response2 = ensureStatusSuccess(await __1.fetch(url2));
+        chai_1.expect(response2.url).to.equal(url2);
+        await already_1.delay(10);
+        await __1.disconnectAll();
+        const text1 = await response1.text(true);
+        const text2 = await response2.text(true);
+        chai_1.expect(text1).to.equal('abcde');
+        chai_1.expect(text2).to.equal('abcde');
         await server.shutdown();
     });
 });

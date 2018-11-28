@@ -145,4 +145,8 @@ class GuardedHeaders extends Headers {
     }
 }
 exports.GuardedHeaders = GuardedHeaders;
+function ensureHeaders(headers) {
+    return headers instanceof Headers ? headers : new Headers(headers);
+}
+exports.ensureHeaders = ensureHeaders;
 //# sourceMappingURL=headers.js.map

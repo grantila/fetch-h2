@@ -2,18 +2,23 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const http2_1 = require("http2");
 const zlib_1 = require("zlib");
-const { HTTP2_HEADER_LOCATION, HTTP2_HEADER_STATUS, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_ENCODING, } = http2_1.constants;
+const { HTTP2_HEADER_LOCATION, HTTP2_HEADER_STATUS, HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_ENCODING, HTTP2_HEADER_CONTENT_LENGTH, } = http2_1.constants;
 const headers_1 = require("./headers");
 const body_1 = require("./body");
 class Response extends body_1.Body {
     constructor(body, init, extra) {
         super();
+        const headers = headers_1.ensureHeaders(init.headers);
         if (body) {
-            const contentType = init.headers[HTTP2_HEADER_CONTENT_TYPE];
+            const contentType = headers.get(HTTP2_HEADER_CONTENT_TYPE);
+            const contentLength = headers.get(HTTP2_HEADER_CONTENT_LENGTH);
+            const length = contentLength == null
+                ? null
+                : parseInt(contentLength);
             if (contentType)
-                this.setBody(body, contentType);
+                this.setBody(body, contentType, null, length);
             else
-                this.setBody(body);
+                this.setBody(body, null, null, length);
         }
         const _extra = (extra || {});
         const type = _extra.type || 'basic';
@@ -22,7 +27,7 @@ class Response extends body_1.Body {
         Object.defineProperties(this, {
             headers: {
                 enumerable: true,
-                value: init.headers,
+                value: headers,
             },
             ok: {
                 enumerable: true,

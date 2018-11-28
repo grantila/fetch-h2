@@ -9,6 +9,7 @@ const response_1 = require("./response");
 const version_1 = require("./generated/version");
 const fetch_1 = require("./fetch");
 const cookie_jar_1 = require("./cookie-jar");
+const utils_1 = require("./utils");
 const { HTTP2_HEADER_PATH, } = http2_1.constants;
 function makeDefaultUserAgent() {
     const name = `fetch-h2/${version_1.version} (+https://github.com/grantila/fetch-h2)`;
@@ -30,6 +31,7 @@ function isOkError(err) {
 class Context {
     constructor(opts) {
         this._h2sessions = new Map();
+        this._h2staleSessions = new Map();
         this.setup(opts);
     }
     setup(opts) {
@@ -110,10 +112,15 @@ class Context {
             // Handle session closure (delete from store)
             promise
                 .then(session => {
-                session.once('close', () => this.disconnect(origin));
+                session.once('close', () => this.disconnect(origin, session));
+                session.once('goaway', (errorCode, lastStreamID, opaqueData) => {
+                    utils_1.setGotGoaway(session);
+                    this.releaseSession(origin);
+                });
             })
                 .catch(() => {
-                this.disconnect(origin);
+                if (sessionItem.session)
+                    this.disconnect(origin, sessionItem.session);
             });
             this._h2sessions.set(origin, sessionItem);
         }
@@ -152,20 +159,66 @@ class Context {
         };
         return fetch_1.fetch(sessionGetter, input, init);
     }
-    disconnect(url) {
-        const { origin } = new url_1.URL(url);
+    releaseSession(origin) {
+        const sessionItem = this.deleteActiveSession(origin);
+        if (!sessionItem)
+            return;
+        if (!this._h2staleSessions.has(origin))
+            this._h2staleSessions.set(origin, new Set());
+        this._h2staleSessions.get(origin).add(sessionItem.session);
+    }
+    deleteActiveSession(origin) {
         if (!this._h2sessions.has(origin))
             return;
-        const prom = this.handleDisconnect(this._h2sessions.get(origin));
+        const sessionItem = this._h2sessions.get(origin);
         this._h2sessions.delete(origin);
-        return prom;
+        return sessionItem;
+    }
+    disconnectSession(session) {
+        return new Promise(resolve => {
+            if (session.destroyed)
+                return resolve();
+            session.once('close', () => resolve());
+            session.destroy();
+        });
+    }
+    disconnectStaleSessions(origin) {
+        const promises = [];
+        if (this._h2staleSessions.has(origin)) {
+            const sessionSet = this._h2staleSessions.get(origin);
+            this._h2staleSessions.delete(origin);
+            for (let session of sessionSet)
+                promises.push(this.disconnectSession(session));
+        }
+        return Promise.all(promises).then(() => { });
+    }
+    disconnect(url, session) {
+        const { origin } = new url_1.URL(url);
+        const promises = [];
+        const sessionItem = this.deleteActiveSession(origin);
+        if (sessionItem && (!session || sessionItem.session === session))
+            promises.push(this.handleDisconnect(sessionItem));
+        if (!session) {
+            promises.push(this.disconnectStaleSessions(origin));
+        }
+        else if (this._h2staleSessions.has(origin)) {
+            const sessionSet = this._h2staleSessions.get(origin);
+            if (sessionSet.has(session)) {
+                sessionSet.delete(session);
+                promises.push(this.disconnectSession(session));
+            }
+        }
+        return Promise.all(promises).then(() => { });
     }
     disconnectAll() {
         const promises = [];
-        for (let [origin, eventualH2session] of this._h2sessions) {
+        for (let eventualH2session of this._h2sessions.values()) {
             promises.push(this.handleDisconnect(eventualH2session));
         }
         this._h2sessions.clear();
+        for (let origin of this._h2staleSessions.keys()) {
+            promises.push(this.disconnectStaleSessions(origin));
+        }
         return Promise.all(promises).then(() => { });
     }
 }

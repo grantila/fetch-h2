@@ -21,6 +21,8 @@ HTTP2_HEADER_USER_AGENT, HTTP2_HEADER_ACCEPT, HTTP2_HEADER_COOKIE, HTTP2_HEADER_
 HTTP2_HEADER_STATUS, HTTP2_HEADER_LOCATION, HTTP2_HEADER_SET_COOKIE, 
 // Error codes
 NGHTTP2_NO_ERROR, } = http2_1.constants;
+// This is from nghttp2.h, but undocumented in Node.js
+const NGHTTP2_ERR_START_STREAM_NOT_ALLOWED = -516;
 const isRedirectStatus = {
     "300": true,
     "301": true,
@@ -41,12 +43,12 @@ function ensureNotCircularRedirection(redirections) {
         }
 }
 async function fetchImpl(session, input, init = {}, extra) {
-    const { redirected } = extra;
+    const { redirected, raceConditionedGoaway } = extra;
     ensureNotCircularRedirection(redirected);
     const req = new request_1.Request(input, init);
     const { url, method, redirect } = req;
     const { signal, onTrailers } = init;
-    const { protocol, host, pathname, search, hash } = new url_1.URL(url);
+    const { origin, protocol, host, pathname, search, hash } = new url_1.URL(url);
     const path = pathname + search + hash;
     const endStream = method === HTTP2_METHOD_GET || method === HTTP2_METHOD_HEAD;
     const headers = new headers_1.Headers(req.headers);
@@ -148,7 +150,28 @@ async function fetchImpl(session, input, init = {}, extra) {
                 stream.on('error', guard((err) => {
                     reject(err);
                 }));
-                stream.on('frameError', guard((...whatever) => {
+                stream.on('frameError', guard((type, code, streamId) => {
+                    if (code === NGHTTP2_ERR_START_STREAM_NOT_ALLOWED &&
+                        endStream) {
+                        // This could be due to a race-condition in GOAWAY.
+                        // As of current Node.js, the 'goaway' event is
+                        // emitted on the session before this event
+                        // is emitted, so we will know if we got it.
+                        if (!raceConditionedGoaway.has(origin) &&
+                            utils_1.hasGotGoaway(h2session)) {
+                            // Don't retry again due to potential GOAWAY
+                            raceConditionedGoaway.add(origin);
+                            // Since we've got the 'goaway' event, the
+                            // context has already released the session,
+                            // so a retry will create a new session.
+                            resolve(fetchImpl(session, req, { signal, onTrailers }, {
+                                timeoutAt,
+                                redirected,
+                                raceConditionedGoaway,
+                            }));
+                            return;
+                        }
+                    }
                     reject(new Error("Request failed"));
                 }));
                 stream.on('streamClosed', guard(errorCode => {
@@ -224,9 +247,10 @@ async function fetchImpl(session, input, init = {}, extra) {
                         return reject(new Error(`URL got redirected to ${location}, which ` +
                             `'fetch-h2' doesn't support for ${method}`));
                     stream.destroy();
-                    resolve(fetchImpl(session, req.clone(location), {}, {
+                    resolve(fetchImpl(session, req.clone(location), { signal, onTrailers }, {
                         timeoutAt,
-                        redirected: redirected.concat(url)
+                        redirected: redirected.concat(url),
+                        raceConditionedGoaway,
                     }));
                 }));
             });
@@ -248,7 +272,9 @@ async function fetchImpl(session, input, init = {}, extra) {
 }
 function fetch(session, input, init) {
     const timeoutAt = null;
-    return fetchImpl(session, input, init, { timeoutAt, redirected: [] });
+    const raceConditionedGoaway = new Set();
+    const extra = { timeoutAt, redirected: [], raceConditionedGoaway };
+    return fetchImpl(session, input, init, extra);
 }
 exports.fetch = fetch;
 //# sourceMappingURL=fetch.js.map

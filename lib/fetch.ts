@@ -3,10 +3,10 @@
 import { constants as h2constants } from 'http2'
 import { URL } from 'url'
 
-import { Finally } from 'already'
+import { delay, Finally } from 'already'
 import { syncGuard } from 'callguard'
 
-import { arrayify, parseLocation } from './utils'
+import { arrayify, parseLocation, hasGotGoaway } from './utils'
 import {
 	Method,
 	FetchInit,
@@ -47,6 +47,9 @@ const {
 	NGHTTP2_NO_ERROR,
 } = h2constants;
 
+// This is from nghttp2.h, but undocumented in Node.js
+const NGHTTP2_ERR_START_STREAM_NOT_ALLOWED = -516;
+
 const isRedirectStatus: { [ status: string ]: boolean; } = {
     "300": true,
     "301": true,
@@ -76,6 +79,7 @@ interface FetchExtra
 {
 	redirected: Array< string >;
 	timeoutAt: number;
+	raceConditionedGoaway: Set< string >; // per origin
 }
 
 async function fetchImpl(
@@ -86,7 +90,7 @@ async function fetchImpl(
 )
 : Promise< Response >
 {
-	const { redirected } = extra;
+	const { redirected, raceConditionedGoaway } = extra;
 	ensureNotCircularRedirection( redirected );
 
 	const req = new Request( input, init );
@@ -96,6 +100,7 @@ async function fetchImpl(
 	const { signal, onTrailers } = init;
 
 	const {
+		origin,
 		protocol,
 		host,
 		pathname, search, hash
@@ -258,10 +263,49 @@ async function fetchImpl(
 					reject( err );
 				} ) );
 
-				stream.on( 'frameError', guard( ( ...whatever ) =>
-				{
-					reject( new Error( "Request failed" ) );
-				} ) );
+				stream.on( 'frameError', guard(
+					( type: number, code: number, streamId: number ) =>
+					{
+						if (
+							code === NGHTTP2_ERR_START_STREAM_NOT_ALLOWED &&
+							endStream
+						)
+						{
+							// This could be due to a race-condition in GOAWAY.
+							// As of current Node.js, the 'goaway' event is
+							// emitted on the session before this event
+							// is emitted, so we will know if we got it.
+							if (
+								!raceConditionedGoaway.has( origin ) &&
+								hasGotGoaway( h2session )
+							)
+							{
+								// Don't retry again due to potential GOAWAY
+								raceConditionedGoaway.add( origin );
+
+								// Since we've got the 'goaway' event, the
+								// context has already released the session,
+								// so a retry will create a new session.
+								resolve(
+									fetchImpl(
+										session,
+										req,
+										{ signal, onTrailers },
+										{
+											timeoutAt,
+											redirected,
+											raceConditionedGoaway,
+										}
+									)
+								);
+
+								return;
+							}
+						}
+
+						reject( new Error( "Request failed" ) );
+					} )
+				);
 
 				stream.on( 'streamClosed', guard( errorCode =>
 				{
@@ -391,10 +435,11 @@ async function fetchImpl(
 						fetchImpl(
 							session,
 							req.clone( location ),
-							{ },
+							{ signal, onTrailers },
 							{
 								timeoutAt,
-								redirected: redirected.concat( url )
+								redirected: redirected.concat( url ),
+								raceConditionedGoaway,
 							}
 						)
 					);
@@ -432,5 +477,8 @@ export function fetch(
 {
 	const timeoutAt = null;
 
-	return fetchImpl( session, input, init, { timeoutAt, redirected: [ ] } );
+	const raceConditionedGoaway = new Set( );
+	const extra = { timeoutAt, redirected: [ ], raceConditionedGoaway };
+
+	return fetchImpl( session, input, init, extra );
 }
