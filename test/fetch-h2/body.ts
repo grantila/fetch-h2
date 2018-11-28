@@ -6,6 +6,8 @@ import { buffer as getStreamAsBuffer } from 'get-stream';
 import * as through2 from 'through2';
 import { createHash } from 'crypto';
 
+import { createIntegrity } from '../lib/utils';
+
 import {
 	fetch,
 	context,
@@ -34,12 +36,9 @@ async function makeSync< T >( fn: ( ) => PromiseLike< T > )
 	}
 }
 
-function setHash( body: any, data, phonyHashType = 'sha256' )
+function setHash( body: any, data, hashType = 'sha256' )
 {
-	const hash = createHash( 'sha256' );
-	hash.update( data );
-	const v = phonyHashType + "-" + hash.digest( "base64" );
-	body._integrity = v;
+	body._integrity = createIntegrity( data, hashType );
 }
 
 class IntegrityBody extends Body

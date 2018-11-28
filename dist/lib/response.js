@@ -9,6 +9,11 @@ class Response extends body_1.Body {
     constructor(body, init, extra) {
         super();
         const headers = headers_1.ensureHeaders(init.headers);
+        const _extra = (extra || {});
+        const type = _extra.type || 'basic';
+        const redirected = !!_extra.redirected || false;
+        const url = _extra.url || '';
+        const integrity = _extra.integrity || null;
         if (body) {
             const contentType = headers.get(HTTP2_HEADER_CONTENT_TYPE);
             const contentLength = headers.get(HTTP2_HEADER_CONTENT_LENGTH);
@@ -16,14 +21,10 @@ class Response extends body_1.Body {
                 ? null
                 : parseInt(contentLength);
             if (contentType)
-                this.setBody(body, contentType, null, length);
+                this.setBody(body, contentType, integrity, length);
             else
-                this.setBody(body, null, null, length);
+                this.setBody(body, null, integrity, length);
         }
-        const _extra = (extra || {});
-        const type = _extra.type || 'basic';
-        const redirected = !!_extra.redirected || false;
-        const url = _extra.url || '';
         Object.defineProperties(this, {
             headers: {
                 enumerable: true,
@@ -101,9 +102,9 @@ function makeInit(inHeaders) {
     const headers = makeHeadersFromH2Headers(inHeaders);
     return { status, statusText, headers };
 }
-function makeExtra(url, headers, redirected) {
+function makeExtra(url, headers, redirected, integrity) {
     const type = 'basic'; // TODO: Implement CORS
-    return { redirected, type, url };
+    return { redirected, integrity, type, url };
 }
 function handleEncoding(contentDecoders, stream, headers) {
     const contentEncoding = headers[HTTP2_HEADER_CONTENT_ENCODING];
@@ -124,8 +125,8 @@ function handleEncoding(contentDecoders, stream, headers) {
     return decoder(stream);
 }
 class H2StreamResponse extends Response {
-    constructor(contentDecoders, url, stream, headers, redirected) {
-        super(handleEncoding(contentDecoders, stream, headers), makeInit(headers), makeExtra(url, headers, redirected));
+    constructor(contentDecoders, url, stream, headers, redirected, integrity) {
+        super(handleEncoding(contentDecoders, stream, headers), makeInit(headers), makeExtra(url, headers, redirected, integrity));
     }
 }
 exports.H2StreamResponse = H2StreamResponse;

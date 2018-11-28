@@ -5,6 +5,7 @@ const chai_1 = require("chai");
 const get_stream_1 = require("get-stream");
 const through2 = require("through2");
 const crypto_1 = require("crypto");
+const utils_1 = require("../lib/utils");
 const __1 = require("../../");
 async function makeSync(fn) {
     try {
@@ -15,11 +16,8 @@ async function makeSync(fn) {
         return () => { throw err; };
     }
 }
-function setHash(body, data, phonyHashType = 'sha256') {
-    const hash = crypto_1.createHash('sha256');
-    hash.update(data);
-    const v = phonyHashType + "-" + hash.digest("base64");
-    body._integrity = v;
+function setHash(body, data, hashType = 'sha256') {
+    body._integrity = utils_1.createIntegrity(data, hashType);
 }
 class IntegrityBody extends __1.Body {
     constructor(data, hashData, integrityHashType = 'sha256') {

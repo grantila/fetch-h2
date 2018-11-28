@@ -95,7 +95,7 @@ async function fetchImpl(
 
 	const req = new Request( input, init );
 
-	const { url, method, redirect } = req;
+	const { url, method, redirect, integrity } = req;
 
 	const { signal, onTrailers } = init;
 
@@ -412,7 +412,8 @@ async function fetchImpl(
 								headers,
 								redirect === 'manual'
 									? false
-									: extra.redirected.length > 0
+									: extra.redirected.length > 0,
+								integrity
 							)
 						);
 

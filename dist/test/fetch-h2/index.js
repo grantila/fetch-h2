@@ -8,6 +8,7 @@ const from2 = require("from2");
 const crypto_1 = require("crypto");
 const get_stream_1 = require("get-stream");
 const server_1 = require("../lib/server");
+const utils_1 = require("../lib/utils");
 const __1 = require("../../");
 afterEach(__1.disconnectAll);
 async function getRejection(promise) {
@@ -392,6 +393,36 @@ describe('goaway', () => {
         const text2 = await response2.text(true);
         chai_1.expect(text1).to.equal('abcde');
         chai_1.expect(text2).to.equal('abcde');
+        await server.shutdown();
+    });
+});
+describe('integrity', () => {
+    it('handle and succeed on valid integrity', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url = `http://localhost:${port}/slow/0`;
+        const data = "abcdefghij";
+        const integrity = utils_1.createIntegrity(data);
+        const response = ensureStatusSuccess(await __1.fetch(url, { integrity }));
+        chai_1.expect(response.url).to.equal(url);
+        chai_1.expect(await response.text()).to.equal(data);
+        await __1.disconnectAll();
+        await server.shutdown();
+    });
+    it('handle and fail on invalid integrity', async () => {
+        const { server, port } = await server_1.makeServer();
+        const url = `http://localhost:${port}/slow/0`;
+        const data = "abcdefghij-x";
+        const integrity = utils_1.createIntegrity(data);
+        const response = ensureStatusSuccess(await __1.fetch(url, { integrity }));
+        chai_1.expect(response.url).to.equal(url);
+        try {
+            await response.text();
+            chai_1.expect(false).to.equal(true);
+        }
+        catch (err) {
+            chai_1.expect(err.message).to.contain("integrity");
+        }
+        await __1.disconnectAll();
         await server.shutdown();
     });
 });

@@ -171,7 +171,8 @@ export class Context
 					path,
 					pushedStream,
 					responseHeaders,
-					false
+					false,
+					null
 				);
 
 				resolve( response );

@@ -124,7 +124,7 @@ onPush( async ( origin, request, getResponse ) =>
  * The `credentials` option is currently not used. Cookies are always sent to the same origin, and not to others.
  * The `cache` option is unused, as `fetch-h2` has no built-in cache.
  * The `referrer` and `referrerPolicy` are unused, as `fetch-h2` operates outside the concept of "web pages".
- * The `integrity` option **is actually implemented** but no validation is performed if the result body is read through the Node.js `ReadableStream` (using `response.readable( )`). The body **is** validated if `arrayBuffer( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise if the validation fails.
+ * The `integrity` option **is actually implemented** and validates unless the result body is read through the Node.js `ReadableStream` (using `response.readable( )`). The body **is** validated if `arrayBuffer( )`, `json( )` or `text( )` is used to read the body, in which case these functions will return a rejected promise if the validation fails.
 
 
 ## Extensions

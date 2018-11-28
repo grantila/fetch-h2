@@ -10,6 +10,7 @@ import { createHash } from 'crypto'
 import { buffer as getStreamAsBuffer } from 'get-stream'
 
 import { makeServer } from '../lib/server';
+import { createIntegrity } from '../lib/utils';
 
 import {
 	fetch,
@@ -697,6 +698,54 @@ describe( 'goaway', ( ) =>
 		expect( text1 ).to.equal( 'abcde' );
 		expect( text2 ).to.equal( 'abcde' );
 
+		await server.shutdown( );
+	} );
+} );
+
+describe( 'integrity', ( ) =>
+{
+
+	it( 'handle and succeed on valid integrity', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const url = `http://localhost:${port}/slow/0`;
+
+		const data = "abcdefghij"
+		const integrity = createIntegrity( data );
+
+		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
+		expect( response.url ).to.equal( url );
+
+		expect( await response.text( ) ).to.equal( data );
+
+		await disconnectAll( );
+		await server.shutdown( );
+	} );
+
+	it( 'handle and fail on invalid integrity', async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const url = `http://localhost:${port}/slow/0`;
+
+		const data = "abcdefghij-x"
+		const integrity = createIntegrity( data );
+
+		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
+		expect( response.url ).to.equal( url );
+
+		try
+		{
+			await response.text( );
+			expect( false ).to.equal( true );
+		}
+		catch ( err )
+		{
+			expect( err.message ).to.contain( "integrity" );
+		}
+
+		await disconnectAll( );
 		await server.shutdown( );
 	} );
 } );

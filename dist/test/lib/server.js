@@ -167,7 +167,7 @@ class Server {
             stream.session.goaway();
             if (waitMs > 0)
                 await already_1.delay(waitMs);
-            ignoreError(() => stream.write("defgh"));
+            ignoreError(() => stream.write("fghij"));
             ignoreError(() => stream.end());
         }
         else if (path.startsWith('/slow/')) {
@@ -180,7 +180,7 @@ class Server {
             stream.write("abcde");
             if (waitMs > 0)
                 await already_1.delay(waitMs);
-            ignoreError(() => stream.write("defgh"));
+            ignoreError(() => stream.write("fghij"));
             ignoreError(() => stream.end());
         }
         else {
