@@ -7,6 +7,9 @@ notifications:
 node_js:
   - "10"
   - "11"
+install:
+    - npm install
+    - npm run build
 after_script:
   - "node_modules/.bin/nyc report --reporter=text-lcov | node_modules/.bin/coveralls"
 after_success:
