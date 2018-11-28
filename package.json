@@ -14,6 +14,9 @@
   "engines": {
     "node": ">=10.0"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
     "mocha": "node_modules/.bin/mocha --bail --check-leaks dist/test",
@@ -26,6 +29,7 @@
     "buildtestfastcov": "npm run build && npm run testfast",
     "coverage": "node_modules/.bin/nyc report --reporter=html",
     "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh",
+    "prepack": "npm run build && npm run test",
     "travis-deploy-once": "travis-deploy-once",
     "semantic-release": "semantic-release",
     "cz": "git-cz"
