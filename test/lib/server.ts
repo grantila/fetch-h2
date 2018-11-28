@@ -271,7 +271,7 @@ export class Server
 			if ( waitMs > 0 )
 				await delay( waitMs );
 
-			ignoreError( ( ) => stream.write( "defgh" ) );
+			ignoreError( ( ) => stream.write( "fghij" ) );
 			ignoreError( ( ) => stream.end( ) );
 		}
 		else if ( path.startsWith( '/slow/' ) )
@@ -290,7 +290,7 @@ export class Server
 			if ( waitMs > 0 )
 				await delay( waitMs );
 
-			ignoreError( ( ) => stream.write( "defgh" ) );
+			ignoreError( ( ) => stream.write( "fghij" ) );
 			ignoreError( ( ) => stream.end( ) );
 		}
 		else

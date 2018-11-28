@@ -75,7 +75,7 @@ class Context {
             pushedStream.once('frameError', () => reject(new Error("Push request failed")));
             pushedStream.once('error', reject);
             pushedStream.once('push', guard(responseHeaders => {
-                const response = new response_1.H2StreamResponse(this._decoders, path, pushedStream, responseHeaders, false);
+                const response = new response_1.H2StreamResponse(this._decoders, path, pushedStream, responseHeaders, false, null);
                 resolve(response);
             }));
         });

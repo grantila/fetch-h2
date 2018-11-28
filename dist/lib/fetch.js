@@ -46,7 +46,7 @@ async function fetchImpl(session, input, init = {}, extra) {
     const { redirected, raceConditionedGoaway } = extra;
     ensureNotCircularRedirection(redirected);
     const req = new request_1.Request(input, init);
-    const { url, method, redirect } = req;
+    const { url, method, redirect, integrity } = req;
     const { signal, onTrailers } = init;
     const { origin, protocol, host, pathname, search, hash } = new url_1.URL(url);
     const path = pathname + search + hash;
@@ -236,7 +236,7 @@ async function fetchImpl(session, input, init = {}, extra) {
                     if (!isRedirected || redirect === 'manual')
                         return resolve(new response_1.H2StreamResponse(contentDecoders, url, stream, headers, redirect === 'manual'
                             ? false
-                            : extra.redirected.length > 0));
+                            : extra.redirected.length > 0, integrity));
                     if (redirect === 'error')
                         return reject(new Error(`URL got redirected to ${location}`));
                     // redirect is 'follow'
