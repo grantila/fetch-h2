@@ -2,3 +2,5 @@ scripts
 .npmignore
 .travis.yml
 tsconfig.json
+test/
+dist/test/
