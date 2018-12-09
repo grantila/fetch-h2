@@ -129,7 +129,7 @@ export class Context
 			: { };
 	}
 
-	public onPush( pushHandler: PushHandler )
+	public onPush( pushHandler?: PushHandler )
 	{
 		this._pushHandler = pushHandler;
 	}

@@ -31,7 +31,7 @@ const disconnectAll =
 	( ) =>
 		defaultContext.disconnectAll( );
 const onPush =
-	( handler: PushHandler ) =>
+	( handler?: PushHandler ) =>
 		defaultContext.onPush( handler );
 
 function context( opts?: Partial< ContextOptions > )

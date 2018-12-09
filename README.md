@@ -112,6 +112,16 @@ onPush( async ( origin, request, getResponse ) =>
 } );
 ```
 
+To unset the push handler (and ignore future pushes) when it has been set to a function previously, call `onPush` without any arguments.
+
+```ts
+import { onPush } from 'fetch-h2'
+
+onPush( push_fun );
+// ... later
+onPush( ); // Reset push handling to ignore pushes from now
+```
+
 
 ## Limitations
 
