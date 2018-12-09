@@ -71,7 +71,6 @@
     "already": "1.x",
     "callguard": "1.x",
     "get-stream": "4.x",
-    "is-buffer": "2.x",
     "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "2.x"

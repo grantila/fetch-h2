@@ -4,7 +4,6 @@ import { createHash } from 'crypto'
 
 import { buffer as getStreamAsBuffer } from 'get-stream'
 import * as through2 from 'through2'
-import * as isBuffer from 'is-buffer'
 import * as toArrayBuffer from 'to-arraybuffer'
 import { tap } from 'already'
 
@@ -125,7 +124,7 @@ export class Body implements IBody
 		else
 			this._body = < StorageBodyTypes >body;
 
-		if ( isBuffer( this._body ) )
+		if ( Buffer.isBuffer( this._body ) )
 			this._length = ( < Buffer >this._body ).length;
 
 		if ( mime )
@@ -156,7 +155,7 @@ export class Body implements IBody
 			)
 			.then( buffer => toArrayBuffer( buffer ) );
 
-		else if ( isBuffer( this._body ) )
+		else if ( Buffer.isBuffer( this._body ) )
 			return this.validateIntegrity(
 				toArrayBuffer( < Buffer >this._body ),
 				allowIncomplete
@@ -193,7 +192,7 @@ export class Body implements IBody
 					< any >this.validateIntegrity( buffer, false )
 				) )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
-		else if ( isBuffer( this._body ) )
+		else if ( Buffer.isBuffer( this._body ) )
 			return Promise.resolve( < Buffer >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, false )
@@ -218,7 +217,7 @@ export class Body implements IBody
 					< any >this.validateIntegrity( buffer, allowIncomplete )
 				) )
 				.then( buffer => buffer.toString( ) );
-		else if ( isBuffer( this._body ) )
+		else if ( Buffer.isBuffer( this._body ) )
 			return Promise.resolve( < Buffer >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, allowIncomplete )
@@ -240,7 +239,7 @@ export class Body implements IBody
 		}
 		else if ( isStream( this._body ) )
 			return Promise.resolve( < NodeJS.ReadableStream >this._body );
-		else if ( isBuffer( this._body ) )
+		else if ( Buffer.isBuffer( this._body ) )
 			return Promise.resolve( through2( ) )
 				.then( stream =>
 				{
