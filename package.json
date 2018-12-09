@@ -53,10 +53,9 @@
     "@types/mocha": "5.x",
     "@types/node": "10.x",
     "@types/through2": "2.x",
-    "@types/tough-cookie": "2.x",
     "chai": "4.x",
     "coveralls": "3.x",
-    "cz-conventional-changelog": "^2.1.0",
+    "cz-conventional-changelog": "2.x",
     "from2": "2.x",
     "mocha": "5.x",
     "nyc": "13.x",
@@ -68,6 +67,7 @@
     "typescript": "3.x"
   },
   "dependencies": {
+    "@types/tough-cookie": "2.x",
     "already": "1.x",
     "callguard": "1.x",
     "get-stream": "4.x",
