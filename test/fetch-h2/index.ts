@@ -2,12 +2,11 @@
 
 import 'mocha';
 import { expect } from 'chai';
-import { delay } from 'already';
-import { buffer } from 'get-stream';
+import { defer, delay } from 'already';
 import * as through2 from 'through2';
 import * as from2 from 'from2';
-import { createHash } from 'crypto'
-import { buffer as getStreamAsBuffer } from 'get-stream'
+import { createHash } from 'crypto';
+import { buffer as getStreamAsBuffer } from 'get-stream';
 
 import { makeServer } from '../lib/server';
 import { createIntegrity } from '../lib/utils';
@@ -316,13 +315,10 @@ describe( 'basic', ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const trailers = { foo: 'bar' };
+		const trailers: any = { foo: 'bar' };
 
-		let onTrailers: OnTrailers;
-		const trailerPromise = new Promise< Headers >( resolve =>
-		{
-			onTrailers = resolve;
-		} );
+		const deferredTrailers = defer< Headers >( );
+		const onTrailers = deferredTrailers.resolve;
 
 		const response = await fetch(
 			`http://localhost:${port}/trailers`,
@@ -334,7 +330,7 @@ describe( 'basic', ( ) =>
 		);
 
 		const data = await response.text( );
-		const receivedTrailers = await trailerPromise;
+		const receivedTrailers = await deferredTrailers.promise;
 
 		expect( data ).to.not.be.empty;
 
@@ -516,7 +512,7 @@ describe( 'basic', ( ) =>
 
 		expect( pushedData ).to.deep.equal( data );
 
-		onPush( null );
+		onPush( );
 
 		await server.shutdown( );
 	} );

@@ -8,7 +8,7 @@ export const Guards =
 export type GuardTypes =
 	'immutable' | 'request' | 'request-no-cors' | 'response' | 'none';
 
-export type RawHeaders = { [ key: string ]: string | string[] };
+export type RawHeaders = { [ key: string ]: string | string[] | undefined };
 
 type HeaderMap = Map< string, Array< string > >;
 
@@ -50,7 +50,7 @@ function isForbiddenResponseHeader( name: string )
 	return [ 'set-cookie', 'set-cookie2' ].includes( name );
 }
 
-function isSimpleHeader( name: string, value: string ): boolean
+function isSimpleHeader( name: string, value?: string ): boolean
 {
 	const simpleHeaders = [
 		'accept',
@@ -68,6 +68,9 @@ function isSimpleHeader( name: string, value: string ): boolean
 		return true;
 
 	if ( name !== 'content-type' )
+		return false;
+
+	if ( value == null )
 		return false;
 
 	const mimeType = value.replace( /;.*/, '' ).toLowerCase( );
@@ -121,7 +124,7 @@ function _ensureGuard(
 			` (${name})` );
 }
 
-let _guard = null;
+let _guard: string | null = null;
 
 export class Headers
 {
@@ -130,7 +133,7 @@ export class Headers
 
 	constructor( init?: RawHeaders | Headers )
 	{
-		this._guard = _guard || 'none';
+		this._guard = < GuardTypes >_guard || 'none';
 		_guard = null;
 		this._data = new Map( );
 
@@ -165,7 +168,7 @@ export class Headers
 			this._data.set( _name, [ value ] );
 
 		else
-			this._data.get( _name ).push( value );
+			( < Array< string > >this._data.get( _name ) ).push( value );
 	}
 
 	delete( name: string ): void
@@ -179,16 +182,16 @@ export class Headers
 
 	*entries( ): IterableIterator< [ string, string ] >
 	{
-		for ( let [ name ] of this._data.entries( ) )
-			yield [ name, this._data.get( name ).join( ',' ) ];
+		for ( let [ name, value ] of this._data.entries( ) )
+			yield [ name, value.join( ',' ) ];
 	}
 
-	get( name: string ): string
+	get( name: string ): string | null
 	{
 		const _name = filterName( name );
 
 		return this._data.has( _name )
-			? this._data.get( _name ).join( ',' )
+			? ( < Array< string > >this._data.get( _name ) ).join( ',' )
 			: null;
 	}
 
@@ -226,7 +229,7 @@ export class GuardedHeaders extends Headers
 	}
 }
 
-export function ensureHeaders( headers: RawHeaders | Headers )
+export function ensureHeaders( headers: RawHeaders | Headers | undefined )
 {
 	return headers instanceof Headers ? headers : new Headers( headers );
 }

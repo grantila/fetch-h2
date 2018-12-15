@@ -1,6 +1,9 @@
 'use strict'
 
-import { constants as h2constants } from 'http2'
+import {
+	constants as h2constants,
+	IncomingHttpHeaders as IncomingHttp2Headers,
+} from 'http2'
 import { URL } from 'url'
 
 import { delay, Finally } from 'already'
@@ -78,7 +81,7 @@ function ensureNotCircularRedirection( redirections: ReadonlyArray< string > )
 interface FetchExtra
 {
 	redirected: Array< string >;
-	timeoutAt: number;
+	timeoutAt?: number;
 	raceConditionedGoaway: Set< string >; // per origin
 }
 
@@ -171,16 +174,16 @@ async function fetchImpl(
 	}
 
 	const timeoutAt = extra.timeoutAt || (
-		'timeout' in init
+		( 'timeout' in init && typeof init.timeout === 'number' )
 			// Setting the timeoutAt here at first time allows async cookie
 			// jar to not take part of timeout for at least the first request
 			// (in a potential redirect chain)
 			? Date.now( ) + init.timeout
-			: null
+			: void 0
 	);
 
 	function setupTimeout( )
-	: { promise: Promise< Response >; clear: Function; }
+	: { promise: Promise< Response >; clear: Function; } | null
 	{
 		if ( !timeoutAt )
 			return null;
@@ -189,7 +192,7 @@ async function fetchImpl(
 		if ( now >= timeoutAt )
 			throw timeoutError( );
 
-		let timerId;
+		let timerId: NodeJS.Timeout | null;
 
 		return {
 			clear: ( ) =>
@@ -221,7 +224,7 @@ async function fetchImpl(
 	if ( signal && signal.aborted )
 		throw abortError( );
 
-	const signalPromise: Promise< Response > =
+	const signalPromise: Promise< Response > | null =
 		signal
 		?
 			new Promise< Response >( ( resolve, reject ) =>
@@ -239,7 +242,7 @@ async function fetchImpl(
 			timeoutInfo.clear( );
 
 		if ( signal )
-			signal.onabort = null;
+			delete signal.onabort;
 	}
 
 	function doFetch( ): Promise< Response >
@@ -307,7 +310,7 @@ async function fetchImpl(
 					} )
 				);
 
-				stream.on( 'streamClosed', guard( errorCode =>
+				stream.on( 'streamClosed', guard( ( errorCode: number ) =>
 				{
 					// We'll get an 'error' event if there actually is an
 					// error, but not if we got NGHTTP2_NO_ERROR.
@@ -323,7 +326,8 @@ async function fetchImpl(
 					reject( new TimeoutError( "Request timed out" ) );
 				} ) );
 
-				stream.on( 'trailers', guard( ( _headers, flags ) =>
+				stream.on( 'trailers', guard(
+					( _headers: IncomingHttp2Headers, _flags: any ) =>
 				{
 					if ( !onTrailers )
 						return;
@@ -359,16 +363,19 @@ async function fetchImpl(
 						"This can't happen unless a server failure" ) );
 				} ) );
 
-				stream.on( 'headers', guard( ( headers, flags ) =>
-				{
-					const code = headers[ HTTP2_HEADER_STATUS ];
-					reject( new Error(
-						`Request failed with a ${code} status. ` +
-						"Any 1xx error is unexpected to fetch() and " +
-						"shouldn't happen." ) );
-				} ) );
+				stream.on( 'headers', guard(
+					( headers: IncomingHttp2Headers, _flags: any ) =>
+					{
+						const code = headers[ HTTP2_HEADER_STATUS ];
+						reject( new Error(
+							`Request failed with a ${code} status. ` +
+							"Any 1xx error is unexpected to fetch() and " +
+							"shouldn't happen." ) );
+					}
+				) );
 
-				stream.on( 'response', guard( headers =>
+				stream.on( 'response', guard(
+					( headers: IncomingHttp2Headers ) =>
 				{
 					if ( signal && signal.aborted )
 					{
@@ -431,6 +438,13 @@ async function fetchImpl(
 							`URL got redirected to ${location}, which ` +
 							`'fetch-h2' doesn't support for ${method}` ) );
 
+					if ( !location )
+						return reject(
+							new Error(
+								`URL got redirected without 'location' header`
+							)
+						);
+	
 					stream.destroy( );
 					resolve(
 						fetchImpl(
@@ -460,8 +474,8 @@ async function fetchImpl(
 
 	return Promise.race(
 		[
-			signalPromise,
-			timeoutInfo && timeoutInfo.promise,
+			< Promise< any > >signalPromise,
+			< Promise< any > >( timeoutInfo && timeoutInfo.promise ),
 			doFetch( ),
 		]
 		.filter( promise => promise )
@@ -476,7 +490,7 @@ export function fetch(
 )
 : Promise< Response >
 {
-	const timeoutAt = null;
+	const timeoutAt = void 0;
 
 	const raceConditionedGoaway = new Set( );
 	const extra = { timeoutAt, redirected: [ ], raceConditionedGoaway };

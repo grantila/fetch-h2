@@ -48,6 +48,7 @@
     "typescript"
   ],
   "devDependencies": {
+    "@types/chai": "4.x",
     "@types/from2": "2.x",
     "@types/get-stream": "3.x",
     "@types/mocha": "5.x",

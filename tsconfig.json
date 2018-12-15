@@ -5,11 +5,13 @@
 		"outDir": "dist",
 		"sourceMap": true,
 		"module": "CommonJS",
-		"target": "esnext"
+		"target": "esnext",
+		"strict": true
 	},
 	"include": [
 		"index.ts",
 		"generated",
+		"externs",
 		"lib",
 		"test"
 	]

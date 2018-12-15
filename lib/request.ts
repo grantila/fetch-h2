@@ -32,16 +32,26 @@ export class Request extends Body implements RequestInitWithoutBody
 	private _url: string;
 	private _init: Partial< RequestInit >;
 
-	readonly method: Method;
-	readonly url: string;
-	readonly headers: Headers;
-	readonly referrer: ReferrerTypes;
-	readonly referrerPolicy: ReferrerPolicyTypes;
-	readonly mode: ModeTypes;
-	readonly credentials: CredentialsTypes;
-	readonly redirect: RedirectTypes;
-	readonly integrity: string;
-	readonly cache: CacheTypes;
+	// @ts-ignore
+	public readonly method: Method;
+	// @ts-ignore
+	public readonly url: string;
+	// @ts-ignore
+	public readonly headers: Headers;
+	// @ts-ignore
+	public readonly referrer: ReferrerTypes;
+	// @ts-ignore
+	public readonly referrerPolicy: ReferrerPolicyTypes;
+	// @ts-ignore
+	public readonly mode: ModeTypes;
+	// @ts-ignore
+	public readonly credentials: CredentialsTypes;
+	// @ts-ignore
+	public readonly redirect: RedirectTypes;
+	// @ts-ignore
+	public readonly integrity: string;
+	// @ts-ignore
+	public readonly cache: CacheTypes;
 
 	constructor( input: string | Request, init?: Partial< RequestInit > )
 	{

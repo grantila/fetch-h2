@@ -25,6 +25,7 @@ import { version } from './generated/version'
 import { fetch } from './fetch'
 import { CookieJar } from './cookie-jar'
 import { setGotGoaway } from './utils'
+import { RawHeaders } from './headers'
 
 const {
 	HTTP2_HEADER_PATH,
@@ -85,14 +86,20 @@ export class Context
 	private _userAgent: string;
 	private _accept: string;
 	private _cookieJar: CookieJar;
-	private _pushHandler: PushHandler;
 	private _decoders: ReadonlyArray< Decoder >;
 	private _sessionOptions: SecureClientSessionOptions;
+	private _pushHandler?: PushHandler;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
 		this._h2sessions = new Map( );
 		this._h2staleSessions = new Map( );
+
+		this._userAgent = '';
+		this._accept = '';
+		this._cookieJar = < CookieJar >< any >void 0;
+		this._decoders = [ ];
+		this._sessionOptions = { };
 
 		this.setup( opts );
 	}
@@ -107,17 +114,17 @@ export class Context
 				'overwriteUserAgent' in opts &&
 				opts.overwriteUserAgent
 			)
-			? opts.userAgent
+			? ( opts.userAgent || '' )
 			: 'userAgent' in opts
 			? opts.userAgent + " " + defaultUserAgent
 			: defaultUserAgent;
 
 		this._accept = 'accept' in opts
-			? opts.accept
+			? ( opts.accept || defaultAccept )
 			: defaultAccept;
 
 		this._cookieJar = 'cookieJar' in opts
-			? opts.cookieJar
+			? ( opts.cookieJar || new CookieJar( ) )
 			: new CookieJar( );
 
 		this._decoders = 'decoders' in opts
@@ -164,19 +171,20 @@ export class Context
 			);
 			pushedStream.once( 'error', reject );
 
-			pushedStream.once( 'push', guard( responseHeaders =>
-			{
-				const response = new H2StreamResponse(
-					this._decoders,
-					path,
-					pushedStream,
-					responseHeaders,
-					false,
-					null
-				);
+			pushedStream.once( 'push', guard(
+				( responseHeaders: IncomingHttp2Headers ) =>
+				{
+					const response = new H2StreamResponse(
+						this._decoders,
+						path,
+						pushedStream,
+						responseHeaders,
+						false
+					);
 
-				resolve( response );
-			} ) );
+					resolve( response );
+				}
+			) );
 		} );
 
 		futureResponse
@@ -198,7 +206,7 @@ export class Context
 			? new Error( `Unknown connection error (${event}): ${origin}` )
 			: new Error( `Connection closed` );
 
-		let session: ClientHttp2Session;
+		let session: ClientHttp2Session = < ClientHttp2Session >< any >void 0;
 
 		// TODO: #8
 		const aGuard = asyncGuard( console.error.bind( console ) );
@@ -273,7 +281,7 @@ export class Context
 			this._h2sessions.set( origin, sessionItem );
 		}
 
-		return this._h2sessions.get( origin ).promise
+		return ( < SessionItem >this._h2sessions.get( origin ) ).promise
 		.catch( err =>
 		{
 			if ( willCreate || created )
@@ -332,7 +340,8 @@ export class Context
 		if ( !this._h2staleSessions.has( origin ) )
 			this._h2staleSessions.set( origin, new Set( ) );
 
-		this._h2staleSessions.get( origin ).add( sessionItem.session );
+		( < Set< ClientHttp2Session > >this._h2staleSessions.get( origin ) )
+			.add( sessionItem.session );
 	}
 
 	deleteActiveSession( origin: string ): SessionItem | void
@@ -364,7 +373,9 @@ export class Context
 
 		if ( this._h2staleSessions.has( origin ) )
 		{
-			const sessionSet = this._h2staleSessions.get( origin );
+			const sessionSet =
+				< Set< ClientHttp2Session > >
+					this._h2staleSessions.get( origin );
 			this._h2staleSessions.delete( origin );
 
 			for ( let session of sessionSet )
@@ -390,7 +401,9 @@ export class Context
 		}
 		else if ( this._h2staleSessions.has( origin ) )
 		{
-			const sessionSet = this._h2staleSessions.get( origin );
+			const sessionSet =
+				< Set< ClientHttp2Session > >
+					this._h2staleSessions.get( origin );
 			if ( sessionSet.has( session ) )
 			{
 				sessionSet.delete( session );

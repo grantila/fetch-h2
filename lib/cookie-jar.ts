@@ -9,7 +9,7 @@ export class CookieJar
 
 	constructor( jar = new ToughCookieJar( ) )
 	{
-		this.reset( jar );
+		this._jar = jar;
 	}
 
 	reset( jar = new ToughCookieJar( ) )

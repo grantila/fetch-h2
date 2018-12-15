@@ -48,18 +48,26 @@ interface Extra
 
 export class Response extends Body
 {
-	readonly headers: Headers;
-	readonly ok: boolean;
-	readonly redirected: boolean;
-	readonly status: number;
-	readonly statusText: string;
-	readonly type: ResponseTypes;
-	readonly url: string;
-	readonly useFinalURL: boolean;
+	// @ts-ignore
+	public readonly headers: Headers;
+	// @ts-ignore
+	public readonly ok: boolean;
+	// @ts-ignore
+	public readonly redirected: boolean;
+	// @ts-ignore
+	public readonly status: number;
+	// @ts-ignore
+	public readonly statusText: string;
+	// @ts-ignore
+	public readonly type: ResponseTypes;
+	// @ts-ignore
+	public readonly url: string;
+	// @ts-ignore
+	public readonly useFinalURL: boolean;
 
 	constructor(
-		body?: BodyTypes | Body,
-		init?: Partial< ResponseInit >,
+		body: BodyTypes | Body | null,
+		init: Partial< ResponseInit >,
 		extra?: Partial< Extra >
 	)
 	{
@@ -170,7 +178,7 @@ function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
 		const value = headers[ key ];
 		if ( Array.isArray( value ) )
 			value.forEach( val => out.append( key, val ) );
-		else
+		else if ( value != null )
 			out.set( key, value );
 	}
 
@@ -190,9 +198,9 @@ function makeExtra(
 	url: string,
 	headers: IncomingHttpHeaders,
 	redirected: boolean,
-	integrity: string
+	integrity?: string
 )
-: Extra
+: Partial< Extra >
 {
 	const type = 'basic'; // TODO: Implement CORS
 
@@ -241,7 +249,7 @@ export class H2StreamResponse extends Response
 		stream: ClientHttp2Stream,
 		headers: IncomingHttpHeaders,
 		redirected: boolean,
-		integrity: string
+		integrity?: string
 	)
 	{
 		super(

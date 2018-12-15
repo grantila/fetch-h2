@@ -5,11 +5,11 @@ import {
 	createSecureServer,
 	Http2Server,
 	Http2Session,
-	Http2Stream,
 	ServerHttp2Stream,
 	IncomingHttpHeaders,
 	SecureServerOptions,
 	constants,
+	OutgoingHttpHeaders,
 } from 'http2'
 
 import { createHash } from 'crypto'
@@ -50,7 +50,7 @@ export class Server
 	private _opts: ServerOptions;
 	private _server: Http2Server;
 	private _sessions: Set< Http2Session >;
-	port: number;
+	port: number | null;
 
 	constructor( opts: ServerOptions )
 	{
@@ -97,7 +97,7 @@ export class Server
 		}
 		else if ( path === '/echo' )
 		{
-			const responseHeaders = {
+			const responseHeaders: OutgoingHttpHeaders = {
 				':status': 200,
 			};
 			[ HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH ]
@@ -111,16 +111,17 @@ export class Server
 		}
 		else if ( path === '/set-cookie' )
 		{
-			const responseHeaders: any = {
+			const responseHeaders: OutgoingHttpHeaders = {
 				':status': 200,
 				[ HTTP2_HEADER_SET_COOKIE ]: [ ],
 			};
 
 			const data = await getStreamAsBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
-			json.forEach( cookie =>
+			json.forEach( ( cookie: any ) =>
 			{
-				responseHeaders[ HTTP2_HEADER_SET_COOKIE ].push( cookie )
+				( < any >responseHeaders[ HTTP2_HEADER_SET_COOKIE ] )
+					.push( cookie );
 			} );
 
 			stream.respond( responseHeaders );
@@ -131,7 +132,7 @@ export class Server
 			const timeout = parseInt( m[ 1 ] );
 			await delay( timeout );
 
-			const responseHeaders = {
+			const responseHeaders: OutgoingHttpHeaders = {
 				':status': 200,
 			};
 			[ HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH ]
@@ -207,9 +208,9 @@ export class Server
 			const data = await getStreamAsBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 
-			json.forEach( pushable =>
+			json.forEach( ( pushable: any ) =>
 			{
-				function cb( err: Error, pushStream: ServerHttp2Stream )
+				function cb( err: Error | null, pushStream: ServerHttp2Stream )
 				{
 					if ( err )
 						return;
@@ -249,7 +250,10 @@ export class Server
 			};
 
 			stream.respond( responseHeaders );
-			stream.pipe( encoder ).pipe( stream );
+			if ( encoder )
+				stream.pipe( encoder ).pipe( stream );
+			else
+				stream.pipe( stream );
 		}
 		else if ( path.startsWith( '/goaway' ) )
 		{
@@ -306,7 +310,7 @@ export class Server
 		}
 	}
 
-	listen( port: number = void 0 ): Promise< number >
+	listen( port: number | undefined = void 0 ): Promise< number >
 	{
 		return new Promise( ( resolve, reject ) =>
 		{
@@ -340,7 +344,7 @@ export class Server
 }
 
 export async function makeServer( opts: ServerOptions = { } )
-: Promise< { server: Server; port: number; } >
+: Promise< { server: Server; port: number | null; } >
 {
 	opts = opts || { };
 

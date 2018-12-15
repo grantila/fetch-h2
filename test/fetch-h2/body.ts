@@ -36,7 +36,7 @@ async function makeSync< T >( fn: ( ) => PromiseLike< T > )
 	}
 }
 
-function setHash( body: any, data, hashType = 'sha256' )
+function setHash( body: any, data: string, hashType = 'sha256' )
 {
 	body._integrity = createIntegrity( data, hashType );
 }
@@ -44,7 +44,7 @@ function setHash( body: any, data, hashType = 'sha256' )
 class IntegrityBody extends Body
 {
 	constructor(
-		data: string | Buffer | NodeJS.ReadableStream,
+		data: string | Buffer | NodeJS.ReadableStream | null,
 		hashData: string,
 		integrityHashType = 'sha256'
 	)

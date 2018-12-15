@@ -10,9 +10,14 @@ import { tap } from 'already'
 import { IBody, BodyTypes, StorageBodyTypes } from './core'
 
 
+function makeUnknownDataError( )
+{
+	return new Error( "Unknown body data" );
+}
+
 function throwUnknownData( ): never
 {
-	throw new Error( "Unknown body data" );
+	throw makeUnknownDataError( );
 }
 
 function throwIntegrityMismatch( ): never
@@ -42,11 +47,12 @@ const emptyBuffer = new ArrayBuffer( 0 );
 
 export class Body implements IBody
 {
-	private _body: StorageBodyTypes;
-	protected _length: number;
+	private _body?: StorageBodyTypes | null;
+	protected _length: number | null;
 	private _used: boolean;
 	protected _mime?: string;
 	private _integrity?: string;
+	// @ts-ignore
 	readonly bodyUsed: boolean;
 
 	constructor( )
@@ -102,10 +108,10 @@ export class Body implements IBody
 	}
 
 	protected setBody(
-		body: BodyTypes | IBody,
-		mime?: string,
-		integrity?: string,
-		length: number = null
+		body: BodyTypes | IBody | null,
+		mime?: string | null,
+		integrity?: string | null,
+		length: number | null = null
 	)
 	: void
 	{
@@ -121,8 +127,10 @@ export class Body implements IBody
 		}
 		else if ( typeof body === 'string' )
 			this._body = Buffer.from( body );
-		else
+		else if ( body != null )
 			this._body = < StorageBodyTypes >body;
+		else
+			this._body = body;
 
 		if ( Buffer.isBuffer( this._body ) )
 			this._length = ( < Buffer >this._body ).length;
@@ -162,7 +170,7 @@ export class Body implements IBody
 			);
 
 		else
-			throwUnknownData( );
+			throw makeUnknownDataError( );
 	}
 
 	private async blob( ): Promise< never >
@@ -199,7 +207,7 @@ export class Body implements IBody
 				) )
 				.then( buffer => JSON.parse( buffer.toString( ) ) );
 		else
-			throwUnknownData( );
+			throw makeUnknownDataError( );
 	}
 
 	async text( allowIncomplete = false ): Promise< string >
@@ -224,7 +232,7 @@ export class Body implements IBody
 				) )
 				.then( buffer => buffer.toString( ) );
 		else
-			return throwUnknownData( );
+			throw makeUnknownDataError( );
 	}
 
 	async readable( ): Promise< NodeJS.ReadableStream >
@@ -248,7 +256,7 @@ export class Body implements IBody
 					return stream;
 				} );
 		else
-			throwUnknownData( );
+			throw makeUnknownDataError( );
 	}
 }
 
@@ -275,7 +283,7 @@ export class StreamBody extends Body
 
 export class DataBody extends Body
 {
-	constructor( data: Buffer | string )
+	constructor( data: Buffer | string | null )
 	{
 		super( );
 
