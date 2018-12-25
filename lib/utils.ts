@@ -1,5 +1,3 @@
-'use strict'
-
 import { ClientHttp2Session } from 'http2'
 import { URL } from 'url'
 

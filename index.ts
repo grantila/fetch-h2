@@ -1,5 +1,3 @@
-'use strict'
-
 import { Body, JsonBody, StreamBody, DataBody } from './lib/body'
 import { RawHeaders, Headers } from './lib/headers'
 import { Request } from './lib/request'

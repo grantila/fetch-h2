@@ -1,5 +1,3 @@
-'use strict';
-
 import 'mocha';
 import { expect } from 'chai';
 import { delay } from 'already';

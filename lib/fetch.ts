@@ -1,5 +1,3 @@
-'use strict'
-
 import {
 	constants as h2constants,
 	IncomingHttpHeaders as IncomingHttp2Headers,

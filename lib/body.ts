@@ -1,5 +1,3 @@
-'use strict'
-
 import { createHash } from 'crypto'
 
 import { buffer as getStreamAsBuffer } from 'get-stream'

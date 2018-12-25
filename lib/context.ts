@@ -1,5 +1,3 @@
-'use strict'
-
 import {
 	connect as http2Connect,
 	SecureClientSessionOptions,

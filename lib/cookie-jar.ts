@@ -1,5 +1,3 @@
-'use strict'
-
 import { CookieJar as ToughCookieJar, Cookie } from 'tough-cookie'
 
 

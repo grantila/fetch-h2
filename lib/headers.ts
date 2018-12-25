@@ -1,5 +1,3 @@
-'use strict'
-
 import { arrayify } from './utils'
 
 

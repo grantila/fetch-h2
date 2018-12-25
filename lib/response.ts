@@ -1,5 +1,3 @@
-'use strict'
-
 import {
 	constants as h2constants,
 	ClientHttp2Stream,
