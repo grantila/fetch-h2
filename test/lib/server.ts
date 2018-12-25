@@ -1,21 +1,21 @@
 import {
-	createServer,
+	constants,
 	createSecureServer,
+	createServer,
 	Http2Server,
 	Http2Session,
-	ServerHttp2Stream,
 	IncomingHttpHeaders,
-	SecureServerOptions,
-	constants,
 	OutgoingHttpHeaders,
-} from 'http2'
+	SecureServerOptions,
+	ServerHttp2Stream,
+} from "http2";
 
-import { createHash } from 'crypto'
-import { createGzip, createDeflate } from 'zlib'
+import { createHash } from "crypto";
+import { createDeflate, createGzip } from "zlib";
 
-import { buffer as getStreamAsBuffer } from 'get-stream'
+import { buffer as getStreamAsBuffer } from "get-stream";
 
-import { delay } from 'already'
+import { delay } from "already";
 
 const {
 	HTTP2_HEADER_PATH,
@@ -45,10 +45,10 @@ const ignoreError = ( cb: ( ) => any ) => { try { cb( ); } catch ( err ) { } };
 
 export class Server
 {
+	public port: number | null;
 	private _opts: ServerOptions;
 	private _server: Http2Server;
 	private _sessions: Set< Http2Session >;
-	port: number | null;
 
 	constructor( opts: ServerOptions )
 	{
@@ -60,14 +60,46 @@ export class Server
 		this._sessions = new Set( );
 		this.port = null;
 
-		this._server.on( 'stream', ( stream, headers ) =>
+		this._server.on( "stream", ( stream, headers ) =>
 		{
 			this.onStream( stream, headers )
 			.catch( err =>
 			{
 				console.error( "Unit test server failed", err );
 				process.exit( 1 );
-			} )
+			} );
+		} );
+	}
+
+	public async listen( port: number | undefined = void 0 ): Promise< number >
+	{
+		return new Promise( ( resolve, _reject ) =>
+		{
+			this._server.listen( port, "0.0.0.0", resolve );
+		} )
+		.then( ( ) =>
+		{
+			const address = this._server.address( );
+			if ( typeof address === "string" )
+				return 0;
+			return address.port;
+		} )
+		.then( port =>
+		{
+			this.port = port;
+			return port;
+		} );
+	}
+
+	public async shutdown( ): Promise< void >
+	{
+		return new Promise< void >( ( resolve, _reject ) =>
+		{
+			for ( const session of this._sessions )
+			{
+				session.destroy( );
+			}
+			this._server.close( resolve );
 		} );
 	}
 
@@ -78,25 +110,25 @@ export class Server
 	: Promise< void >
 	{
 		this._sessions.add( stream.session );
-		stream.session.once( 'close', ( ) =>
+		stream.session.once( "close", ( ) =>
 			this._sessions.delete( stream.session ) );
 
 		const path = headers[ HTTP2_HEADER_PATH ] as string;
 		let m;
 
-		if ( path === '/headers' )
+		if ( path === "/headers" )
 		{
 			stream.respond( {
-				'content-type': 'application/json',
-				':status': 200,
+				":status": 200,
+				"content-type": "application/json",
 			} );
 
 			stream.end( JSON.stringify( headers ) );
 		}
-		else if ( path === '/echo' )
+		else if ( path === "/echo" )
 		{
 			const responseHeaders: OutgoingHttpHeaders = {
-				':status': 200,
+				":status": 200,
 			};
 			[ HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH ]
 			.forEach( name =>
@@ -107,10 +139,10 @@ export class Server
 			stream.respond( responseHeaders );
 			stream.pipe( stream );
 		}
-		else if ( path === '/set-cookie' )
+		else if ( path === "/set-cookie" )
 		{
 			const responseHeaders: OutgoingHttpHeaders = {
-				':status': 200,
+				":status": 200,
 				[ HTTP2_HEADER_SET_COOKIE ]: [ ],
 			};
 
@@ -125,13 +157,14 @@ export class Server
 			stream.respond( responseHeaders );
 			stream.end( );
 		}
+		// tslint:disable-next-line
 		else if ( m = path.match( /\/wait\/(.+)/ ) )
 		{
-			const timeout = parseInt( m[ 1 ] );
+			const timeout = parseInt( m[ 1 ], 10 );
 			await delay( timeout );
 
 			const responseHeaders: OutgoingHttpHeaders = {
-				':status': 200,
+				":status": 200,
 			};
 			[ HTTP2_HEADER_CONTENT_TYPE, HTTP2_HEADER_CONTENT_LENGTH ]
 			.forEach( name =>
@@ -149,16 +182,16 @@ export class Server
 			// timeout, which causes us to try to write to a closed stream.
 			{ }
 		}
-		else if ( path === '/trailers' )
+		else if ( path === "/trailers" )
 		{
 			const responseHeaders = {
-				':status': 200,
+				":status": 200,
 			};
 
 			const data = await getStreamAsBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 
-			stream.once( 'wantTrailers', ( ) =>
+			stream.once( "wantTrailers", ( ) =>
 			{
 				// TODO: Fix when @types/node is fixed
 				(<any>stream).sendTrailers( json );
@@ -176,31 +209,31 @@ export class Server
 
 			stream.end( );
 		}
-		else if ( path === '/sha256' )
+		else if ( path === "/sha256" )
 		{
-			const hash = createHash( 'sha256' );
+			const hash = createHash( "sha256" );
 
 			const responseHeaders = {
-				':status': 200,
+				":status": 200,
 			};
 			stream.respond( responseHeaders );
 
-			hash.on( 'readable', ( ) =>
+			hash.on( "readable", ( ) =>
 			{
 				const data = < Buffer >hash.read( );
 				if ( data )
 				{
-					stream.write( data.toString( 'hex' ) );
+					stream.write( data.toString( "hex" ) );
 					stream.end( );
 				}
 			} );
 
 			stream.pipe( hash );
 		}
-		else if ( path === '/push' )
+		else if ( path === "/push" )
 		{
 			const responseHeaders = {
-				':status': 200,
+				":status": 200,
 			};
 
 			const data = await getStreamAsBuffer( stream );
@@ -223,9 +256,9 @@ export class Server
 			stream.write( "push-route" );
 			stream.end( );
 		}
-		else if ( path.startsWith( '/compressed/' ) )
+		else if ( path.startsWith( "/compressed/" ) )
 		{
-			const encoding = path.replace( '/compressed/', '' );
+			const encoding = path.replace( "/compressed/", "" );
 
 			const accept = headers[ HTTP2_HEADER_ACCEPT_ENCODING ] as string;
 
@@ -236,15 +269,15 @@ export class Server
 			}
 
 			const encoder =
-				encoding === 'gzip'
+				encoding === "gzip"
 				? createGzip( )
-				: encoding === 'deflate'
+				: encoding === "deflate"
 				? createDeflate( )
 				: null;
 
 			const responseHeaders = {
-				':status': 200,
-				'content-encoding': encoding,
+				":status": 200,
+				"content-encoding": encoding,
 			};
 
 			stream.respond( responseHeaders );
@@ -253,15 +286,15 @@ export class Server
 			else
 				stream.pipe( stream );
 		}
-		else if ( path.startsWith( '/goaway' ) )
+		else if ( path.startsWith( "/goaway" ) )
 		{
-			const waitMs = path.startsWith( '/goaway/' )
-				? parseInt( path.replace( '/goaway/', '' ) )
+			const waitMs = path.startsWith( "/goaway/" )
+				? parseInt( path.replace( "/goaway/", "" ), 10 )
 				: 0;
 
 			const responseHeaders = {
-				':status': 200,
-				[ HTTP2_HEADER_CONTENT_LENGTH ]: '10',
+				":status": 200,
+				[ HTTP2_HEADER_CONTENT_LENGTH ]: "10",
 			};
 
 			stream.respond( responseHeaders );
@@ -276,13 +309,13 @@ export class Server
 			ignoreError( ( ) => stream.write( "fghij" ) );
 			ignoreError( ( ) => stream.end( ) );
 		}
-		else if ( path.startsWith( '/slow/' ) )
+		else if ( path.startsWith( "/slow/" ) )
 		{
-			const waitMs = parseInt( path.replace( '/slow/', '' ) );
+			const waitMs = parseInt( path.replace( "/slow/", "" ), 10 );
 
 			const responseHeaders = {
-				':status': 200,
-				[ HTTP2_HEADER_CONTENT_LENGTH ]: '10',
+				":status": 200,
+				[ HTTP2_HEADER_CONTENT_LENGTH ]: "10",
 			};
 
 			stream.respond( responseHeaders );
@@ -302,42 +335,10 @@ export class Server
 
 			if ( !matched )
 			{
-				stream.respond( { ':status': 400 } );
+				stream.respond( { ":status": 400 } );
 				stream.end( );
 			}
 		}
-	}
-
-	listen( port: number | undefined = void 0 ): Promise< number >
-	{
-		return new Promise( ( resolve, reject ) =>
-		{
-			this._server.listen( port, '0.0.0.0', resolve );
-		} )
-		.then( ( ) =>
-		{
-			const address = this._server.address( );
-			if ( typeof address === 'string' )
-				return 0;
-			return address.port;
-		} )
-		.then( port =>
-		{
-			this.port = port;
-			return port;
-		} );
-	}
-
-	shutdown( ): Promise< void >
-	{
-		return new Promise< void >( ( resolve, reject ) =>
-		{
-			for ( let session of this._sessions )
-			{
-				session.destroy( );
-			}
-			this._server.close( resolve );
-		} );
 	}
 }
 

@@ -1,26 +1,27 @@
-import { ClientHttp2Session } from 'http2'
-import { URL } from 'url'
+import { ClientHttp2Session } from "http2";
+import { URL } from "url";
 
-export function arrayify< T >( value: T | Array< T > | undefined | null )
-: Array< T >;
 export function arrayify< T >(
-	value: Readonly< T > | ReadonlyArray< T > | undefined | null
-): Array< T >;
-export function arrayify< T >( value: T | Array< T > | undefined | null)
+	value:
+		T | Array< T > | Readonly< T > | ReadonlyArray< T > | undefined | null
+)
 : Array< T >
 {
+	if ( value != null && Array.isArray( value ) )
+		return value;
+
 	return value == null
 		? [ ]
 		: Array.isArray( value )
-		? value
+		? [ ...value ]
 		: [ value ];
 }
 
 export function parseLocation(
-	location: string | string[] | undefined, origin: string
+	location: string | Array< string > | undefined, origin: string
 )
 {
-	if ( 'string' !== typeof location )
+	if ( "string" !== typeof location )
 		return null;
 
 	const url = new URL( location, origin );

@@ -1,6 +1,6 @@
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
-export function createIntegrity( data: string, hashType = 'sha256' )
+export function createIntegrity( data: string, hashType = "sha256" )
 {
 	const hash = createHash( hashType );
 	hash.update( data );

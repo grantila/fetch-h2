@@ -19,8 +19,9 @@
   ],
   "scripts": {
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
+    "lint": "node_modules/.bin/tslint --project .",
     "mocha": "node_modules/.bin/mocha --bail --check-leaks dist/test",
-    "test": "node_modules/.bin/nyc npm run mocha",
+    "test": "npm run lint && node_modules/.bin/nyc npm run mocha",
     "testfast": "node_modules/.bin/nyc node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
     "test-nocov": "node_modules/.bin/mocha --bail --check-leaks dist/test",
     "buildtest": "npm run build && npm run test-nocov",
@@ -66,6 +67,7 @@
     "source-map-support": "0.x",
     "travis-deploy-once": "5.x",
     "ts-node": "7.x",
+    "tslint": "5.x",
     "typescript": "3.x"
   },
   "dependencies": {

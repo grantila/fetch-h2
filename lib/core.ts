@@ -1,48 +1,48 @@
 import {
-	SessionOptions,
-	SecureClientSessionOptions,
 	ClientHttp2Session,
-} from 'http2'
+	SecureClientSessionOptions,
+	SessionOptions,
+} from "http2";
 
-import { URL } from 'url'
+import { URL } from "url";
 
-import { RawHeaders, Headers } from './headers'
-import { CookieJar } from './cookie-jar'
+import { CookieJar } from "./cookie-jar";
+import { Headers, RawHeaders } from "./headers";
 
 export type Method =
-	'ACL' |
-	'BIND' |
-	'CHECKOUT' |
-	'CONNECT' |
-	'COPY' |
-	'DELETE' |
-	'GET' |
-	'HEAD' |
-	'LINK' |
-	'LOCK' |
-	'M-SEARCH' |
-	'MERGE' |
-	'MKACTIVITY' |
-	'MKCALENDAR' |
-	'MKCOL' |
-	'MOVE' |
-	'NOTIFY' |
-	'OPTIONS' |
-	'PATCH' |
-	'POST' |
-	'PROPFIND' |
-	'PROPPATCH' |
-	'PURGE' |
-	'PUT' |
-	'REBIND' |
-	'REPORT' |
-	'SEARCH' |
-	'SUBSCRIBE' |
-	'TRACE' |
-	'UNBIND' |
-	'UNLINK' |
-	'UNLOCK' |
-	'UNSUBSCRIBE';
+	"ACL" |
+	"BIND" |
+	"CHECKOUT" |
+	"CONNECT" |
+	"COPY" |
+	"DELETE" |
+	"GET" |
+	"HEAD" |
+	"LINK" |
+	"LOCK" |
+	"M-SEARCH" |
+	"MERGE" |
+	"MKACTIVITY" |
+	"MKCALENDAR" |
+	"MKCOL" |
+	"MOVE" |
+	"NOTIFY" |
+	"OPTIONS" |
+	"PATCH" |
+	"POST" |
+	"PROPFIND" |
+	"PROPPATCH" |
+	"PURGE" |
+	"PUT" |
+	"REBIND" |
+	"REPORT" |
+	"SEARCH" |
+	"SUBSCRIBE" |
+	"TRACE" |
+	"UNBIND" |
+	"UNLINK" |
+	"UNLOCK" |
+	"UNSUBSCRIBE";
 
 export type StorageBodyTypes =
 	Buffer | NodeJS.ReadableStream;
@@ -51,47 +51,47 @@ export type BodyTypes =
 	StorageBodyTypes | string;
 
 export type ModeTypes =
-	'cors' |
-	'no-cors' |
-	'same-origin';
+	"cors" |
+	"no-cors" |
+	"same-origin";
 
 export type CredentialsTypes =
-	'omit' |
-	'same-origin' |
-	'include';
+	"omit" |
+	"same-origin" |
+	"include";
 
 export type CacheTypes =
-	'default' |
-	'no-store' |
-	'reload' |
-	'no-cache' |
-	'force-cache' |
-	'only-if-cached';
+	"default" |
+	"no-store" |
+	"reload" |
+	"no-cache" |
+	"force-cache" |
+	"only-if-cached";
 
 export type RedirectTypes =
-	'follow' |
-	'error' |
-	'manual';
+	"follow" |
+	"error" |
+	"manual";
 
 export type SpecialReferrerTypes =
-	'no-referrer' |
-	'client';
+	"no-referrer" |
+	"client";
 
 export type ReferrerTypes =
 	SpecialReferrerTypes |
 	string;
 
 export type ReferrerPolicyTypes =
-	'no-referrer' |
-	'no-referrer-when-downgrade' |
-	'origin' |
-	'origin-when-cross-origin' |
-	'unsafe-url';
+	"no-referrer" |
+	"no-referrer-when-downgrade" |
+	"origin" |
+	"origin-when-cross-origin" |
+	"unsafe-url";
 
 export type ResponseTypes =
-	'basic' |
-	'cors' |
-	'error';
+	"basic" |
+	"cors" |
+	"error";
 
 export interface IBody
 {
@@ -179,6 +179,8 @@ export interface Decoder
 
 export interface SimpleSession
 {
+	cookieJar: CookieJar;
+
 	get(
 		url: string | URL,
 		options?: SessionOptions | SecureClientSessionOptions
@@ -186,8 +188,6 @@ export interface SimpleSession
 
 	userAgent( ): string;
 	accept( ): string;
-
-	cookieJar: CookieJar;
 
 	contentDecoders( ): ReadonlyArray< Decoder >;
 }

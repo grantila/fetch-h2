@@ -1,23 +1,15 @@
-import 'mocha';
-import { expect } from 'chai';
-import { readFileSync } from 'fs';
+import { expect } from "chai";
+import { readFileSync } from "fs";
+import "mocha";
 
-import { makeServer } from '../lib/server';
+import { makeServer } from "../lib/server";
 
 import {
-	fetch,
 	context,
-	disconnectAll,
-	onPush,
-	Body,
-	JsonBody,
-	StreamBody,
-	DataBody,
-	Response,
-	Headers,
-	OnTrailers,
 	CookieJar,
-} from '../../';
+	disconnectAll,
+	Response,
+} from "../../";
 
 afterEach( disconnectAll );
 
@@ -32,19 +24,19 @@ const key = readFileSync( __dirname + "/../../../certs/key.pem" );
 const cert = readFileSync( __dirname + "/../../../certs/cert.pem" );
 
 
-describe( 'context', function( )
+describe( "context", function( )
 {
 	this.timeout( 500 );
 
-	describe( 'options', ( ) =>
+	describe( "options", ( ) =>
 	{
-		it( 'should be able to overwrite default user agent', async ( ) =>
+		it( "should be able to overwrite default user agent", async ( ) =>
 		{
 			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
-				userAgent: 'foobar',
 				overwriteUserAgent: true,
+				userAgent: "foobar",
 			} );
 
 			const response = ensureStatusSuccess(
@@ -52,19 +44,19 @@ describe( 'context', function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ 'user-agent' ] ).to.equal( 'foobar' );
+			expect( res[ "user-agent" ] ).to.equal( "foobar" );
 
 			disconnectAll( );
 
 			await server.shutdown( );
 		} );
 
-		it( 'should be able to set (combined) user agent', async ( ) =>
+		it( "should be able to set (combined) user agent", async ( ) =>
 		{
 			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
-				userAgent: 'foobar'
+				userAgent: "foobar",
 			} );
 
 			const response = ensureStatusSuccess(
@@ -72,19 +64,19 @@ describe( 'context', function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ 'user-agent' ] ).to.contain( 'foobar' );
-			expect( res[ 'user-agent' ] ).to.contain( 'fetch-h2' );
+			expect( res[ "user-agent" ] ).to.contain( "foobar" );
+			expect( res[ "user-agent" ] ).to.contain( "fetch-h2" );
 
 			disconnectAll( );
 
 			await server.shutdown( );
 		} );
 
-		it( 'should be able to set default accept header', async ( ) =>
+		it( "should be able to set default accept header", async ( ) =>
 		{
 			const { server, port } = await makeServer( );
 
-			const accept = 'application/foobar, text/*;0.9';
+			const accept = "application/foobar, text/*;0.9";
 
 			const { disconnectAll, fetch } = context( { accept } );
 
@@ -93,7 +85,7 @@ describe( 'context', function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ 'accept' ] ).to.equal( accept );
+			expect( res.accept ).to.equal( accept );
 
 			disconnectAll( );
 
@@ -101,17 +93,17 @@ describe( 'context', function( )
 		} );
 	} );
 
-	describe( 'network settings', ( ) =>
+	describe( "network settings", ( ) =>
 	{
-		it( 'should not be able to connect over unauthorized ssl', async ( ) =>
+		it( "should not be able to connect over unauthorized ssl", async ( ) =>
 		{
 			const { server, port } = await makeServer( {
-				serverOptions: { key, cert }
+				serverOptions: { key, cert },
 			} );
 
 			const { disconnectAll, fetch } = context( {
-				userAgent: 'foobar',
 				overwriteUserAgent: true,
+				userAgent: "foobar",
 			} );
 
 			try
@@ -122,11 +114,11 @@ describe( 'context', function( )
 			catch ( err )
 			{
 				expect( err.message ).to.satisfy( ( message: string ) =>
-					message.includes( 'closed' ) // < Node 9.4
+					message.includes( "closed" ) // < Node 9.4
 					||
-					message.includes( 'self signed' ) // >= Node 9.4
+					message.includes( "self signed" ) // >= Node 9.4
 					||
-					message.includes( 'expired' )
+					message.includes( "expired" )
 				);
 			}
 
@@ -135,16 +127,16 @@ describe( 'context', function( )
 			await server.shutdown( );
 		} );
 
-		it( 'should be able to connect over unauthorized ssl', async ( ) =>
+		it( "should be able to connect over unauthorized ssl", async ( ) =>
 		{
 			const { server, port } = await makeServer( {
-				serverOptions: { key, cert }
+				serverOptions: { key, cert },
 			} );
 
 			const { disconnectAll, fetch } = context( {
-				userAgent: 'foobar',
 				overwriteUserAgent: true,
 				session: { rejectUnauthorized: false },
+				userAgent: "foobar",
 			} );
 
 			const response = ensureStatusSuccess(
@@ -152,7 +144,7 @@ describe( 'context', function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ 'user-agent' ] ).to.equal( 'foobar' );
+			expect( res[ "user-agent" ] ).to.equal( "foobar" );
 
 			disconnectAll( );
 
@@ -160,9 +152,9 @@ describe( 'context', function( )
 		} );
 	} );
 
-	describe( 'cookies', ( ) =>
+	describe( "cookies", ( ) =>
 	{
-		it( 'should be able to specify custom cookie jar', async ( ) =>
+		it( "should be able to specify custom cookie jar", async ( ) =>
 		{
 			const { server, port } = await makeServer( );
 
@@ -173,16 +165,15 @@ describe( 'context', function( )
 			).to.be.empty;
 
 			const { disconnectAll, fetch } = context( {
-				userAgent: 'foobar',
-				overwriteUserAgent: true,
 				cookieJar,
+				overwriteUserAgent: true,
+				userAgent: "foobar",
 			} );
 
-			const response =
-				await fetch( `http://localhost:${port}/set-cookie`, {
-					json: [ "a=b" , "c=d" ],
-					method: 'POST',
-				} );
+			await fetch( `http://localhost:${port}/set-cookie`, {
+				json: [ "a=b" , "c=d" ],
+				method: "POST",
+			} );
 
 			const cookies =
 				await cookieJar.getCookies( `http://localhost:${port}/` );
@@ -195,7 +186,7 @@ describe( 'context', function( )
 
 			// Next request should maintain cookies
 
-			const response2 = await fetch( `http://localhost:${port}/echo` );
+			await fetch( `http://localhost:${port}/echo` );
 
 			const cookies2 =
 				await cookieJar.getCookies( `http://localhost:${port}/` );
@@ -207,7 +198,7 @@ describe( 'context', function( )
 
 			cookieJar.reset( );
 
-			const response3 = await fetch( `http://localhost:${port}/echo` );
+			await fetch( `http://localhost:${port}/echo` );
 
 			const cookies3 =
 				await cookieJar.getCookies( `http://localhost:${port}/` );
@@ -220,12 +211,12 @@ describe( 'context', function( )
 		} );
 	} );
 
-	describe( 'disconnection', ( ) =>
+	describe( "disconnection", ( ) =>
 	{
-		it( 'should be able to disconnect non-connection',
+		it( "should be able to disconnect non-connection",
 			async ( ) =>
 		{
-			const { server, port } = await makeServer( );
+			const { server } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( );
 
@@ -240,10 +231,10 @@ describe( 'context', function( )
 			await server.shutdown( );
 		} );
 
-		it( 'should be able to disconnect invalid url',
+		it( "should be able to disconnect invalid url",
 			async ( ) =>
 		{
-			const { server, port } = await makeServer( );
+			const { server } = await makeServer( );
 
 			const { disconnectAll, fetch } =
 				context( { session: { port: -1, host: < any >{ } } } );

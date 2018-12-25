@@ -1,13 +1,13 @@
 import {
-	constants as h2constants,
 	ClientHttp2Stream,
+	constants as h2constants,
 	IncomingHttpHeaders,
-} from 'http2'
+} from "http2";
 
 import {
 	createGunzip,
 	createInflate,
-} from 'zlib'
+} from "zlib";
 
 const {
 	HTTP2_HEADER_LOCATION,
@@ -20,21 +20,21 @@ const {
 
 import {
 	BodyTypes,
+	DecodeFunction,
+	Decoder,
 	ResponseInit,
 	ResponseTypes,
-	Decoder,
-	DecodeFunction,
-} from './core'
+} from "./core";
 
 import {
-	Headers,
-	GuardedHeaders,
 	ensureHeaders,
-} from './headers'
+	GuardedHeaders,
+	Headers,
+} from "./headers";
 
 import {
 	Body,
-} from './body'
+} from "./body";
 
 interface Extra
 {
@@ -75,9 +75,9 @@ export class Response extends Body
 
 		const _extra = < Partial< Extra > >( extra || { } );
 
-		const type = _extra.type || 'basic';
+		const type = _extra.type || "basic";
 		const redirected = !!_extra.redirected || false;
-		const url = _extra.url || '';
+		const url = _extra.url || "";
 		const integrity = _extra.integrity || null;
 
 		if ( body )
@@ -88,7 +88,7 @@ export class Response extends Body
 			const length =
 				contentLength == null
 				? null
-				: parseInt( contentLength );
+				: parseInt( contentLength, 10 );
 
 			if ( contentType )
 				this.setBody( body, contentType, integrity, length );
@@ -132,25 +132,18 @@ export class Response extends Body
 		} );
 	}
 
-	// Creates a clone of a Response object.
-	clone( ): Response
-	{
-		const { headers, status, statusText } = this;
-		return new Response( this, { headers, status, statusText } );
-	}
-
 	// Returns a new Response object associated with a network error.
-	static error( ): Response
+	public static error( ): Response
 	{
-		const headers = new GuardedHeaders( 'immutable' );
+		const headers = new GuardedHeaders( "immutable" );
 		const status = 521;
 		const statusText = "Web Server Is Down";
 		return new Response(
-			null, { headers, status, statusText }, { type: 'error' } );
+			null, { headers, status, statusText }, { type: "error" } );
 	}
 
 	// Creates a new response with a different URL.
-	static redirect( url: string, status?: number )
+	public static redirect( url: string, status?: number )
 	{
 		status = status || 302;
 
@@ -158,18 +151,24 @@ export class Response extends Body
 			[ HTTP2_HEADER_LOCATION ]: url,
 		};
 
-		return new Response( null, { headers, status } )
+		return new Response( null, { headers, status } );
 	}
 
+	// Creates a clone of a Response object.
+	public clone( ): Response
+	{
+		const { headers, status, statusText } = this;
+		return new Response( this, { headers, status, statusText } );
+	}
 }
 
 function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
 {
-	const out = new GuardedHeaders( 'response' );
+	const out = new GuardedHeaders( "response" );
 
-	for ( let key of Object.keys( headers ) )
+	for ( const key of Object.keys( headers ) )
 	{
-		if ( key.startsWith( ':' ) )
+		if ( key.startsWith( ":" ) )
 			// We ignore pseudo-headers
 			continue;
 
@@ -185,8 +184,8 @@ function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
 
 function makeInit( inHeaders: IncomingHttpHeaders ): Partial< ResponseInit >
 {
-	const status = parseInt( '' + inHeaders[ HTTP2_HEADER_STATUS ] );
-	const statusText = ''; // Not supported in H2
+	const status = parseInt( "" + inHeaders[ HTTP2_HEADER_STATUS ], 10 );
+	const statusText = ""; // Not supported in H2
 	const headers = makeHeadersFromH2Headers( inHeaders );
 
 	return { status, statusText, headers };
@@ -194,13 +193,12 @@ function makeInit( inHeaders: IncomingHttpHeaders ): Partial< ResponseInit >
 
 function makeExtra(
 	url: string,
-	headers: IncomingHttpHeaders,
 	redirected: boolean,
 	integrity?: string
 )
 : Partial< Extra >
 {
-	const type = 'basic'; // TODO: Implement CORS
+	const type = "basic"; // TODO: Implement CORS
 
 	return { redirected, integrity, type, url };
 }
@@ -218,10 +216,10 @@ function handleEncoding(
 		return stream;
 
 	const decoders: { [ name: string ]: DecodeFunction; } = {
-		gzip: ( stream: NodeJS.ReadableStream ) =>
-			stream.pipe( createGunzip( ) ),
 		deflate: ( stream: NodeJS.ReadableStream ) =>
 			stream.pipe( createInflate( ) ),
+		gzip: ( stream: NodeJS.ReadableStream ) =>
+			stream.pipe( createGunzip( ) ),
 	};
 
 	contentDecoders.forEach( decoder =>
@@ -257,7 +255,7 @@ export class H2StreamResponse extends Response
 				headers
 			),
 			makeInit( headers ),
-			makeExtra( url, headers, redirected, integrity )
+			makeExtra( url, redirected, integrity )
 		);
 	}
 }

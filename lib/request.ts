@@ -1,35 +1,30 @@
 import {
-	Method,
-	BodyTypes,
-	ModeTypes,
-	CredentialsTypes,
 	CacheTypes,
+	CredentialsTypes,
+	Method,
+	ModeTypes,
 	RedirectTypes,
-	SpecialReferrerTypes,
-	ReferrerTypes,
 	ReferrerPolicyTypes,
+	ReferrerTypes,
 	RequestInit,
 	RequestInitWithoutBody,
-} from './core'
+} from "./core";
 
-import { Headers, GuardedHeaders } from './headers'
-import { Body, JsonBody } from './body'
+import { Body, JsonBody } from "./body";
+import { GuardedHeaders, Headers } from "./headers";
 
 
 const defaultInit: Partial< RequestInit > = {
-	method: 'GET',
-	mode: 'same-origin',
-	credentials: 'omit',
-	cache: 'default',
-	redirect: 'manual',
-	referrer: 'client',
+	cache: "default",
+	credentials: "omit",
+	method: "GET",
+	mode: "same-origin",
+	redirect: "manual",
+	referrer: "client",
 };
 
 export class Request extends Body implements RequestInitWithoutBody
 {
-	private _url: string;
-	private _init: Partial< RequestInit >;
-
 	// @ts-ignore
 	public readonly method: Method;
 	// @ts-ignore
@@ -50,6 +45,9 @@ export class Request extends Body implements RequestInitWithoutBody
 	public readonly integrity: string;
 	// @ts-ignore
 	public readonly cache: CacheTypes;
+
+	private _url: string;
+	private _init: Partial< RequestInit >;
 
 	constructor( input: string | Request, init?: Partial< RequestInit > )
 	{
@@ -84,9 +82,9 @@ export class Request extends Body implements RequestInitWithoutBody
 		this._init = Object.assign( { }, defaultInit, init );
 
 		const headers = new GuardedHeaders(
-			this._init.mode === 'no-cors'
-				? 'request-no-cors'
-				: 'request',
+			this._init.mode === "no-cors"
+				? "request-no-cors"
+				: "request",
 			this._init.headers
 		);
 
@@ -95,8 +93,8 @@ export class Request extends Body implements RequestInitWithoutBody
 
 		if ( !this.hasBody( ) && this._init.body )
 		{
-			if ( headers.has( 'content-type' ) )
-				this.setBody( this._init.body, headers.get( 'content-type' ) );
+			if ( headers.has( "content-type" ) )
+				this.setBody( this._init.body, headers.get( "content-type" ) );
 			else
 				this.setBody( this._init.body );
 		}
@@ -106,17 +104,33 @@ export class Request extends Body implements RequestInitWithoutBody
 		}
 
 		Object.defineProperties( this, {
-			method: {
+			cache: {
 				enumerable: true,
-				value: this._init.method,
+				value: this._init.cache,
 			},
-			url: {
+			credentials: {
 				enumerable: true,
-				value: this._url,
+				value: this._init.credentials,
 			},
 			headers: {
 				enumerable: true,
 				value: headers,
+			},
+			integrity: {
+				enumerable: true,
+				value: this._init.integrity,
+			},
+			method: {
+				enumerable: true,
+				value: this._init.method,
+			},
+			mode: {
+				enumerable: true,
+				value: this._init.mode,
+			},
+			redirect: {
+				enumerable: true,
+				value: this._init.redirect,
 			},
 			referrer: {
 				enumerable: true,
@@ -126,30 +140,14 @@ export class Request extends Body implements RequestInitWithoutBody
 				enumerable: true,
 				value: this._init.referrerPolicy,
 			},
-			mode: {
+			url: {
 				enumerable: true,
-				value: this._init.mode,
-			},
-			credentials: {
-				enumerable: true,
-				value: this._init.credentials,
-			},
-			redirect: {
-				enumerable: true,
-				value: this._init.redirect,
-			},
-			integrity: {
-				enumerable: true,
-				value: this._init.integrity,
-			},
-			cache: {
-				enumerable: true,
-				value: this._init.cache,
+				value: this._url,
 			},
 		} );
 	}
 
-	clone( newUrl?: string ): Request
+	public clone( newUrl?: string ): Request
 	{
 		const ret = new Request( this );
 		if ( newUrl )

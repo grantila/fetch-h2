@@ -1,0 +1,14 @@
+{
+    "extends": [
+        "../tslint.json"
+    ],
+    "jsRules": {},
+    "rules": {
+        "no-unused-expression": [
+            false,
+            "allow-fast-null-checks"
+        ],
+        "no-console": false
+    },
+    "rulesDirectory": []
+}

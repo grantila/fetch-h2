@@ -1,26 +1,23 @@
-import 'mocha';
-import { expect } from 'chai';
-import { defer, delay } from 'already';
-import * as through2 from 'through2';
-import * as from2 from 'from2';
-import { createHash } from 'crypto';
-import { buffer as getStreamAsBuffer } from 'get-stream';
+import { defer, delay } from "already";
+import { expect } from "chai";
+import { createHash } from "crypto";
+import * as from2 from "from2";
+import { buffer as getStreamAsBuffer } from "get-stream";
+import "mocha";
+import * as through2 from "through2";
 
-import { makeServer } from '../lib/server';
-import { createIntegrity } from '../lib/utils';
+import { makeServer } from "../lib/server";
+import { createIntegrity } from "../lib/utils";
 
 import {
-	fetch,
-	context,
-	disconnectAll,
-	onPush,
-	JsonBody,
-	StreamBody,
 	DataBody,
-	Response,
+	disconnectAll,
+	fetch,
 	Headers,
-	OnTrailers,
-} from '../../';
+	onPush,
+	Response,
+	StreamBody,
+} from "../../";
 
 afterEach( disconnectAll );
 
@@ -44,9 +41,9 @@ function ensureStatusSuccess( response: Response ): Response
 	return response;
 }
 
-describe( 'basic', ( ) =>
+describe( "basic", ( ) =>
 {
-	it( 'should be able to perform simple GET', async ( ) =>
+	it( "should be able to perform simple GET", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -55,91 +52,91 @@ describe( 'basic', ( ) =>
 		);
 
 		const res = await response.json( );
-		expect( res[ ':path' ] ).to.equal( '/headers' );
+		expect( res[ ":path" ] ).to.equal( "/headers" );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to set upper-case headers', async ( ) =>
+	it( "should be able to set upper-case headers", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const headers = {
-			'Content-Type': 'text/foo+text',
-			'Content-Length': '6',
+			"Content-Length": "6",
+			"Content-Type": "text/foo+text",
 		};
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/headers`,
 				{
-					method: 'POST',
 					body: new DataBody( "foobar" ),
 					headers,
+					method: "POST",
 				}
 			)
 		);
 
 		const res = await response.json( );
 
-		for ( let [ key, val ] of Object.entries( headers ) )
+		for ( const [ key, val ] of Object.entries( headers ) )
 			expect( res[ key.toLowerCase( ) ] ).to.equal( val );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to get upper-case headers', async ( ) =>
+	it( "should be able to get upper-case headers", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const json = { foo: 'bar' };
+		const json = { foo: "bar" };
 
 		const response = await fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
-				json
+				json,
+				method: "POST",
 			}
 		);
 
 		const data = await response.json( );
 		const { headers } = response;
 
-		expect( headers.get( 'Content-Type' ) ).to.equal( 'application/json' );
+		expect( headers.get( "Content-Type" ) ).to.equal( "application/json" );
 		expect( data ).to.deep.equal( json );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to set numeric headers', async ( ) =>
+	it( "should be able to set numeric headers", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const headers = {
-			'content-type': 'text/foo+text',
-			'content-length': < string >< any >6,
+			"content-length": < string >< any >6,
+			"content-type": "text/foo+text",
 		};
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/headers`,
 				{
-					method: 'POST',
 					body: new DataBody( "foobar" ),
 					headers,
+					method: "POST",
 				}
 			)
 		);
 
 		const res = await response.json( );
 
-		for ( let [ key, val ] of Object.entries( headers ) )
+		for ( const [ key, val ] of Object.entries( headers ) )
 			expect( res[ key ] ).to.equal( `${val}` );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to POST stream-data with known length', async ( ) =>
+	it( "should be able to POST stream-data with known length", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -147,12 +144,12 @@ describe( 'basic', ( ) =>
 
 		stream.write( "foo" );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
 				body: new StreamBody( stream ),
-				headers: { 'content-length': '6' },
+				headers: { "content-length": "6" },
+				method: "POST",
 			}
 		);
 
@@ -161,7 +158,7 @@ describe( 'basic', ( ) =>
 		stream.write( "bar" );
 		stream.end( );
 
-		const response = ensureStatusSuccess( await eventual_response );
+		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
 		expect( data ).to.equal( "foobar" );
@@ -169,7 +166,7 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to POST stream-data with unknown length', async ( ) =>
+	it( "should be able to POST stream-data with unknown length", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -177,11 +174,11 @@ describe( 'basic', ( ) =>
 
 		stream.write( "foo" );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
 				body: new StreamBody( stream ),
+				method: "POST",
 			}
 		);
 
@@ -190,7 +187,7 @@ describe( 'basic', ( ) =>
 		stream.write( "bar" );
 		stream.end( );
 
-		const response = ensureStatusSuccess( await eventual_response );
+		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
 		expect( data ).to.equal( "foobar" );
@@ -198,50 +195,50 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should not be able to send both json and body', async ( ) =>
+	it( "should not be able to send both json and body", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
-				body: 'foo',
-				json: { foo: '' }
+				body: "foo",
+				json: { foo: "" },
+				method: "POST",
 			}
 		);
 
-		const err = await getRejection( eventual_response );
+		const err = await getRejection( eventualResponse );
 
-		expect( err.message ).to.contain( 'Cannot specify both' );
+		expect( err.message ).to.contain( "Cannot specify both" );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to send json', async ( ) =>
+	it( "should be able to send json", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const json = { foo: 'bar' };
+		const json = { foo: "bar" };
 
 		const response = await fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
-				json
+				json,
+				method: "POST",
 			}
 		);
 
 		const data = await response.json( );
 		const { headers } = response;
 
-		expect( headers.get( 'content-type' ) ).to.equal( 'application/json' );
+		expect( headers.get( "content-type" ) ).to.equal( "application/json" );
 		expect( data ).to.deep.equal( json );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to send body as string', async ( ) =>
+	it( "should be able to send body as string", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -250,20 +247,19 @@ describe( 'basic', ( ) =>
 		const response = await fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
-				body
+				body,
+				method: "POST",
 			}
 		);
 
 		const data = await response.text( );
-		const { headers } = response;
 
 		expect( data ).to.deep.equal( body );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to send body as buffer', async ( ) =>
+	it( "should be able to send body as buffer", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -272,8 +268,8 @@ describe( 'basic', ( ) =>
 		const response = await fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
-				body
+				body,
+				method: "POST",
 			}
 		);
 
@@ -284,7 +280,7 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to send body as readable stream', async ( ) =>
+	it( "should be able to send body as readable stream", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -297,8 +293,8 @@ describe( 'basic', ( ) =>
 		const response = await fetch(
 			`http://localhost:${port}/echo`,
 			{
-				method: 'POST',
 				body: stream,
+				method: "POST",
 			}
 		);
 
@@ -309,11 +305,11 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should trigger onTrailers', async ( ) =>
+	it( "should trigger onTrailers", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const trailers: any = { foo: 'bar' };
+		const trailers: any = { foo: "bar" };
 
 		const deferredTrailers = defer< Headers >( );
 		const onTrailers = deferredTrailers.resolve;
@@ -321,8 +317,8 @@ describe( 'basic', ( ) =>
 		const response = await fetch(
 			`http://localhost:${port}/trailers`,
 			{
-				method: 'POST',
 				json: trailers,
+				method: "POST",
 				onTrailers,
 			}
 		);
@@ -341,35 +337,35 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should timeout on a slow request', async function( )
+	it( "should timeout on a slow request", async function( )
 	{
 		this.timeout( 500 );
 
 		const { server, port } = await makeServer( );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/wait/20`,
 			{
-				method: 'POST',
+				method: "POST",
 				timeout: 8,
 			}
 		);
 
-		const err = await getRejection( eventual_response );
+		const err = await getRejection( eventualResponse );
 
 		expect( err.message ).to.contain( "timed out" );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should not timeout on a fast request', async ( ) =>
+	it( "should not timeout on a fast request", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const response = await fetch(
 			`http://localhost:${port}/wait/1`,
 			{
-				method: 'POST',
+				method: "POST",
 				timeout: 100,
 			}
 		);
@@ -379,7 +375,7 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to POST large (16MiB) stream with known length',
+	it( "should be able to POST large (16MiB) stream with known length",
 		async function( )
 	{
 		this.timeout( 2000 );
@@ -390,11 +386,11 @@ describe( 'basic', ( ) =>
 		const chunks = 16;
 		const chunk = Buffer.allocUnsafe( chunkSize );
 
-		const hash = createHash( 'sha256' );
+		const hash = createHash( "sha256" );
 		let referenceHash;
 
 		let chunkNum = 0;
-		const stream = from2( ( size, next ) =>
+		const stream = from2( ( _size, next ) =>
 		{
 			if ( chunkNum++ === chunks )
 			{
@@ -407,18 +403,18 @@ describe( 'basic', ( ) =>
 			next( null, chunk );
 		} );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/sha256`,
 			{
-				method: 'POST',
 				body: new StreamBody( stream ),
-				headers: { 'content-length': '' + chunkSize * chunks },
+				headers: { "content-length": "" + chunkSize * chunks },
+				method: "POST",
 			}
 		);
 
 		await delay( 1 );
 
-		const response = ensureStatusSuccess( await eventual_response );
+		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
 		expect( data ).to.equal( referenceHash );
@@ -426,7 +422,7 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to POST large (16MiB) stream with unknown length',
+	it( "should be able to POST large (16MiB) stream with unknown length",
 		async function( )
 	{
 		this.timeout( 2000 );
@@ -437,11 +433,11 @@ describe( 'basic', ( ) =>
 		const chunks = 16;
 		const chunk = Buffer.allocUnsafe( chunkSize );
 
-		const hash = createHash( 'sha256' );
+		const hash = createHash( "sha256" );
 		let referenceHash;
 
 		let chunkNum = 0;
-		const stream = from2( ( size, next ) =>
+		const stream = from2( ( _size, next ) =>
 		{
 			if ( chunkNum++ === chunks )
 			{
@@ -454,17 +450,17 @@ describe( 'basic', ( ) =>
 			next( null, chunk );
 		} );
 
-		const eventual_response = fetch(
+		const eventualResponse = fetch(
 			`http://localhost:${port}/sha256`,
 			{
-				method: 'POST',
 				body: new StreamBody( stream ),
+				method: "POST",
 			}
 		);
 
 		await delay( 1 );
 
-		const response = ensureStatusSuccess( await eventual_response );
+		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
 		expect( data ).to.equal( referenceHash );
@@ -472,31 +468,31 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should be able to receive pushed request', async ( ) =>
+	it( "should be able to receive pushed request", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const onPushPromise = new Promise< Response >( ( resolve, reject ) =>
 		{
-			onPush( ( origin, request, getResponse ) =>
+			onPush( ( _origin, _request, getResponse ) =>
 			{
 				getResponse( ).then( resolve, reject );
 			} );
 		} );
 
-		const data = { foo: 'bar' };
+		const data = { foo: "bar" };
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/push`,
 				{
-					method: 'POST',
 					json: [
 						{
 							data: JSON.stringify( data ),
-							headers: { 'content-type': 'application/json' },
-						}
+							headers: { "content-type": "application/json" },
+						},
 					],
+					method: "POST",
 				}
 			)
 		);
@@ -515,33 +511,31 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should convert \'host\' to \':authority\'', async ( ) =>
+	it( "should convert 'host' to ':authority'", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const host = 'localhost';
+		const host = "localhost";
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/headers`,
 				{
-					headers: { host }
+					headers: { host },
 				}
 			)
 		);
 
 		const responseData = await response.json( );
 
-		expect( responseData[ ':authority' ] ).to.equal( host );
+		expect( responseData[ ":authority" ] ).to.equal( host );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should send accept-encoding', async ( ) =>
+	it( "should send accept-encoding", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
-
-		const host = 'localhost';
 
 		const response = ensureStatusSuccess(
 			await fetch( `http://localhost:${port}/headers` )
@@ -549,24 +543,23 @@ describe( 'basic', ( ) =>
 
 		const responseData = await response.json( );
 
-		expect( responseData[ 'accept-encoding' ] ).to.contain( "gzip" );
+		expect( responseData[ "accept-encoding" ] ).to.contain( "gzip" );
 
 		await server.shutdown( );
 	} );
 
-	it( 'should accept content-encoding (gzip)', async ( ) =>
+	it( "should accept content-encoding (gzip)", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const host = 'localhost';
 		const testData = { foo: "bar" };
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/compressed/gzip`,
 				{
-					method: 'POST',
 					json: testData,
+					method: "POST",
 				}
 			)
 		);
@@ -580,19 +573,18 @@ describe( 'basic', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'should accept content-encoding (deflate)', async ( ) =>
+	it( "should accept content-encoding (deflate)", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const host = 'localhost';
 		const testData = { foo: "bar" };
 
 		const response = ensureStatusSuccess(
 			await fetch(
 				`http://localhost:${port}/compressed/deflate`,
 				{
-					method: 'POST',
 					json: testData,
+					method: "POST",
 				}
 			)
 		);
@@ -607,9 +599,9 @@ describe( 'basic', ( ) =>
 	} );
 } );
 
-describe( 'response', ( ) =>
+describe( "response", ( ) =>
 {
-	it( 'should have a proper url', async ( ) =>
+	it( "should have a proper url", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -624,9 +616,9 @@ describe( 'response', ( ) =>
 	} );
 } );
 
-describe( 'goaway', ( ) =>
+describe( "goaway", ( ) =>
 {
-	it( 'handle session failover (race conditioned)', async ( ) =>
+	it( "handle session failover (race conditioned)", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -646,7 +638,7 @@ describe( 'goaway', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'handle session failover (calm)', async ( ) =>
+	it( "handle session failover (calm)", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -668,7 +660,7 @@ describe( 'goaway', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'user-disconnect closes all sessions', async ( ) =>
+	it( "user-disconnect closes all sessions", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
@@ -689,23 +681,23 @@ describe( 'goaway', ( ) =>
 
 		const text1 = await response1.text( true );
 		const text2 = await response2.text( true );
-		expect( text1 ).to.equal( 'abcde' );
-		expect( text2 ).to.equal( 'abcde' );
+		expect( text1 ).to.equal( "abcde" );
+		expect( text2 ).to.equal( "abcde" );
 
 		await server.shutdown( );
 	} );
 } );
 
-describe( 'integrity', ( ) =>
+describe( "integrity", ( ) =>
 {
 
-	it( 'handle and succeed on valid integrity', async ( ) =>
+	it( "handle and succeed on valid integrity", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const url = `http://localhost:${port}/slow/0`;
 
-		const data = "abcdefghij"
+		const data = "abcdefghij";
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
@@ -717,13 +709,13 @@ describe( 'integrity', ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( 'handle and fail on invalid integrity', async ( ) =>
+	it( "handle and fail on invalid integrity", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
 		const url = `http://localhost:${port}/slow/0`;
 
-		const data = "abcdefghij-x"
+		const data = "abcdefghij-x";
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );

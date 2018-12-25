@@ -1,24 +1,23 @@
 import {
 	constants as h2constants,
 	IncomingHttpHeaders as IncomingHttp2Headers,
-} from 'http2'
-import { URL } from 'url'
+} from "http2";
+import { URL } from "url";
 
-import { delay, Finally } from 'already'
-import { syncGuard } from 'callguard'
+import { Finally } from "already";
+import { syncGuard } from "callguard";
 
-import { arrayify, parseLocation, hasGotGoaway } from './utils'
+import { BodyInspector } from "./body";
 import {
-	Method,
-	FetchInit,
 	AbortError,
-	TimeoutError,
+	FetchInit,
 	SimpleSession,
-} from './core'
-import { Request } from './request'
-import { H2StreamResponse, Response } from './response'
-import { RawHeaders, Headers, GuardedHeaders } from './headers'
-import { BodyInspector } from './body'
+	TimeoutError,
+} from "./core";
+import { GuardedHeaders, Headers, RawHeaders } from "./headers";
+import { Request } from "./request";
+import { H2StreamResponse, Response } from "./response";
+import { arrayify, hasGotGoaway, parseLocation } from "./utils";
 
 
 const {
@@ -52,13 +51,13 @@ const {
 const NGHTTP2_ERR_START_STREAM_NOT_ALLOWED = -516;
 
 const isRedirectStatus: { [ status: string ]: boolean; } = {
-    "300": true,
-    "301": true,
-    "302": true,
-    "303": true,
-    "305": true,
-    "307": true,
-    "308": true,
+	300: true,
+	301: true,
+	302: true,
+	303: true,
+	305: true,
+	307: true,
+	308: true,
 };
 
 function ensureNotCircularRedirection( redirections: ReadonlyArray< string > )
@@ -103,8 +102,7 @@ async function fetchImpl(
 	const {
 		origin,
 		protocol,
-		host,
-		pathname, search, hash
+		pathname, search, hash,
 	} = new URL( url );
 	const path = pathname + search + hash;
 
@@ -120,10 +118,10 @@ async function fetchImpl(
 
 	const acceptEncoding =
 		contentDecoders.length === 0
-		? 'gzip;q=1.0, deflate;q=0.5'
+		? "gzip;q=1.0, deflate;q=0.5"
 		: contentDecoders
 			.map( decoder => `${decoder.name};q=1.0` )
-			.join( ', ' ) + ', gzip;q=0.8, deflate;q=0.5';
+			.join( ", " ) + ", gzip;q=0.8, deflate;q=0.5";
 
 	if ( headers.has( HTTP2_HEADER_COOKIE ) )
 		cookies.push( ...arrayify( headers.get( HTTP2_HEADER_COOKIE ) ) );
@@ -131,7 +129,7 @@ async function fetchImpl(
 	const headersToSend: RawHeaders = {
 		// Set required headers
 		[ HTTP2_HEADER_METHOD ]: method,
-		[ HTTP2_HEADER_SCHEME ]: protocol.replace( /:.*/, '' ),
+		[ HTTP2_HEADER_SCHEME ]: protocol.replace( /:.*/, "" ),
 		[ HTTP2_HEADER_PATH ]: path,
 
 		// Set default headers
@@ -141,14 +139,14 @@ async function fetchImpl(
 	};
 
 	if ( cookies.length > 0 )
-		headersToSend[ HTTP2_HEADER_COOKIE ] = cookies.join( '; ' );
+		headersToSend[ HTTP2_HEADER_COOKIE ] = cookies.join( "; " );
 
-	for ( let [ key, val ] of headers.entries( ) )
+	for ( const [ key, val ] of headers.entries( ) )
 	{
-		if ( key === 'host' )
+		if ( key === "host" )
 			// Convert to :authority like curl does:
 			// https://github.com/grantila/fetch-h2/issues/9
-			headersToSend[ ':authority' ] = val;
+			headersToSend[ ":authority" ] = val;
 		else if ( key !== HTTP2_HEADER_COOKIE )
 			headersToSend[ key ] = val;
 	}
@@ -160,9 +158,9 @@ async function fetchImpl(
 		inspector.length != null &&
 		!req.headers.has( HTTP2_HEADER_CONTENT_LENGTH )
 	)
-		headersToSend[ HTTP2_HEADER_CONTENT_LENGTH ] = '' + inspector.length;
+		headersToSend[ HTTP2_HEADER_CONTENT_LENGTH ] = "" + inspector.length;
 
-	if ( !endStream && !req.headers.has( 'content-type' ) && inspector.mime )
+	if ( !endStream && !req.headers.has( "content-type" ) && inspector.mime )
 		headersToSend[ HTTP2_HEADER_CONTENT_TYPE ] = inspector.mime;
 
 	function timeoutError( )
@@ -172,7 +170,7 @@ async function fetchImpl(
 	}
 
 	const timeoutAt = extra.timeoutAt || (
-		( 'timeout' in init && typeof init.timeout === 'number' )
+		( "timeout" in init && typeof init.timeout === "number" )
 			// Setting the timeoutAt here at first time allows async cookie
 			// jar to not take part of timeout for at least the first request
 			// (in a potential redirect chain)
@@ -181,7 +179,7 @@ async function fetchImpl(
 	);
 
 	function setupTimeout( )
-	: { promise: Promise< Response >; clear: Function; } | null
+	: { promise: Promise< Response >; clear: ( ) => void; } | null
 	{
 		if ( !timeoutAt )
 			return null;
@@ -198,16 +196,16 @@ async function fetchImpl(
 				if ( timerId )
 					clearTimeout( timerId );
 			},
-			promise: new Promise( ( resolve, reject ) =>
+			promise: new Promise( ( _resolve, reject ) =>
 			{
 				timerId = setTimeout( ( ) =>
 					{
 						timerId = null;
-						reject( timeoutError( ) )
+						reject( timeoutError( ) );
 					},
 					timeoutAt - now
 				);
-			} )
+			} ),
 		};
 
 	}
@@ -225,7 +223,7 @@ async function fetchImpl(
 	const signalPromise: Promise< Response > | null =
 		signal
 		?
-			new Promise< Response >( ( resolve, reject ) =>
+			new Promise< Response >( ( _resolve, reject ) =>
 			{
 				signal.onabort = ( ) =>
 				{
@@ -254,18 +252,18 @@ async function fetchImpl(
 			{
 				const guard = syncGuard( reject, { catchAsync: true } );
 
-				stream.on( 'aborted', guard( ( ...whatever ) =>
+				stream.on( "aborted", guard( ( ..._whatever ) =>
 				{
 					reject( new AbortError( "Request aborted" ) );
 				} ) );
 
-				stream.on( 'error', guard( ( err: Error ) =>
+				stream.on( "error", guard( ( err: Error ) =>
 				{
 					reject( err );
 				} ) );
 
-				stream.on( 'frameError', guard(
-					( type: number, code: number, streamId: number ) =>
+				stream.on( "frameError", guard(
+					( _type: number, code: number, _streamId: number ) =>
 					{
 						if (
 							code === NGHTTP2_ERR_START_STREAM_NOT_ALLOWED &&
@@ -293,9 +291,9 @@ async function fetchImpl(
 										req,
 										{ signal, onTrailers },
 										{
-											timeoutAt,
-											redirected,
 											raceConditionedGoaway,
+											redirected,
+											timeoutAt,
 										}
 									)
 								);
@@ -308,7 +306,7 @@ async function fetchImpl(
 					} )
 				);
 
-				stream.on( 'streamClosed', guard( ( errorCode: number ) =>
+				stream.on( "streamClosed", guard( ( errorCode: number ) =>
 				{
 					// We'll get an 'error' event if there actually is an
 					// error, but not if we got NGHTTP2_NO_ERROR.
@@ -319,19 +317,19 @@ async function fetchImpl(
 							new AbortError( "Stream prematurely closed" ) );
 				} ) );
 
-				stream.on( 'timeout', guard( ( ...whatever ) =>
+				stream.on( "timeout", guard( ( ..._whatever ) =>
 				{
 					reject( new TimeoutError( "Request timed out" ) );
 				} ) );
 
-				stream.on( 'trailers', guard(
+				stream.on( "trailers", guard(
 					( _headers: IncomingHttp2Headers, _flags: any ) =>
 				{
 					if ( !onTrailers )
 						return;
 					try
 					{
-						const headers = new GuardedHeaders( 'response' );
+						const headers = new GuardedHeaders( "response" );
 
 						Object.keys( _headers ).forEach( key =>
 						{
@@ -340,7 +338,7 @@ async function fetchImpl(
 									.forEach( value =>
 										headers.append( key, value ) );
 							else
-								headers.set( key, '' + _headers[ key ] );
+								headers.set( key, "" + _headers[ key ] );
 						} );
 
 						onTrailers( headers );
@@ -348,20 +346,21 @@ async function fetchImpl(
 					catch ( err )
 					{
 						// TODO: Implement #8
+						// tslint:disable-next-line
 						console.warn( "Trailer handling failed", err );
 					}
 				} ) );
 
 				// ClientHttp2Stream events
 
-				stream.on( 'continue', guard( ( ...whatever ) =>
+				stream.on( "continue", guard( ( ..._whatever ) =>
 				{
 					reject( new Error(
 						"Request failed with 100 continue. " +
 						"This can't happen unless a server failure" ) );
 				} ) );
 
-				stream.on( 'headers', guard(
+				stream.on( "headers", guard(
 					( headers: IncomingHttp2Headers, _flags: any ) =>
 					{
 						const code = headers[ HTTP2_HEADER_STATUS ];
@@ -372,7 +371,7 @@ async function fetchImpl(
 					}
 				) );
 
-				stream.on( 'response', guard(
+				stream.on( "response", guard(
 					( headers: IncomingHttp2Headers ) =>
 				{
 					if ( signal && signal.aborted )
@@ -382,7 +381,7 @@ async function fetchImpl(
 						return;
 					}
 
-					const status = '' + headers[ HTTP2_HEADER_STATUS ];
+					const status = "" + headers[ HTTP2_HEADER_STATUS ];
 					const location = parseLocation(
 						headers[ HTTP2_HEADER_LOCATION ],
 						url
@@ -398,8 +397,8 @@ async function fetchImpl(
 						session.cookieJar.setCookies( setCookies, url );
 					}
 
-					delete headers[ 'set-cookie' ];
-					delete headers[ 'set-cookie2' ];
+					delete headers[ "set-cookie" ];
+					delete headers[ "set-cookie2" ];
 
 					if ( isRedirected && !location )
 						return reject(
@@ -408,21 +407,21 @@ async function fetchImpl(
 							)
 						);
 
-					if ( !isRedirected || redirect === 'manual' )
+					if ( !isRedirected || redirect === "manual" )
 						return resolve(
 							new H2StreamResponse(
 								contentDecoders,
 								url,
 								stream,
 								headers,
-								redirect === 'manual'
+								redirect === "manual"
 									? false
 									: extra.redirected.length > 0,
 								integrity
 							)
 						);
 
-					if ( redirect === 'error' )
+					if ( redirect === "error" )
 						return reject(
 							new Error( `URL got redirected to ${location}` ) );
 
@@ -442,7 +441,7 @@ async function fetchImpl(
 								`URL got redirected without 'location' header`
 							)
 						);
-	
+
 					stream.destroy( );
 					resolve(
 						fetchImpl(
@@ -450,14 +449,14 @@ async function fetchImpl(
 							req.clone( location ),
 							{ signal, onTrailers },
 							{
-								timeoutAt,
-								redirected: redirected.concat( url ),
 								raceConditionedGoaway,
+								redirected: redirected.concat( url ),
+								timeoutAt,
 							}
 						)
 					);
 				} ) );
-			} )
+			} );
 
 			if ( !endStream )
 				await req.readable( )

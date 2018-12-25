@@ -1,4 +1,4 @@
-import { CookieJar as ToughCookieJar, Cookie } from 'tough-cookie'
+import { Cookie, CookieJar as ToughCookieJar } from "tough-cookie";
 
 
 export class CookieJar
@@ -10,12 +10,12 @@ export class CookieJar
 		this._jar = jar;
 	}
 
-	reset( jar = new ToughCookieJar( ) )
+	public reset( jar = new ToughCookieJar( ) )
 	{
 		this._jar = jar;
 	}
 
-	setCookie( cookie: string | Cookie, url: string ): Promise< Cookie >
+	public setCookie( cookie: string | Cookie, url: string ): Promise< Cookie >
 	{
 		return new Promise< Cookie >( ( resolve, reject ) =>
 		{
@@ -28,7 +28,7 @@ export class CookieJar
 		} );
 	}
 
-	setCookies( cookies: ReadonlyArray< string | Cookie >, url: string )
+	public setCookies( cookies: ReadonlyArray< string | Cookie >, url: string )
 	: Promise< ReadonlyArray< Cookie > >
 	{
 		return Promise.all(
@@ -36,7 +36,7 @@ export class CookieJar
 		);
 	}
 
-	getCookies( url: string ): Promise< ReadonlyArray< Cookie > >
+	public getCookies( url: string ): Promise< ReadonlyArray< Cookie > >
 	{
 		return new Promise< ReadonlyArray< Cookie > >( ( resolve, reject ) =>
 		{

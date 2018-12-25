@@ -1,17 +1,17 @@
-import { Body, JsonBody, StreamBody, DataBody } from './lib/body'
-import { RawHeaders, Headers } from './lib/headers'
-import { Request } from './lib/request'
-import { Response } from './lib/response'
+import { Body, DataBody, JsonBody, StreamBody } from "./lib/body";
+import { Context, ContextOptions, PushHandler } from "./lib/context";
+import { CookieJar } from "./lib/cookie-jar";
 import {
 	AbortError,
-	TimeoutError,
-	FetchInit,
-	OnTrailers,
 	DecodeFunction,
 	Decoder,
-} from './lib/core'
-import { Context, ContextOptions, PushHandler } from './lib/context'
-import { CookieJar } from './lib/cookie-jar'
+	FetchInit,
+	OnTrailers,
+	TimeoutError,
+} from "./lib/core";
+import { Headers } from "./lib/headers";
+import { Request } from "./lib/request";
+import { Response } from "./lib/response";
 
 
 const defaultContext = new Context( );
@@ -36,11 +36,11 @@ function context( opts?: Partial< ContextOptions > )
 {
 	const ctx = new Context( opts );
 	return {
-		setup: ctx.setup.bind( ctx ) as typeof setup,
-		fetch: ctx.fetch.bind( ctx ) as typeof fetch,
 		disconnect: ctx.disconnect.bind( ctx ) as typeof disconnect,
 		disconnectAll: ctx.disconnectAll.bind( ctx ) as typeof disconnectAll,
+		fetch: ctx.fetch.bind( ctx ) as typeof fetch,
 		onPush: ctx.onPush.bind( ctx ) as typeof onPush,
+		setup: ctx.setup.bind( ctx ) as typeof setup,
 	};
 }
 
@@ -67,4 +67,4 @@ export {
 	DecodeFunction,
 	Decoder,
 	CookieJar,
-}
+};

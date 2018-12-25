@@ -6,6 +6,8 @@
 		"sourceMap": true,
 		"module": "CommonJS",
 		"target": "esnext",
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
 		"strict": true
 	},
 	"include": [

@@ -1,42 +1,43 @@
-import { arrayify } from './utils'
+import { arrayify } from "./utils";
 
 
-export const Guards =
-	[ 'immutable', 'request', 'request-no-cors', 'response', 'none' ];
 export type GuardTypes =
-	'immutable' | 'request' | 'request-no-cors' | 'response' | 'none';
+	"immutable" | "request" | "request-no-cors" | "response" | "none";
 
-export type RawHeaders = { [ key: string ]: string | string[] | undefined };
+export interface RawHeaders
+{
+	[ key: string ]: string | Array< string > | undefined;
+}
 
 type HeaderMap = Map< string, Array< string > >;
 
 
 const forbiddenHeaders = [
-	'accept-charset',
-	'accept-encoding',
-	'access-control-request-headers',
-	'access-control-request-method',
-	'connection',
-	'content-length',
-	'cookie',
-	'cookie2',
-	'date',
-	'dnt',
-	'expect',
-	'host',
-	'keep-alive',
-	'origin',
-	'referer',
-	'te',
-	'trailer',
-	'transfer-encoding',
-	'upgrade',
-	'via',
+	"accept-charset",
+	"accept-encoding",
+	"access-control-request-headers",
+	"access-control-request-method",
+	"connection",
+	"content-length",
+	"cookie",
+	"cookie2",
+	"date",
+	"dnt",
+	"expect",
+	"host",
+	"keep-alive",
+	"origin",
+	"referer",
+	"te",
+	"trailer",
+	"transfer-encoding",
+	"upgrade",
+	"via",
 ];
 
 function isForbiddenHeader( name: string ): boolean
 {
-	if ( name.startsWith( 'proxy-' ) || name.startsWith( 'sec-' ) )
+	if ( name.startsWith( "proxy-" ) || name.startsWith( "sec-" ) )
 		// Safe headers
 		return false;
 
@@ -45,38 +46,38 @@ function isForbiddenHeader( name: string ): boolean
 
 function isForbiddenResponseHeader( name: string )
 {
-	return [ 'set-cookie', 'set-cookie2' ].includes( name );
+	return [ "set-cookie", "set-cookie2" ].includes( name );
 }
 
 function isSimpleHeader( name: string, value?: string ): boolean
 {
 	const simpleHeaders = [
-		'accept',
-		'accept-language',
-		'content-language',
+		"accept",
+		"accept-language",
+		"content-language",
 
-		'dpr',
-		'downlink',
-		'save-data',
-		'viewport-width',
-		'width',
+		"dpr",
+		"downlink",
+		"save-data",
+		"viewport-width",
+		"width",
 	];
 
 	if ( simpleHeaders.includes( name ) )
 		return true;
 
-	if ( name !== 'content-type' )
+	if ( name !== "content-type" )
 		return false;
 
 	if ( value == null )
 		return false;
 
-	const mimeType = value.replace( /;.*/, '' ).toLowerCase( );
+	const mimeType = value.replace( /;.*/, "" ).toLowerCase( );
 
 	return [
-		'application/x-www-form-urlencoded',
-		'multipart/form-data',
-		'text/plain'
+		"application/x-www-form-urlencoded",
+		"multipart/form-data",
+		"text/plain",
 	].includes( mimeType );
 }
 
@@ -84,7 +85,7 @@ function filterName( name: string ): string
 {
 	if ( /[^A-Za-z0-9\-#$%&'*+.\^_`|~]/.test( name ) )
 		throw new TypeError(
-			'Invalid character in header field name: ' + name );
+			"Invalid character in header field name: " + name );
 
 	return name.toLowerCase( );
 }
@@ -96,29 +97,29 @@ function _ensureGuard(
 )
 : void
 {
-	if ( guard === 'immutable' )
+	if ( guard === "immutable" )
 		throw new TypeError(
-			'Header guard error: Cannot change immutable header' );
+			"Header guard error: Cannot change immutable header" );
 
 	if ( !name )
 		return;
 
-	if ( guard === 'request' && isForbiddenHeader( name ) )
+	if ( guard === "request" && isForbiddenHeader( name ) )
 		throw new TypeError(
-			'Header guard error: ' +
-			'Cannot set forbidden header for requests' +
+			"Header guard error: " +
+			"Cannot set forbidden header for requests" +
 			` (${name})` );
 
-	if ( guard === 'request-no-cors' && !isSimpleHeader( name, value ) )
+	if ( guard === "request-no-cors" && !isSimpleHeader( name, value ) )
 		throw new TypeError(
-			'Header guard error: ' +
-			'Cannot set non-simple header for no-cors requests' +
+			"Header guard error: " +
+			"Cannot set non-simple header for no-cors requests" +
 			` (${name})` );
 
-	if ( guard === 'response' && isForbiddenResponseHeader( name ) )
+	if ( guard === "response" && isForbiddenResponseHeader( name ) )
 		throw new TypeError(
-			'Header guard error: ' +
-			'Cannot set forbidden response header for response' +
+			"Header guard error: " +
+			"Cannot set forbidden response header for response" +
 			` (${name})` );
 }
 
@@ -131,7 +132,7 @@ export class Headers
 
 	constructor( init?: RawHeaders | Headers )
 	{
-		this._guard = < GuardTypes >_guard || 'none';
+		this._guard = < GuardTypes >_guard || "none";
 		_guard = null;
 		this._data = new Map( );
 
@@ -140,13 +141,13 @@ export class Headers
 
 		else if ( init instanceof Headers )
 		{
-			for ( let [ name, value ] of init._data.entries( ) )
+			for ( const [ name, value ] of init._data.entries( ) )
 				this._data.set( name, [ ...value ] );
 		}
 
 		else
 		{
-			for ( let _name of Object.keys( init ) )
+			for ( const _name of Object.keys( init ) )
 			{
 				const name = filterName( _name );
 				const value = arrayify( init[ _name ] )
@@ -156,7 +157,7 @@ export class Headers
 		}
 	}
 
-	append( name: string, value: string ): void
+	public append( name: string, value: string ): void
 	{
 		const _name = filterName( name );
 
@@ -169,7 +170,7 @@ export class Headers
 			( < Array< string > >this._data.get( _name ) ).push( value );
 	}
 
-	delete( name: string ): void
+	public delete( name: string ): void
 	{
 		const _name = filterName( name );
 
@@ -178,32 +179,32 @@ export class Headers
 		this._data.delete( _name );
 	}
 
-	*entries( ): IterableIterator< [ string, string ] >
+	public *entries( ): IterableIterator< [ string, string ] >
 	{
-		for ( let [ name, value ] of this._data.entries( ) )
-			yield [ name, value.join( ',' ) ];
+		for ( const [ name, value ] of this._data.entries( ) )
+			yield [ name, value.join( "," ) ];
 	}
 
-	get( name: string ): string | null
+	public get( name: string ): string | null
 	{
 		const _name = filterName( name );
 
 		return this._data.has( _name )
-			? ( < Array< string > >this._data.get( _name ) ).join( ',' )
+			? ( < Array< string > >this._data.get( _name ) ).join( "," )
 			: null;
 	}
 
-	has( name: string ): boolean
+	public has( name: string ): boolean
 	{
 		return this._data.has( filterName( name ) );
 	}
 
-	keys( ): IterableIterator< string >
+	public keys( ): IterableIterator< string >
 	{
 		return this._data.keys( );
 	}
 
-	set( name: string, value: string ): void
+	public set( name: string, value: string ): void
 	{
 		const _name = filterName( name );
 
@@ -212,10 +213,10 @@ export class Headers
 		this._data.set( _name, [ value ] );
 	}
 
-	*values( ): IterableIterator< string >
+	public *values( ): IterableIterator< string >
 	{
-		for ( let value of this._data.values( ) )
-			yield value.join( ',' );
+		for ( const value of this._data.values( ) )
+			yield value.join( "," );
 	}
 }
 

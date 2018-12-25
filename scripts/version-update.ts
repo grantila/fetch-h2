@@ -1,14 +1,9 @@
-'use strict'
+import { writeFileSync } from "fs";
+import { resolve } from "path";
 
-import { writeFileSync } from 'fs'
-import { resolve } from 'path'
+// tslint:disable-next-line
+const { version } = require( "../package.json" );
 
-const { version } = require( '../package.json' );
+const fileData = `export const version = "${version}";`;
 
-const fileData =
-`'use strict'
-
-export const version = '${version}';
-`;
-
-writeFileSync( resolve( __dirname, '../lib/generated/version.ts' ), fileData );
+writeFileSync( resolve( __dirname, "../lib/generated/version.ts" ), fileData );

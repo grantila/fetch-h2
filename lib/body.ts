@@ -1,21 +1,16 @@
-import { createHash } from 'crypto'
+import { createHash } from "crypto";
 
-import { buffer as getStreamAsBuffer } from 'get-stream'
-import * as through2 from 'through2'
-import * as toArrayBuffer from 'to-arraybuffer'
-import { tap } from 'already'
+import { tap } from "already";
+import { buffer as getStreamAsBuffer } from "get-stream";
+import * as through2 from "through2";
+import * as toArrayBuffer from "to-arraybuffer";
 
-import { IBody, BodyTypes, StorageBodyTypes } from './core'
+import { BodyTypes, IBody, StorageBodyTypes } from "./core";
 
 
 function makeUnknownDataError( )
 {
 	return new Error( "Unknown body data" );
-}
-
-function throwUnknownData( ): never
-{
-	throw makeUnknownDataError( );
 }
 
 function throwIntegrityMismatch( ): never
@@ -31,27 +26,27 @@ function throwLengthMismatch( ): never
 
 function parseIntegrity( integrity: string )
 {
-	const [ algorithm, ...expectedHash ] = integrity.split( '-' );
-	return { algorithm, hash: expectedHash.join( '-' ) };
+	const [ algorithm, ...expectedHash ] = integrity.split( "-" );
+	return { algorithm, hash: expectedHash.join( "-" ) };
 }
 
 function isStream( body: StorageBodyTypes ): boolean
 {
 	return body &&
-		( 'readable' in ( < NodeJS.ReadableStream >Object( body ) ) );
+		( "readable" in ( < NodeJS.ReadableStream >Object( body ) ) );
 }
 
 const emptyBuffer = new ArrayBuffer( 0 );
 
 export class Body implements IBody
 {
-	private _body?: StorageBodyTypes | null;
-	protected _length: number | null;
-	private _used: boolean;
-	protected _mime?: string;
-	private _integrity?: string;
 	// @ts-ignore
-	readonly bodyUsed: boolean;
+	public readonly bodyUsed: boolean;
+	protected _length: number | null;
+	protected _mime?: string;
+	private _body?: StorageBodyTypes | null;
+	private _used: boolean;
+	private _integrity?: string;
 
 	constructor( )
 	{
@@ -61,93 +56,12 @@ export class Body implements IBody
 		Object.defineProperties( this, {
 			bodyUsed: {
 				enumerable: true,
-				get: ( ) => this._used
-			}
+				get: ( ) => this._used,
+			},
 		} );
 	}
 
-	private validateIntegrity< T extends Buffer | ArrayBuffer >(
-		data: T,
-		allowIncomplete: boolean
-	)
-	: T
-	{
-		if (
-			!allowIncomplete &&
-			this._length != null &&
-			data.byteLength != this._length
-		)
-			throwLengthMismatch( );
-
-		if ( !this._integrity )
-			// This is valid
-			return data;
-
-		const { algorithm, hash: expectedHash } =
-			parseIntegrity( this._integrity );
-
-		const hash = createHash( algorithm )
-			.update(
-				data instanceof ArrayBuffer
-				? new DataView( data ) as any
-				: < Buffer >data
-			)
-			.digest( 'base64' );
-
-		if ( expectedHash.toLowerCase( ) !== hash.toLowerCase( ) )
-			throwIntegrityMismatch( );
-
-		return data;
-	}
-
-	protected hasBody( ): boolean
-	{
-		return '_body' in this;
-	}
-
-	protected setBody(
-		body: BodyTypes | IBody | null,
-		mime?: string | null,
-		integrity?: string | null,
-		length: number | null = null
-	)
-	: void
-	{
-		this._ensureUnused( );
-		this._length = length;
-		this._used = false;
-
-		if ( body instanceof Body )
-		{
-			body._ensureUnused( );
-			this._body = body._body;
-			this._mime = body._mime;
-		}
-		else if ( typeof body === 'string' )
-			this._body = Buffer.from( body );
-		else if ( body != null )
-			this._body = < StorageBodyTypes >body;
-		else
-			this._body = body;
-
-		if ( Buffer.isBuffer( this._body ) )
-			this._length = ( < Buffer >this._body ).length;
-
-		if ( mime )
-			this._mime = mime;
-
-		if ( integrity )
-			this._integrity = integrity;
-	}
-
-	private _ensureUnused( )
-	{
-		if ( this._used )
-			throw new ReferenceError( "Body already used" );
-		this._used = true;
-	}
-
-	async arrayBuffer( allowIncomplete = false ): Promise< ArrayBuffer >
+	public async arrayBuffer( allowIncomplete = false ): Promise< ArrayBuffer >
 	{
 		this._ensureUnused( );
 
@@ -171,19 +85,12 @@ export class Body implements IBody
 			throw makeUnknownDataError( );
 	}
 
-	private async blob( ): Promise< never >
-	{
-		throw new Error(
-			"Body.blob() is not implemented (makes no sense in Node.js), " +
-			"use another getter." );
-	}
-
-	async formData( ): Promise< never /* FormData */ >
+	public async formData( ): Promise< never /* FormData */ >
 	{
 		throw new Error( "Body.formData() is not yet implemented" );
 	}
 
-	async json( ): Promise< any >
+	public async json( ): Promise< any >
 	{
 		this._ensureUnused( );
 
@@ -208,7 +115,7 @@ export class Body implements IBody
 			throw makeUnknownDataError( );
 	}
 
-	async text( allowIncomplete = false ): Promise< string >
+	public async text( allowIncomplete = false ): Promise< string >
 	{
 		this._ensureUnused( );
 
@@ -233,7 +140,7 @@ export class Body implements IBody
 			throw makeUnknownDataError( );
 	}
 
-	async readable( ): Promise< NodeJS.ReadableStream >
+	public async readable( ): Promise< NodeJS.ReadableStream >
 	{
 		this._ensureUnused( );
 
@@ -256,6 +163,95 @@ export class Body implements IBody
 		else
 			throw makeUnknownDataError( );
 	}
+
+	protected hasBody( ): boolean
+	{
+		return "_body" in this;
+	}
+
+	protected setBody(
+		body: BodyTypes | IBody | null,
+		mime?: string | null,
+		integrity?: string | null,
+		length: number | null = null
+	)
+	: void
+	{
+		this._ensureUnused( );
+		this._length = length;
+		this._used = false;
+
+		if ( body instanceof Body )
+		{
+			body._ensureUnused( );
+			this._body = body._body;
+			this._mime = body._mime;
+		}
+		else if ( typeof body === "string" )
+			this._body = Buffer.from( body );
+		else if ( body != null )
+			this._body = < StorageBodyTypes >body;
+		else
+			this._body = body;
+
+		if ( Buffer.isBuffer( this._body ) )
+			this._length = ( < Buffer >this._body ).length;
+
+		if ( mime )
+			this._mime = mime;
+
+		if ( integrity )
+			this._integrity = integrity;
+	}
+
+	private validateIntegrity< T extends Buffer | ArrayBuffer >(
+		data: T,
+		allowIncomplete: boolean
+	)
+	: T
+	{
+		if (
+			!allowIncomplete &&
+			this._length != null &&
+			data.byteLength !== this._length
+		)
+			throwLengthMismatch( );
+
+		if ( !this._integrity )
+			// This is valid
+			return data;
+
+		const { algorithm, hash: expectedHash } =
+			parseIntegrity( this._integrity );
+
+		const hash = createHash( algorithm )
+			.update(
+				data instanceof ArrayBuffer
+				? new DataView( data ) as any
+				: < Buffer >data
+			)
+			.digest( "base64" );
+
+		if ( expectedHash.toLowerCase( ) !== hash.toLowerCase( ) )
+			throwIntegrityMismatch( );
+
+		return data;
+	}
+
+	private _ensureUnused( )
+	{
+		if ( this._used )
+			throw new ReferenceError( "Body already used" );
+		this._used = true;
+	}
+
+	// @ts-ignore
+	private async blob( ): Promise< never >
+	{
+		throw new Error(
+			"Body.blob() is not implemented (makes no sense in Node.js), " +
+			"use another getter." );
+	}
 }
 
 export class JsonBody extends Body
@@ -265,7 +261,7 @@ export class JsonBody extends Body
 		super( );
 
 		const body = Buffer.from( JSON.stringify( obj ) );
-		this.setBody( body, 'application/json' );
+		this.setBody( body, "application/json" );
 	}
 }
 
