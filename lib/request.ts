@@ -74,7 +74,6 @@ export class Request extends Body implements RequestInitWithoutBody
 				input,
 				init
 			);
-			input = input._url;
 			init = newInit;
 
 			// TODO: Follow MDN:
