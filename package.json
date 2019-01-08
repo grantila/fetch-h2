@@ -77,7 +77,7 @@
     "get-stream": "4.x",
     "through2": "3.x",
     "to-arraybuffer": "1.x",
-    "tough-cookie": "2.x"
+    "tough-cookie": "3.x"
   },
   "config": {
     "commitizen": {
