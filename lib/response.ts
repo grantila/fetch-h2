@@ -84,9 +84,11 @@ export class Response extends Body
 		{
 			const contentType = headers.get( HTTP2_HEADER_CONTENT_TYPE );
 			const contentLength = headers.get( HTTP2_HEADER_CONTENT_LENGTH );
+			const contentEncoding =
+				headers.get( HTTP2_HEADER_CONTENT_ENCODING );
 
 			const length =
-				contentLength == null
+				( contentLength == null || contentEncoding != null )
 				? null
 				: parseInt( contentLength, 10 );
 

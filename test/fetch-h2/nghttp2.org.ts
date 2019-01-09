@@ -136,4 +136,11 @@ describe( "nghttp2.org/httpbin", function( )
 
 		await disconnectAll( );
 	} );
+
+	it( "should be possible to GET gzip data", async ( ) =>
+	{
+		const response = await fetch( "https://nghttp2.org/httpbin/gzip" );
+		const data = await response.json( );
+		expect( data ).to.deep.include( { gzipped: true, method: "GET" } );
+	} );
 } );
