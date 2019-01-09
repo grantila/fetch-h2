@@ -306,13 +306,13 @@ async function fetchImpl(
 					} )
 				);
 
-				stream.on( "streamClosed", guard( ( errorCode: number ) =>
+				stream.on( "close", guard( ( ) =>
 				{
 					// We'll get an 'error' event if there actually is an
 					// error, but not if we got NGHTTP2_NO_ERROR.
 					// In case of an error, the 'error' event will be awaited
 					// instead, to get (and propagate) the error object.
-					if ( errorCode === NGHTTP2_NO_ERROR )
+					if ( stream.rstCode === NGHTTP2_NO_ERROR )
 						reject(
 							new AbortError( "Stream prematurely closed" ) );
 				} ) );

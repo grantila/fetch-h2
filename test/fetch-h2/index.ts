@@ -690,7 +690,6 @@ describe( "goaway", ( ) =>
 
 describe( "integrity", ( ) =>
 {
-
 	it( "handle and succeed on valid integrity", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
@@ -729,6 +728,29 @@ describe( "integrity", ( ) =>
 		catch ( err )
 		{
 			expect( err.message ).to.contain( "integrity" );
+		}
+
+		await disconnectAll( );
+		await server.shutdown( );
+	} );
+} );
+
+describe( "premature stream close", ( ) =>
+{
+	it( "handle and reject fetch operation", async ( ) =>
+	{
+		const { server, port } = await makeServer( );
+
+		const url = `http://localhost:${port}/prem-close`;
+
+		try
+		{
+			await fetch( url );
+			expect( false ).to.equal( true );
+		}
+		catch ( err )
+		{
+			expect( err.message ).to.contain( "Stream prematurely closed" );
 		}
 
 		await disconnectAll( );

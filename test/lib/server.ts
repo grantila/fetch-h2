@@ -328,6 +328,10 @@ export class Server
 			ignoreError( ( ) => stream.write( "fghij" ) );
 			ignoreError( ( ) => stream.end( ) );
 		}
+		else if ( path.startsWith( "/prem-close" ) )
+		{
+			stream.close( );
+		}
 		else
 		{
 			const matched = ( this._opts.matchers || [ ] )
