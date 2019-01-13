@@ -22,8 +22,8 @@
     "lint": "node_modules/.bin/tslint --project .",
     "mocha": "node_modules/.bin/mocha --bail --check-leaks dist/test",
     "mocha:debug": "node_modules/.bin/mocha --inspect-brk dist/test",
-    "test": "npm run lint && node_modules/.bin/nyc npm run mocha",
-    "testfast": "node_modules/.bin/nyc node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
+    "test": "npm run lint && node_modules/.bin/nyc --require source-map-support/register npm run mocha",
+    "testfast": "node_modules/.bin/nyc --require source-map-support/register node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
     "test-nocov": "node_modules/.bin/mocha --bail --check-leaks dist/test",
     "buildtest": "npm run build && npm run test-nocov",
     "buildtestfast": "npm run build && node_modules/.bin/mocha -i --grep nghttp2.org dist/test",
@@ -83,7 +83,7 @@
     "tough-cookie": "3.x"
   },
   "publishConfig": {
-    "tag": "beta"
+    "tag": "next"
   },
   "config": {
     "commitizen": {
