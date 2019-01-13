@@ -7,9 +7,13 @@
 
 # fetch-h2
 
-HTTP/2 [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) implementation for Node.js (using Node.js' built-in `http2` module). This module is intended to be solely for HTTP/2, handling HTTP/2 sessions transparently. For an HTTP/1(.1)-only alternative, you can use [node-fetch](https://github.com/bitinn/node-fetch).
+[Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) implementation for Node.js using the built-in `http`, `https` and `http2` packages without any compatibility layer.
 
-The module tries to adhere to the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) very closely, but extends it slightly to fit better into Node.js (e.g. using streams).
+`fetch-h2` handles HTTP/1(.1) and HTTP/2 connections transparently since 2.0. By default (although configurable) a url to `http://` uses HTTP/1(.1) and for the very uncommon plain-text HTTP/2 (called _h2c_), `http2://` can be provided. The library supports ALPN negotation, so `https://` will use either HTTP/1(.1) or HTTP/2 depending on what the server supports. By default, HTTP/2 is preferred.
+
+The library handles sessions transparently and re-uses sockets when possible.
+
+`fetch-h2` tries to adhere to the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API) very closely, but extends it slightly to fit better into Node.js (e.g. using streams).
 
 Regardless of whether you're actually interested in the Fetch API per se or not, as long as you want to handle HTTP/2 client requests in Node.js, this module is a lot easier and more natural to use than the native built-in [`http2`](https://nodejs.org/dist/latest-v10.x/docs/api/http2.html) module which is low-level in comparison.
 
@@ -17,12 +21,15 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 By default, `fetch-h2` will accept `gzip` and `deflate` encodings, and decode transparently. If you also want to allow Brotli (`br`), use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
 
-**NOTE;** HTTP/2 support was introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag. The API has changed and not settled until 10.x, **and `fetch-h2` requires 10.4+**.
-
 
 ## Releases
 
 Since 1.0.0, `fetch-h2` requires Node.js 10.
+
+Since 2.0.0, `fetch-h2` requires Node.js 10.4.
+
+
+# API
 
 ## Imports
 
@@ -83,7 +90,7 @@ const responseText = await response.text( );
 With HTTP/2, all requests to the same *origin* (domain name and port) share a single session (socket). In browsers, it is eventually disconnected, maybe. It's up to the implementation to handle disconnections. In `fetch-h2`, you can disconnect it manually, which is great e.g. when using `fetch-h2` in unit tests.
 
 
-### Disconnect
+## Disconnect
 
 Disconnect the session for a certain url (the session for the *origin* will be disconnected) using `disconnect`, and disconnect **all** sessions with `disconnectAll`. Read more on *contexts* below to understand what "all" really means...
 
@@ -96,7 +103,7 @@ await disconnectAll( );
 ```
 
 
-### Pushed requests
+## Pushed requests
 
 When the server pushes a request, this can be handled using the `onPush` handler. Registering an `onPush` handler is, just like the disconnection functions, *per-context*.
 
@@ -150,6 +157,8 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * `fetch()` has an extra option, `onTrailers` (of the type `OnTrailers`) which is a callback that will receive trailing headers.
  * The `Request.clone()` member function has an optional `url` argument.
  * The response `text()` and `arrayBuffer()` has an optional argument `allowIncomplete` which defaults to `false`. If set to `true` these function will return incomplete bodies, i.e. "as much as was read" before the stream was prematurely closed (disconnected). If integrity checks are enabled, the functions will throw anyway if the body is incomplete.
+ * The `Request` class (options to `fetch`) has an extra property `allowForbiddenHeaders`, which defaults to `false`.
+ * The response object has an extra property `httpVersion` which is either `1` or `2`, depending on what was negotiated with the server.
 
 
 ## Contexts
@@ -180,6 +189,7 @@ const { fetch, disconnect, disconnectAll, onPush } = context( );
 
 Contexts can be configured with options when constructed. The default context can be configured using the `setup( )` function, but if this function is used, call it only once, and before any usage of `fetch-h2`, or the result is undefined.
 
+
 ### Context configuration
 
 The options to `setup( )` are the same as those to `context( )` and is available as a TypeScript type `ContextOptions`.
@@ -188,22 +198,68 @@ The options to `setup( )` are the same as those to `context( )` and is available
 // The options object
 interface ContextOptions
 {
-    userAgent: string;
-    overwriteUserAgent: boolean;
-    accept: string;
-    cookieJar: CookieJar;
-    decoders: ReadonlyArray< Decoder >;
-    session: SecureClientSessionOptions;
+    userAgent:
+        string |
+        PerOrigin< string >;
+    overwriteUserAgent:
+        boolean |
+        PerOrigin< boolean >;
+    accept:
+        string |
+        PerOrigin< string >;
+    cookieJar:
+        CookieJar;
+    decoders:
+        ReadonlyArray< Decoder > |
+        PerOrigin< ReadonlyArray< Decoder > >;
+    session:
+        SecureClientSessionOptions |
+        PerOrigin< SecureClientSessionOptions >;
+    httpProtocol:
+        HttpProtocols |
+        PerOrigin< HttpProtocols >;
+    httpsProtocols:
+        ReadonlyArray< HttpProtocols > |
+        PerOrigin< ReadonlyArray< HttpProtocols > >;
+    http1:
+        Partial< Http1Options > |
+        PerOrigin< Partial< Http1Options > >;
 }
 ```
 
+where `Http1Options` is
+```ts
+interface Http1Options
+{
+	keepAlive: boolean | PerOrigin< boolean >;
+	keepAliveMsecs: number | PerOrigin< number >;
+	maxSockets: number | PerOrigin< number >;
+	maxFreeSockets: number | PerOrigin< number >;
+	timeout: void | number | PerOrigin< void | number >;
+}
+```
+
+
+#### Per-origin configuration
+
+Any of these options, except for the cookie jar, can be provided either as a value or as a callback function (`PerOrigin`) which takes the _origin_ as argument and returns the value. A `void` return from that function, will use the built-in default.
+
+
+### User agent
+
 By specifying a `userAgent` string, this will be added to the built-in `user-agent` header. If defined, and `overwriteUserAgent` is true, the built-in user agent string will not be sent.
+
+
+### Accept
 
 `accept` can be specified, which is the `accept` header. The default is:
 
 ```
 application/json, text/*;0.9, */*;q=0.8
 ```
+
+
+### Cookies
 
 `cookieJar` can be set to a custom cookie jar, constructed as `new CookieJar( )`. `CookieJar` is a class exported by `fetch-h2` and has three functions:
 
@@ -218,9 +274,47 @@ application/json, text/*;0.9, */*;q=0.8
 
 where `Cookie` is a [`tough-cookie` Cookie](https://www.npmjs.com/package/tough-cookie#cookie).
 
+
+### Content encodings (compression)
+
+By default, `gzip` and `deflate` are supported.
+
 `decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
 
+
+### Low-level session configuration
+
 `session` can be used for lower-level Node.js settings. This is the options to [`http2::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/http2.html#http2_http2_connect_authority_options_listener) (including the [`net::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/net.html#net_net_connect) and [`tls::connect`](https://nodejs.org/dist/latest-v10.x/docs/api/tls.html#tls_tls_connect_options_callback) options). Use this option to specify `{rejectUnauthorized: false}` if you want to allow unauthorized (e.g. self-signed) certificates.
+
+Some of these fields are compatible with HTTP/1.1 too, such as `rejectUnauthorized`.
+
+
+### HTTP Protocols
+
+The type `HttpProtocols` is `"http1" | "http2"`.
+
+The option `httpProtocol` can be set to either `"http2"` or `"http1"` (the default). This controls what links to `http://` will use. Note that no web server will likely support HTTP/2 unencrypted.
+
+`httpsProtocol` is an array of supported protocols to negotiate over https. It defaults to `[ "http2", "http1" ]`, but can be swapped to prefer HTTP/1(.1) rather than HTTP/2, or to require one of them by only containing that protocol.
+
+
+### HTTP/1
+
+HTTP/2 allows for multiple concurrent streams (requests) over the same session (socket). HTTP/1 has no such feature, so commonly, clients open a set of connections and re-use them to allow for concurrency.
+
+The `http1` options object can be used to configure this.
+
+
+#### Keep-alive
+
+`http1.keepAlive` defaults to false, but can be set to true, to allow connections to linger so that they can be reused. The `http1.keepAliveMsecs` time (defaults to 1000ms, i.e. 1s) specifies the delay before keep-alive probing.
+
+
+#### Sockets
+
+`http1.maxSockets` defines the maximum sockets to allow per origin, and `http1.maxFreeSockets` the maximum number of lingering sockets, waiting to be re-used for new requests.
+
+`http1.timeout` defines the HTTP/1 timeout.
 
 
 ## Errors
