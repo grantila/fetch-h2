@@ -1,4 +1,3 @@
-import { ClientHttp2Session } from "http2";
 import { URL } from "url";
 
 export function arrayify< T >(
@@ -28,12 +27,39 @@ export function parseLocation(
 	return url.href;
 }
 
-export function hasGotGoaway( session: ClientHttp2Session )
+export const isRedirectStatus: { [ status: string ]: boolean; } = {
+	300: true,
+	301: true,
+	302: true,
+	303: true,
+	305: true,
+	307: true,
+	308: true,
+};
+
+export function makeOkError( err: Error ): Error
 {
-	return !!( < any >session ).__fetch_h2_goaway;
+	( < any >err ).metaData = ( < any >err ).metaData || { };
+	( < any >err ).metaData.ok = true;
+	return err;
 }
 
-export function setGotGoaway( session: ClientHttp2Session )
+export function parseInput( url: string )
 {
-	( < any >session ).__fetch_h2_goaway = true;
+	const explicitProtocol =
+		( url.startsWith( "http2://" ) || url.startsWith( "http1://" ) )
+		? url.substr( 0, 5 )
+		: null;
+
+	url = url.replace( /^http[12]:\/\//, "http://" );
+
+	const { origin, hostname, port, protocol } = new URL( url );
+
+	return {
+		hostname,
+		origin,
+		port: port || ( protocol === "https:" ? "443" : "80" ),
+		protocol: explicitProtocol || protocol.replace( ":", "" ),
+		url,
+	};
 }

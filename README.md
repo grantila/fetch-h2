@@ -17,7 +17,7 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 By default, `fetch-h2` will accept `gzip` and `deflate` encodings, and decode transparently. If you also want to allow Brotli (`br`), use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
 
-**NOTE;** HTTP/2 support was introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag. The API has changed and not settled until 10.x, **and `fetch-h2` requires 10.x**.
+**NOTE;** HTTP/2 support was introduced in Node.js (version 8.4), and required `node` to be started with a flag `--expose-http2` up to version 8.7 (this module won't work without it). From Node.js 8.8, the `http2` module is available without any flag. The API has changed and not settled until 10.x, **and `fetch-h2` requires 10.4+**.
 
 
 ## Releases

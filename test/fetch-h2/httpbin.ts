@@ -1,3 +1,5 @@
+import { URL } from "url";
+
 import { delay } from "already";
 import { expect } from "chai";
 import "mocha";
@@ -6,21 +8,44 @@ import * as through2 from "through2";
 import {
 	context,
 	DataBody,
-	disconnectAll,
-	fetch,
+	HttpProtocols,
 	JsonBody,
 	StreamBody,
 } from "../../";
 
-afterEach( disconnectAll );
 
-describe( "nghttp2.org/httpbin", function( )
+interface TestData
+{
+	protocol: string;
+	site: string;
+	protos: Array< HttpProtocols >;
+}
+
+( [
+	{ protocol: "https:", site: "nghttp2.org/httpbin", protos: [ "http2" ] },
+	{ protocol: "http:", site: "httpbin.org", protos: [ "http1" ] },
+	{ protocol: "https:", site: "httpbin.org", protos: [ "http1" ] },
+] as Array< TestData > )
+.forEach( ( { site, protocol, protos } ) =>
+{
+const host = `${protocol}//${site}`;
+const baseHost = new URL( host ).origin;
+
+const name = `${site} (${protos[ 0 ]} over ${protocol.replace( ":", "" )})`;
+
+describe( name, function( )
 {
 	this.timeout( 5000 );
 
-	it( "should be possible to GET HTTPS/2", async ( ) =>
+	const { fetch, disconnectAll } = context( {
+		httpsProtocols: protos,
+	} );
+
+	afterEach( disconnectAll );
+
+	it( "should be possible to GET", async ( ) =>
 	{
-		const response = await fetch( "https://nghttp2.org/httpbin/user-agent" );
+		const response = await fetch( `${host}/user-agent` );
 		const data = await response.json( );
 		expect( data[ "user-agent" ] ).to.include( "fetch-h2/" );
 	} );
@@ -30,7 +55,7 @@ describe( "nghttp2.org/httpbin", function( )
 		const testData = { foo: "bar" };
 
 		const response = await fetch(
-			"https://nghttp2.org/httpbin/post",
+			`${host}/post`,
 			{
 				body: new JsonBody( testData ),
 				method: "POST",
@@ -47,7 +72,7 @@ describe( "nghttp2.org/httpbin", function( )
 		const testData = '{"foo": "data"}';
 
 		const response = await fetch(
-			"https://nghttp2.org/httpbin/post",
+			`${host}/post`,
 			{
 				body: new DataBody( testData ),
 				method: "POST",
@@ -67,7 +92,7 @@ describe( "nghttp2.org/httpbin", function( )
 		stream.end( );
 
 		const response = await fetch(
-			"https://nghttp2.org/httpbin/post",
+			`${host}/post`,
 			{
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
@@ -84,7 +109,7 @@ describe( "nghttp2.org/httpbin", function( )
 		const stream = through2( );
 
 		const eventualResponse = fetch(
-			"https://nghttp2.org/httpbin/post",
+			`${host}/post`,
 			{
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
@@ -109,13 +134,13 @@ describe( "nghttp2.org/httpbin", function( )
 		const { fetch, disconnectAll } = context( );
 
 		const responseSet = await fetch(
-			"https://nghttp2.org/httpbin/cookies/set?foo=bar",
+			`${host}/cookies/set?foo=bar`,
 			{ redirect: "manual" } );
 
 		expect( responseSet.headers.has( "location" ) ).to.be.true;
 		const redirectedTo = responseSet.headers.get( "location" );
 
-		const response = await fetch( "https://nghttp2.org" + redirectedTo );
+		const response = await fetch( baseHost + redirectedTo );
 
 		const data = await response.json( );
 		expect( data.cookies ).to.deep.equal( { foo: "bar" } );
@@ -128,10 +153,10 @@ describe( "nghttp2.org/httpbin", function( )
 		const { fetch, disconnectAll } = context( );
 
 		const response = await fetch(
-			"https://nghttp2.org/httpbin/relative-redirect/2",
+			`${host}/relative-redirect/2`,
 			{ redirect: "follow" } );
 
-		expect( response.url ).to.equal( "https://nghttp2.org/httpbin/get" );
+		expect( response.url ).to.equal( `${host}/get` );
 		await response.text( );
 
 		await disconnectAll( );
@@ -139,8 +164,9 @@ describe( "nghttp2.org/httpbin", function( )
 
 	it( "should be possible to GET gzip data", async ( ) =>
 	{
-		const response = await fetch( "https://nghttp2.org/httpbin/gzip" );
+		const response = await fetch( `${host}/gzip` );
 		const data = await response.json( );
 		expect( data ).to.deep.include( { gzipped: true, method: "GET" } );
 	} );
+} );
 } );

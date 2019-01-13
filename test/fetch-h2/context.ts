@@ -1,17 +1,14 @@
 import { expect } from "chai";
-import { readFileSync } from "fs";
 import "mocha";
 
-import { makeServer } from "../lib/server";
+import { TestData } from "../lib/server-common";
+import { makeMakeServer } from "../lib/server-helpers";
 
 import {
 	context,
 	CookieJar,
-	disconnectAll,
 	Response,
 } from "../../";
-
-afterEach( disconnectAll );
 
 function ensureStatusSuccess( response: Response ): Response
 {
@@ -20,12 +17,19 @@ function ensureStatusSuccess( response: Response ): Response
 	return response;
 }
 
-const key = readFileSync( __dirname + "/../../../certs/key.pem" );
-const cert = readFileSync( __dirname + "/../../../certs/cert.pem" );
 
-
-describe( "context", function( )
+( [
+	{ proto: "http:", version: "http1" },
+	{ proto: "http:", version: "http2" },
+	{ proto: "https:", version: "http1" },
+	{ proto: "https:", version: "http2" },
+] as Array< TestData > )
+.forEach( ( { proto, version } ) =>
 {
+describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
+{
+	const { cycleOpts, makeServer } = makeMakeServer( { proto, version } );
+
 	this.timeout( 500 );
 
 	describe( "options", ( ) =>
@@ -35,12 +39,13 @@ describe( "context", function( )
 			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
 				overwriteUserAgent: true,
 				userAgent: "foobar",
 			} );
 
 			const response = ensureStatusSuccess(
-				await fetch( `http://localhost:${port}/headers` )
+				await fetch( `${proto}//localhost:${port}/headers` )
 			);
 
 			const res = await response.json( );
@@ -56,11 +61,12 @@ describe( "context", function( )
 			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
 				userAgent: "foobar",
 			} );
 
 			const response = ensureStatusSuccess(
-				await fetch( `http://localhost:${port}/headers` )
+				await fetch( `${proto}//localhost:${port}/headers` )
 			);
 
 			const res = await response.json( );
@@ -78,10 +84,13 @@ describe( "context", function( )
 
 			const accept = "application/foobar, text/*;0.9";
 
-			const { disconnectAll, fetch } = context( { accept } );
+			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
+				accept,
+			} );
 
 			const response = ensureStatusSuccess(
-				await fetch( `http://localhost:${port}/headers` )
+				await fetch( `${proto}//localhost:${port}/headers` )
 			);
 
 			const res = await response.json( );
@@ -93,16 +102,17 @@ describe( "context", function( )
 		} );
 	} );
 
+	if ( proto === "https:" )
 	describe( "network settings", ( ) =>
 	{
 		it( "should not be able to connect over unauthorized ssl", async ( ) =>
 		{
-			const { server, port } = await makeServer( {
-				serverOptions: { key, cert },
-			} );
+			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
 				overwriteUserAgent: true,
+				session: { rejectUnauthorized: true },
 				userAgent: "foobar",
 			} );
 
@@ -129,11 +139,10 @@ describe( "context", function( )
 
 		it( "should be able to connect over unauthorized ssl", async ( ) =>
 		{
-			const { server, port } = await makeServer( {
-				serverOptions: { key, cert },
-			} );
+			const { server, port } = await makeServer( );
 
 			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
 				overwriteUserAgent: true,
 				session: { rejectUnauthorized: false },
 				userAgent: "foobar",
@@ -161,22 +170,23 @@ describe( "context", function( )
 			const cookieJar = new CookieJar( );
 
 			expect(
-				await cookieJar.getCookies( `http://localhost:${port}/` )
+				await cookieJar.getCookies( `${proto}//localhost:${port}/` )
 			).to.be.empty;
 
 			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
 				cookieJar,
 				overwriteUserAgent: true,
 				userAgent: "foobar",
 			} );
 
-			await fetch( `http://localhost:${port}/set-cookie`, {
+			await fetch( `${proto}//localhost:${port}/set-cookie`, {
 				json: [ "a=b" , "c=d" ],
 				method: "POST",
 			} );
 
 			const cookies =
-				await cookieJar.getCookies( `http://localhost:${port}/` );
+				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
 			expect( cookies ).to.not.be.empty;
 			expect( cookies[ 0 ].key ).to.equal( "a" );
@@ -186,10 +196,10 @@ describe( "context", function( )
 
 			// Next request should maintain cookies
 
-			await fetch( `http://localhost:${port}/echo` );
+			await fetch( `${proto}//localhost:${port}/echo` );
 
 			const cookies2 =
-				await cookieJar.getCookies( `http://localhost:${port}/` );
+				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
 			expect( cookies2 ).to.not.be.empty;
 
@@ -198,10 +208,10 @@ describe( "context", function( )
 
 			cookieJar.reset( );
 
-			await fetch( `http://localhost:${port}/echo` );
+			await fetch( `${proto}//localhost:${port}/echo` );
 
 			const cookies3 =
-				await cookieJar.getCookies( `http://localhost:${port}/` );
+				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
 			expect( cookies3 ).to.be.empty;
 
@@ -220,7 +230,7 @@ describe( "context", function( )
 
 			const { disconnectAll, fetch } = context( );
 
-			const awaitFetch = fetch( "http://localhost:0" );
+			const awaitFetch = fetch( "${proto}//localhost:0" );
 
 			disconnectAll( );
 
@@ -237,7 +247,10 @@ describe( "context", function( )
 			const { server } = await makeServer( );
 
 			const { disconnectAll, fetch } =
-				context( { session: { port: -1, host: < any >{ } } } );
+				context( {
+					...cycleOpts,
+					session: { port: -1, host: < any >{ } },
+				} );
 
 			const awaitFetch = fetch( "ftp://localhost" );
 
@@ -250,4 +263,5 @@ describe( "context", function( )
 			await server.shutdown( );
 		} );
 	} );
+} );
 } );

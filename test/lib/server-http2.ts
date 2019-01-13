@@ -6,16 +6,21 @@ import {
 	Http2Session,
 	IncomingHttpHeaders,
 	OutgoingHttpHeaders,
-	SecureServerOptions,
 	ServerHttp2Stream,
 } from "http2";
 
 import { createHash } from "crypto";
 import { createDeflate, createGzip } from "zlib";
 
+import { delay } from "already";
 import { buffer as getStreamAsBuffer } from "get-stream";
 
-import { delay } from "already";
+import {
+	ignoreError,
+	Server,
+	ServerOptions,
+	TypedServer,
+} from "./server-common";
 
 const {
 	HTTP2_HEADER_PATH,
@@ -25,33 +30,14 @@ const {
 	HTTP2_HEADER_SET_COOKIE,
 } = constants;
 
-export interface MatchData
+export class ServerHttp2 extends TypedServer< Http2Server >
 {
-	path: string;
-	stream: ServerHttp2Stream;
-	headers: IncomingHttpHeaders;
-}
-
-export type Matcher = ( matchData: MatchData ) => boolean;
-
-export interface ServerOptions
-{
-	port?: number;
-	matchers?: ReadonlyArray< Matcher >;
-	serverOptions?: SecureServerOptions;
-}
-
-const ignoreError = ( cb: ( ) => any ) => { try { cb( ); } catch ( err ) { } };
-
-export class Server
-{
-	public port: number | null;
-	private _opts: ServerOptions;
-	private _server: Http2Server;
 	private _sessions: Set< Http2Session >;
 
 	constructor( opts: ServerOptions )
 	{
+		super( );
+
 		this._opts = opts || { };
 		if ( this._opts.serverOptions )
 			this._server = createSecureServer( this._opts.serverOptions );
@@ -71,36 +57,13 @@ export class Server
 		} );
 	}
 
-	public async listen( port: number | undefined = void 0 ): Promise< number >
+	public async _shutdown( ): Promise< void >
 	{
-		return new Promise( ( resolve, _reject ) =>
+		for ( const session of this._sessions )
 		{
-			this._server.listen( port, "0.0.0.0", resolve );
-		} )
-		.then( ( ) =>
-		{
-			const address = this._server.address( );
-			if ( typeof address === "string" )
-				return 0;
-			return address.port;
-		} )
-		.then( port =>
-		{
-			this.port = port;
-			return port;
-		} );
-	}
-
-	public async shutdown( ): Promise< void >
-	{
-		return new Promise< void >( ( resolve, _reject ) =>
-		{
-			for ( const session of this._sessions )
-			{
-				session.destroy( );
-			}
-			this._server.close( resolve );
-		} );
+			session.destroy( );
+		}
+		this._sessions.clear( );
 	}
 
 	private async onStream(
@@ -351,7 +314,7 @@ export async function makeServer( opts: ServerOptions = { } )
 {
 	opts = opts || { };
 
-	const server = new Server( opts );
+	const server = new ServerHttp2( opts );
 	await server.listen( opts.port );
 	return { server, port: server.port };
 }

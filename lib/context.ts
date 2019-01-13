@@ -1,32 +1,33 @@
+import { ClientRequest } from "http";
 import {
 	ClientHttp2Session,
-	ClientHttp2Stream,
-	connect as http2Connect,
-	constants as h2constants,
-	IncomingHttpHeaders as IncomingHttp2Headers,
 	SecureClientSessionOptions,
 } from "http2";
-
-import { asyncGuard, syncGuard } from "callguard";
+import { Socket } from "net";
 import { URL } from "url";
 
+import { H1Context } from "./context-http1";
+import { H2Context, PushHandler } from "./context-http2";
+import { connectTLS } from "./context-https";
 import { CookieJar } from "./cookie-jar";
 import {
-	AbortError,
+	BaseContext,
 	Decoder,
+	FetchError,
 	FetchInit,
+	Http1Options,
+	HttpProtocols,
 	SimpleSession,
-	TimeoutError,
+	SimpleSessionHttp1,
+	SimpleSessionHttp2,
 } from "./core";
-import { fetch } from "./fetch";
+import { fetch as fetchHttp1 } from "./fetch-http1";
+import { fetch as fetchHttp2 } from "./fetch-http2";
 import { version } from "./generated/version";
 import { Request } from "./request";
-import { H2StreamResponse, Response } from "./response";
-import { setGotGoaway } from "./utils";
+import { Response } from "./response";
+import { parseInput } from "./utils";
 
-const {
-	HTTP2_HEADER_PATH,
-} = h2constants;
 
 function makeDefaultUserAgent( ): string
 {
@@ -49,51 +50,45 @@ export interface ContextOptions
 	cookieJar: CookieJar;
 	decoders: ReadonlyArray< Decoder >;
 	session: SecureClientSessionOptions;
+	httpProtocol: HttpProtocols;
+	httpsProtocols: ReadonlyArray< HttpProtocols >;
+	http1: Partial< Http1Options >;
 }
 
-interface SessionItem
+export class Context implements BaseContext
 {
-	session: ClientHttp2Session;
-	promise: Promise< ClientHttp2Session >;
-}
+	public _decoders: ReadonlyArray< Decoder >;
+	public _sessionOptions: SecureClientSessionOptions;
 
-function makeOkError( err: Error ): Error
-{
-	( < any >err ).metaData = ( < any >err ).metaData || { };
-	( < any >err ).metaData.ok = true;
-	return err;
-}
-
-export type PushHandler =
-	(
-		origin: string,
-		request: Request,
-		getResponse: ( ) => Promise< Response >
-	) => void;
-
-export class Context
-{
-	private _h2sessions: Map< string, SessionItem >;
-	private _h2staleSessions: Map< string, Set< ClientHttp2Session > >;
+	private h1Context: H1Context;
+	private h2Context = new H2Context( this );
 	private _userAgent: string;
 	private _accept: string;
 	private _cookieJar: CookieJar;
-	private _decoders: ReadonlyArray< Decoder >;
-	private _sessionOptions: SecureClientSessionOptions;
-	private _pushHandler?: PushHandler;
+	private _httpProtocol: HttpProtocols;
+	private _httpsProtocols: Array< HttpProtocols >;
+	private _http1Options: Http1Options;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
-		this._h2sessions = new Map( );
-		this._h2staleSessions = new Map( );
-
 		this._userAgent = "";
 		this._accept = "";
 		this._cookieJar = < CookieJar >< any >void 0;
 		this._decoders = [ ];
 		this._sessionOptions = { };
+		this._httpProtocol = "http1";
+		this._httpsProtocols = [ "http2", "http1" ];
+		this._http1Options = {
+			keepAlive: false,
+			keepAliveMsecs: 1000,
+			maxFreeSockets: 256,
+			maxSockets: Infinity,
+			timeout: void 0,
+		};
 
 		this.setup( opts );
+
+		this.h1Context = new H1Context( this._http1Options );
 	}
 
 	public setup( opts?: Partial< ContextOptions > )
@@ -126,303 +121,242 @@ export class Context
 		this._sessionOptions = "session" in opts
 			? opts.session || { }
 			: { };
+
+		this._httpProtocol = "httpProtocol" in opts
+			? opts.httpProtocol || "http1"
+			: "http1";
+
+		this._httpsProtocols = "httpsProtocols" in opts
+			? [ ...( opts.httpsProtocols || [ ] ) ]
+			: [ "http2", "http1" ];
+
+		Object.assign( this._http1Options, opts.http1 || { } );
 	}
 
 	public onPush( pushHandler?: PushHandler )
 	{
-		this._pushHandler = pushHandler;
+		this.h2Context._pushHandler = pushHandler;
 	}
 
-	public fetch( input: string | Request, init?: Partial< FetchInit > )
+	public async fetch( input: string | Request, init?: Partial< FetchInit > )
 	: Promise< Response >
 	{
-		const sessionGetter: SimpleSession = {
-			accept: ( ) => this._accept,
-			contentDecoders: ( ) => this._decoders,
-			cookieJar: this._cookieJar,
-			get: ( url: string ) => this.get( url ),
-			userAgent: ( ) => this._userAgent,
-		};
-		return fetch( sessionGetter, input, init );
-	}
+		const { hostname, origin, port, protocol, url } =
+			this.parseInput( input );
 
-	public releaseSession( origin: string ): void
-	{
-		const sessionItem = this.deleteActiveSession( origin );
+		// Rewrite url to get rid of "http1://" and "http2://"
+		const request =
+			input instanceof Request
+			? input.url !== url
+				? input.clone( url )
+				: input
+			: new Request( input, { ...( init || { } ), url } );
 
-		if ( !sessionItem )
-			return;
+		const { rejectUnauthorized } = this._sessionOptions;
 
-		if ( !this._h2staleSessions.has( origin ) )
-			this._h2staleSessions.set( origin, new Set( ) );
-
-		( < Set< ClientHttp2Session > >this._h2staleSessions.get( origin ) )
-			.add( sessionItem.session );
-	}
-
-	public deleteActiveSession( origin: string ): SessionItem | void
-	{
-		if ( !this._h2sessions.has( origin ) )
-			return;
-
-		const sessionItem = this._h2sessions.get( origin );
-		this._h2sessions.delete( origin );
-
-		return sessionItem;
-	}
-
-	public disconnectSession( session: ClientHttp2Session ): Promise< void >
-	{
-		return new Promise< void >( resolve =>
-		{
-			if ( session.destroyed )
-				return resolve( );
-
-			session.once( "close", ( ) => resolve( ) );
-			session.destroy( );
-		} );
-	}
-
-	public disconnectStaleSessions( origin: string ): Promise< void >
-	{
-		const promises: Array< Promise< void > > = [ ];
-
-		if ( this._h2staleSessions.has( origin ) )
-		{
-			const sessionSet =
-				< Set< ClientHttp2Session > >
-					this._h2staleSessions.get( origin );
-			this._h2staleSessions.delete( origin );
-
-			for ( const session of sessionSet )
-				promises.push( this.disconnectSession( session ) );
-		}
-
-		return Promise.all( promises ).then( ( ) => { } );
-	}
-
-	public disconnect( url: string, session?: ClientHttp2Session ): Promise< void >
-	{
-		const { origin } = new URL( url );
-		const promises: Array< Promise< void > > = [ ];
-
-		const sessionItem = this.deleteActiveSession( origin );
-
-		if ( sessionItem && ( !session || sessionItem.session === session ) )
-			promises.push( this.handleDisconnect( sessionItem ) );
-
-		if ( !session )
-		{
-			promises.push( this.disconnectStaleSessions( origin ) );
-		}
-		else if ( this._h2staleSessions.has( origin ) )
-		{
-			const sessionSet =
-				< Set< ClientHttp2Session > >
-					this._h2staleSessions.get( origin );
-			if ( sessionSet.has( session ) )
-			{
-				sessionSet.delete( session );
-				promises.push( this.disconnectSession( session ) );
-			}
-		}
-
-		return Promise.all( promises ).then( ( ) => { } );
-	}
-
-	public disconnectAll( ): Promise< void >
-	{
-		const promises: Array< Promise< void > > = [ ];
-
-		for ( const eventualH2session of this._h2sessions.values( ) )
-		{
-			promises.push( this.handleDisconnect( eventualH2session ) );
-		}
-		this._h2sessions.clear( );
-
-		for ( const origin of this._h2staleSessions.keys( ) )
-		{
-			promises.push( this.disconnectStaleSessions( origin ) );
-		}
-
-		return Promise.all( promises ).then( ( ) => { } );
-	}
-
-	private handlePush(
-		origin: string,
-		pushedStream: ClientHttp2Stream,
-		requestHeaders: IncomingHttp2Headers
-	)
-	{
-		if ( !this._pushHandler )
-			return; // Drop push. TODO: Signal through error log: #8
-
-		const path = requestHeaders[ HTTP2_HEADER_PATH ] as string;
-
-		// Remove pseudo-headers
-		Object.keys( requestHeaders )
-		.filter( name => name.charAt( 0 ) === ":" )
-		.forEach( name => { delete requestHeaders[ name ]; } );
-
-		const pushedRequest = new Request( path, { headers: requestHeaders } );
-
-		const futureResponse = new Promise< Response >( ( resolve, reject ) =>
-		{
-			const guard = syncGuard( reject, { catchAsync: true } );
-
-			pushedStream.once( "aborted", ( ) =>
-				reject( new AbortError( "Response aborted" ) )
-			);
-			pushedStream.once( "frameError", ( ) =>
-				reject( new Error( "Push request failed" ) )
-			);
-			pushedStream.once( "error", reject );
-
-			pushedStream.once( "push", guard(
-				( responseHeaders: IncomingHttp2Headers ) =>
-				{
-					const response = new H2StreamResponse(
-						this._decoders,
-						path,
-						pushedStream,
-						responseHeaders,
-						false
-					);
-
-					resolve( response );
-				}
-			) );
-		} );
-
-		futureResponse
-		.catch( _err => { } ); // TODO: #8
-
-		const getResponse = ( ) => futureResponse;
-
-		return this._pushHandler( origin, pushedRequest, getResponse );
-	}
-
-	private connect( origin: string )
-	: SessionItem
-	{
-		const makeConnectionTimeout = ( ) =>
-			new TimeoutError( `Connection timeout to ${origin}` );
-
-		const makeError = ( event?: string ) =>
-			event
-			? new Error( `Unknown connection error (${event}): ${origin}` )
-			: new Error( `Connection closed` );
-
-		let session: ClientHttp2Session = < ClientHttp2Session >< any >void 0;
-
-		// TODO: #8
-		// tslint:disable-next-line
-		const aGuard = asyncGuard( console.error.bind( console ) );
-
-		const pushHandler = aGuard(
-			( stream: ClientHttp2Stream, headers: IncomingHttp2Headers ) =>
-				this.handlePush( origin, stream, headers )
-		);
-
-		const options = this._sessionOptions;
-
-		const promise = new Promise< ClientHttp2Session >(
-			( resolve, reject ) =>
-			{
-				session =
-					http2Connect( origin, options, ( ) => resolve( session ) );
-
-				session.on( "stream", pushHandler );
-
-				session.once( "close", ( ) =>
-					reject( makeOkError( makeError( ) ) ) );
-
-				session.once( "timeout", ( ) =>
-					reject( makeConnectionTimeout( ) ) );
-
-				session.once( "error", reject );
-			}
-		);
-
-		return { promise, session };
-	}
-
-	private getOrCreate( origin: string, created = false )
-	: Promise< ClientHttp2Session >
-	{
-		const willCreate = !this._h2sessions.has( origin );
-
-		if ( willCreate )
-		{
-			const sessionItem = this.connect( origin );
-
-			const { promise } = sessionItem;
-
-			// Handle session closure (delete from store)
-			promise
-			.then( session =>
-			{
-				session.once(
-					"close",
-					( ) => this.disconnect( origin, session )
-				);
-
-				session.once(
-					"goaway",
-					(
-						_errorCode: number,
-						_lastStreamID: number,
-						_opaqueData: Buffer
-					) =>
-					{
-						setGotGoaway( session );
-						this.releaseSession( origin );
-					}
-				);
-			} )
-			.catch( ( ) =>
-			{
-				if ( sessionItem.session )
-					this.disconnect( origin, sessionItem.session );
+		const makeSimpleSession = ( protocol: HttpProtocols ): SimpleSession =>
+			( {
+				accept: ( ) => this._accept,
+				contentDecoders: ( ) => this._decoders,
+				cookieJar: this._cookieJar,
+				protocol,
+				userAgent: ( ) => this._userAgent,
 			} );
 
-			this._h2sessions.set( origin, sessionItem );
-		}
+		const doFetchHttp1 = ( socket: Socket ) =>
+		{
+			const sessionGetterHttp1: SimpleSessionHttp1 = {
+				get: ( url: string ) =>
+					this.getHttp1( url, socket, request, rejectUnauthorized ),
+				...makeSimpleSession( "http1" ),
+			};
+			return fetchHttp1( sessionGetterHttp1, request, init );
+		};
 
-		return ( < SessionItem >this._h2sessions.get( origin ) ).promise
+		const doFetchHttp2 = ( ) =>
+		{
+			const sessionGetterHttp2: SimpleSessionHttp2 = {
+				get: ( url: string ) => this.getHttp2( url ),
+				...makeSimpleSession( "http2" ),
+			};
+			return fetchHttp2( sessionGetterHttp2, request, init );
+		};
+
+		const tryWaitForHttp1 = async ( ) =>
+		{
+			const { socket: freeHttp1Socket, shouldCreateNew } =
+				this.h1Context.getFreeSocketForOrigin( origin );
+
+			if ( freeHttp1Socket )
+				return doFetchHttp1( freeHttp1Socket );
+
+			if ( !shouldCreateNew )
+			{
+				// We've maxed out HTTP/1 connections, wait for one to be
+				// freed.
+				const socket = await this.h1Context.waitForSocket( origin );
+				return doFetchHttp1( socket );
+			}
+		};
+
+		if ( protocol === "http1" )
+		{
+			// Plain text HTTP/1(.1)
+			const resp = await tryWaitForHttp1( );
+			if ( resp )
+				return resp;
+
+			const socket = await this.h1Context.makeNewConnection( url );
+			this.h1Context.addUsedSocket( origin, socket );
+			return doFetchHttp1( socket );
+		}
+		else if ( protocol === "http2" )
+		{
+			// Plain text HTTP/2
+			return doFetchHttp2( );
+		}
+		else // protocol === "https"
+		{
+			// If we already have a session/socket open to this origin,
+			// re-use it
+
+			if ( this.h2Context.hasOrigin( origin ) )
+				return doFetchHttp2( );
+
+			const resp = await tryWaitForHttp1( );
+			if ( resp )
+				return resp;
+
+			// TODO: Make queue for subsequent fetch requests to the same
+			//       origin, so they can re-use the http2 session, or http1
+			//       pool once we know what protocol will be used.
+			//       This must apply to plain-text http1 too.
+
+			// Use ALPN to figure out protocol lazily
+			const { protocol, socket } = await connectTLS(
+				hostname,
+				port,
+				this._httpsProtocols,
+				this._sessionOptions
+			);
+
+			if ( protocol === "http2" )
+			{
+				// Convert socket into http2 session
+				await this.h2Context.getOrCreateHttp2(
+					origin,
+					{
+						createConnection: ( ) => socket,
+					}
+				);
+				// Session now lingering, it will be re-used by the next get()
+				return doFetchHttp2( );
+			}
+			else // protocol === "http1"
+			{
+				this.h1Context.addUsedSocket( origin, socket );
+				return doFetchHttp1( socket );
+			}
+		}
+	}
+
+	public async disconnect( url: string )
+	{
+		await Promise.all( [
+			this.h1Context.disconnect( url ),
+			this.h2Context.disconnect( url ),
+		] );
+	}
+
+	public async disconnectAll( )
+	{
+		await Promise.all([
+			this.h1Context.disconnectAll( ),
+			this.h2Context.disconnectAll( ),
+		]);
+	}
+
+	private getHttp1(
+		url: string,
+		socket: Socket,
+		request: Request,
+		rejectUnauthorized?: boolean
+	)
+	: ClientRequest
+	{
+		return this.h1Context.connect(
+			new URL( url ),
+			{
+				createConnection: ( ) => socket,
+				rejectUnauthorized,
+			},
+			request
+		);
+	}
+
+	private getOrCreateHttp2( origin: string, created = false )
+	: Promise< ClientHttp2Session >
+	{
+		const { didCreate, session } =
+			this.h2Context.getOrCreateHttp2( origin );
+
+		return session
 		.catch( err =>
 		{
-			if ( willCreate || created )
+			if ( didCreate || created )
 				// Created in this request, forward error
 				throw err;
 			// Not created in this request, try again
-			return this.getOrCreate( origin, true );
+			return this.getOrCreateHttp2( origin, true );
 		} );
 	}
 
-	private get( url: string )
+	private getHttp2( url: string )
 	: Promise< ClientHttp2Session >
 	{
-		const { origin } = new URL( url );
+		const { origin } = typeof url === "string" ? new URL( url ) : url;
 
-		return this.getOrCreate( origin );
+		return this.getOrCreateHttp2( origin );
 	}
 
-	private handleDisconnect( sessionItem: SessionItem ): Promise< void >
+	private parseInput( input: string | Request )
 	{
-		const { promise, session } = sessionItem;
+		const { hostname, origin, port, protocol, url } =
+			parseInput( typeof input !== "string" ? input.url : input );
 
-		if ( session )
-			session.destroy( );
+		const defaultHttp = this._httpProtocol;
 
-		return promise
-		.then( _h2session => { } )
-		.catch( err =>
-		{
-			const debugMode = false;
-			if ( debugMode )
-				// tslint:disable-next-line
-				console.warn( "Disconnect error", err );
-		} );
+		if (
+			( protocol === "http" && defaultHttp === "http1" )
+			|| protocol === "http1"
+		)
+			return {
+				hostname,
+				origin,
+				port,
+				protocol: "http1",
+				url,
+			};
+		else if (
+			( protocol === "http" && defaultHttp === "http2" )
+			|| protocol === "http2"
+		)
+			return {
+				hostname,
+				origin,
+				port,
+				protocol: "http2",
+				url,
+			};
+		else if ( protocol === "https" )
+			return {
+				hostname,
+				origin,
+				port,
+				protocol: "https",
+				url,
+			};
+		else
+			throw new FetchError( `Invalid protocol "${protocol}"` );
 	}
 }

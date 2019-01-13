@@ -1,7 +1,6 @@
 import {
-	ClientHttp2Stream,
+	// These are same as http1 for the usage here
 	constants as h2constants,
-	IncomingHttpHeaders,
 } from "http2";
 
 import {
@@ -16,7 +15,6 @@ const {
 	HTTP2_HEADER_CONTENT_ENCODING,
 	HTTP2_HEADER_CONTENT_LENGTH,
 } = h2constants;
-
 
 import {
 	BodyTypes,
@@ -35,6 +33,11 @@ import {
 import {
 	Body,
 } from "./body";
+
+import {
+	IncomingHttpHeaders,
+} from "./types";
+
 
 interface Extra
 {
@@ -184,7 +187,17 @@ function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
 	return out;
 }
 
-function makeInit( inHeaders: IncomingHttpHeaders ): Partial< ResponseInit >
+function makeInitHttp1( inHeaders: IncomingHttpHeaders )
+: Partial< ResponseInit >
+{
+	// Headers in HTTP/2 are compatible with HTTP/1 (colon illegal in HTTP/1)
+	const headers = makeHeadersFromH2Headers( inHeaders );
+
+	return { headers };
+}
+
+function makeInitHttp2( inHeaders: IncomingHttpHeaders )
+: Partial< ResponseInit >
 {
 	const status = parseInt( "" + inHeaders[ HTTP2_HEADER_STATUS ], 10 );
 	const statusText = ""; // Not supported in H2
@@ -239,14 +252,16 @@ function handleEncoding(
 	return decoder( stream );
 }
 
-export class H2StreamResponse extends Response
+export class StreamResponse extends Response
 {
 	constructor(
 		contentDecoders: ReadonlyArray< Decoder >,
 		url: string,
-		stream: ClientHttp2Stream,
+		stream: NodeJS.ReadableStream,
 		headers: IncomingHttpHeaders,
 		redirected: boolean,
+		init: Partial< ResponseInit >,
+		httpVersion: 1 | 2,
 		integrity?: string
 	)
 	{
@@ -256,7 +271,14 @@ export class H2StreamResponse extends Response
 				< NodeJS.ReadableStream >stream,
 				headers
 			),
-			makeInit( headers ),
+			{
+				...init,
+				...(
+					httpVersion === 1
+					? makeInitHttp1( headers )
+					: makeInitHttp2( headers )
+				),
+			},
 			makeExtra( url, redirected, integrity )
 		);
 	}

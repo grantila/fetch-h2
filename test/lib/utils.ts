@@ -6,3 +6,6 @@ export function createIntegrity( data: string, hashType = "sha256" )
 	hash.update( data );
 	return hashType + "-" + hash.digest( "base64" );
 }
+
+export const cleanUrl = ( url: string ) =>
+	url.replace( /^http[12]:\/\//, "http://" );

@@ -1,11 +1,13 @@
 import { Body, DataBody, JsonBody, StreamBody } from "./lib/body";
-import { Context, ContextOptions, PushHandler } from "./lib/context";
+import { Context, ContextOptions } from "./lib/context";
+import { PushHandler } from "./lib/context-http2";
 import { CookieJar } from "./lib/cookie-jar";
 import {
 	AbortError,
 	DecodeFunction,
 	Decoder,
 	FetchInit,
+	HttpProtocols,
 	OnTrailers,
 	TimeoutError,
 } from "./lib/core";
@@ -53,6 +55,7 @@ export {
 	onPush,
 
 	// Re-export
+	HttpProtocols,
 	Body,
 	JsonBody,
 	StreamBody,

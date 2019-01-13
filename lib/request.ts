@@ -8,6 +8,7 @@ import {
 	ReferrerTypes,
 	RequestInit,
 	RequestInitWithoutBody,
+	RequestInitWithUrl,
 } from "./core";
 
 import { Body, JsonBody } from "./body";
@@ -49,15 +50,17 @@ export class Request extends Body implements RequestInitWithoutBody
 	private _url: string;
 	private _init: Partial< RequestInit >;
 
-	constructor( input: string | Request, init?: Partial< RequestInit > )
+	constructor( input: string | Request, init?: Partial< RequestInitWithUrl > )
 	{
 		super( );
+
+		const { url: overwriteUrl } = init || ( { } as RequestInitWithUrl );
 
 		// TODO: Consider throwing a TypeError if the URL has credentials
 		this._url =
 			input instanceof Request
-			? input._url
-			: input;
+			? ( overwriteUrl || input._url )
+			: ( overwriteUrl || input );
 
 		if ( input instanceof Request )
 		{
@@ -149,9 +152,6 @@ export class Request extends Body implements RequestInitWithoutBody
 
 	public clone( newUrl?: string ): Request
 	{
-		const ret = new Request( this );
-		if ( newUrl )
-			ret._url = newUrl;
-		return ret;
+		return new Request( this, { url: newUrl } );
 	}
 }

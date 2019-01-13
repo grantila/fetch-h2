@@ -1,13 +1,9 @@
-import {
-	ClientHttp2Session,
-	SecureClientSessionOptions,
-	SessionOptions,
-} from "http2";
-
-import { URL } from "url";
+import { ClientRequest } from "http";
+import { ClientHttp2Session, SecureClientSessionOptions } from "http2";
 
 import { CookieJar } from "./cookie-jar";
 import { Headers, RawHeaders } from "./headers";
+
 
 export type Method =
 	"ACL" |
@@ -93,6 +89,8 @@ export type ResponseTypes =
 	"cors" |
 	"error";
 
+export type HttpProtocols = "http1" | "http2";
+
 export interface IBody
 {
 	readonly bodyUsed: boolean;
@@ -128,6 +126,11 @@ export interface RequestInit extends RequestInitWithoutBody
 	json: any;
 }
 
+export interface RequestInitWithUrl extends RequestInit
+{
+	url: string;
+}
+
 export type OnTrailers = ( headers: Headers ) => void;
 
 export interface FetchInit extends RequestInit
@@ -148,6 +151,15 @@ export interface ResponseInit
 	status: number;
 	statusText: string;
 	headers: RawHeaders | Headers;
+}
+
+export class FetchError extends Error
+{
+	constructor( message: string )
+	{
+		super( message );
+		Object.setPrototypeOf( this, FetchError.prototype );
+	}
 }
 
 export class AbortError extends Error
@@ -177,17 +189,41 @@ export interface Decoder
 	decode: DecodeFunction;
 }
 
+export type PerOriginOption< T > = ( origin: string ) => T;
+
+export interface Http1Options
+{
+	keepAlive: boolean | PerOriginOption< boolean >;
+	keepAliveMsecs: number | PerOriginOption< number >;
+	maxSockets: number | PerOriginOption< number >;
+	maxFreeSockets: number | PerOriginOption< number >;
+	timeout: void | number | PerOriginOption< void | number >;
+}
+
+export interface BaseContext
+{
+	_decoders: ReadonlyArray< Decoder >;
+	_sessionOptions: SecureClientSessionOptions;
+}
+
 export interface SimpleSession
 {
-	cookieJar: CookieJar;
+	protocol: HttpProtocols;
 
-	get(
-		url: string | URL,
-		options?: SessionOptions | SecureClientSessionOptions
-	): Promise< ClientHttp2Session >;
+	cookieJar: CookieJar;
 
 	userAgent( ): string;
 	accept( ): string;
 
 	contentDecoders( ): ReadonlyArray< Decoder >;
+}
+
+export interface SimpleSessionHttp1 extends SimpleSession
+{
+	get( url: string ): ClientRequest;
+}
+
+export interface SimpleSessionHttp2 extends SimpleSession
+{
+	get( url: string ): Promise< ClientHttp2Session >;
 }

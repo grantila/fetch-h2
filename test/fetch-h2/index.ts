@@ -6,20 +6,21 @@ import { buffer as getStreamAsBuffer } from "get-stream";
 import "mocha";
 import * as through2 from "through2";
 
-import { makeServer } from "../lib/server";
-import { createIntegrity } from "../lib/utils";
+import { TestData } from "../lib/server-common";
+import { makeMakeServer } from "../lib/server-helpers";
+import { cleanUrl, createIntegrity } from "../lib/utils";
 
 import {
+	context,
 	DataBody,
-	disconnectAll,
-	fetch,
+	disconnectAll as _disconnectAll,
+	fetch as _fetch,
 	Headers,
-	onPush,
+	onPush as _onPush,
 	Response,
 	StreamBody,
 } from "../../";
 
-afterEach( disconnectAll );
 
 async function getRejection< T >( promise: Promise< T > ): Promise< Error >
 {
@@ -41,18 +42,44 @@ function ensureStatusSuccess( response: Response ): Response
 	return response;
 }
 
+
+( [
+	{ proto: "http:", version: "http1" },
+	{ proto: "http:", version: "http2" },
+	{ proto: "https:", version: "http1" },
+	{ proto: "https:", version: "http2" },
+] as Array< TestData > )
+.forEach( ( { proto, version } ) =>
+{
+const { cycleOpts, makeServer } = makeMakeServer( { proto, version } );
+
+const { disconnectAll, fetch, onPush } =
+	( proto === "httpss:" && version === "http1" )
+	? { disconnectAll: _disconnectAll, fetch: _fetch, onPush: _onPush }
+	: context( { ...cycleOpts } );
+
 describe( "basic", ( ) =>
+{
+afterEach( disconnectAll );
+
+describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 {
 	it( "should be able to perform simple GET", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
+		const headers =
+			version === "http1" ? { "http1-path": "/headers" } : { };
+
 		const response = ensureStatusSuccess(
-			await fetch( `http://localhost:${port}/headers` )
+			await fetch( `${proto}//localhost:${port}/headers`, { headers } )
 		);
 
 		const res = await response.json( );
-		expect( res[ ":path" ] ).to.equal( "/headers" );
+		if ( version === "http1" )
+			expect( res[ "http1-path" ] ).to.equal( "/headers" );
+		else
+			expect( res[ ":path" ] ).to.equal( "/headers" );
 
 		await server.shutdown( );
 	} );
@@ -68,7 +95,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/headers`,
+				`${proto}//localhost:${port}/headers`,
 				{
 					body: new DataBody( "foobar" ),
 					headers,
@@ -92,7 +119,7 @@ describe( "basic", ( ) =>
 		const json = { foo: "bar" };
 
 		const response = await fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				json,
 				method: "POST",
@@ -119,7 +146,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/headers`,
+				`${proto}//localhost:${port}/headers`,
 				{
 					body: new DataBody( "foobar" ),
 					headers,
@@ -145,7 +172,7 @@ describe( "basic", ( ) =>
 		stream.write( "foo" );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
@@ -175,7 +202,7 @@ describe( "basic", ( ) =>
 		stream.write( "foo" );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body: new StreamBody( stream ),
 				method: "POST",
@@ -200,7 +227,7 @@ describe( "basic", ( ) =>
 		const { server, port } = await makeServer( );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body: "foo",
 				json: { foo: "" },
@@ -222,7 +249,7 @@ describe( "basic", ( ) =>
 		const json = { foo: "bar" };
 
 		const response = await fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				json,
 				method: "POST",
@@ -245,7 +272,7 @@ describe( "basic", ( ) =>
 		const body = "foobar";
 
 		const response = await fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body,
 				method: "POST",
@@ -266,7 +293,7 @@ describe( "basic", ( ) =>
 		const body = Buffer.from( "foobar" );
 
 		const response = await fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body,
 				method: "POST",
@@ -291,7 +318,7 @@ describe( "basic", ( ) =>
 		stream.end( );
 
 		const response = await fetch(
-			`http://localhost:${port}/echo`,
+			`${proto}//localhost:${port}/echo`,
 			{
 				body: stream,
 				method: "POST",
@@ -315,7 +342,7 @@ describe( "basic", ( ) =>
 		const onTrailers = deferredTrailers.resolve;
 
 		const response = await fetch(
-			`http://localhost:${port}/trailers`,
+			`${proto}//localhost:${port}/trailers`,
 			{
 				json: trailers,
 				method: "POST",
@@ -326,7 +353,7 @@ describe( "basic", ( ) =>
 		const data = await response.text( );
 		const receivedTrailers = await deferredTrailers.promise;
 
-		expect( data ).to.not.be.empty;
+		expect( data ).to.contain( "trailers will be sent" );
 
 		Object.keys( trailers )
 		.forEach( key =>
@@ -344,7 +371,7 @@ describe( "basic", ( ) =>
 		const { server, port } = await makeServer( );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/wait/20`,
+			`${proto}//localhost:${port}/wait/20`,
 			{
 				method: "POST",
 				timeout: 8,
@@ -363,7 +390,7 @@ describe( "basic", ( ) =>
 		const { server, port } = await makeServer( );
 
 		const response = await fetch(
-			`http://localhost:${port}/wait/1`,
+			`${proto}//localhost:${port}/wait/1`,
 			{
 				method: "POST",
 				timeout: 100,
@@ -404,7 +431,7 @@ describe( "basic", ( ) =>
 		} );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/sha256`,
+			`${proto}//localhost:${port}/sha256`,
 			{
 				body: new StreamBody( stream ),
 				headers: { "content-length": "" + chunkSize * chunks },
@@ -451,7 +478,7 @@ describe( "basic", ( ) =>
 		} );
 
 		const eventualResponse = fetch(
-			`http://localhost:${port}/sha256`,
+			`${proto}//localhost:${port}/sha256`,
 			{
 				body: new StreamBody( stream ),
 				method: "POST",
@@ -468,6 +495,7 @@ describe( "basic", ( ) =>
 		await server.shutdown( );
 	} );
 
+	if ( version === "http2" )
 	it( "should be able to receive pushed request", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
@@ -484,7 +512,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/push`,
+				`${proto}//localhost:${port}/push`,
 				{
 					json: [
 						{
@@ -519,7 +547,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/headers`,
+				`${proto}//localhost:${port}/headers`,
 				{
 					headers: { host },
 				}
@@ -528,7 +556,10 @@ describe( "basic", ( ) =>
 
 		const responseData = await response.json( );
 
-		expect( responseData[ ":authority" ] ).to.equal( host );
+		if ( version === "http2" )
+			expect( responseData[ ":authority" ] ).to.equal( host );
+		else
+			expect( responseData.host ).to.equal( host );
 
 		await server.shutdown( );
 	} );
@@ -538,7 +569,7 @@ describe( "basic", ( ) =>
 		const { server, port } = await makeServer( );
 
 		const response = ensureStatusSuccess(
-			await fetch( `http://localhost:${port}/headers` )
+			await fetch( `${proto}//localhost:${port}/headers` )
 		);
 
 		const responseData = await response.json( );
@@ -556,7 +587,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/compressed/gzip`,
+				`${proto}//localhost:${port}/compressed/gzip`,
 				{
 					json: testData,
 					method: "POST",
@@ -581,7 +612,7 @@ describe( "basic", ( ) =>
 
 		const response = ensureStatusSuccess(
 			await fetch(
-				`http://localhost:${port}/compressed/deflate`,
+				`${proto}//localhost:${port}/compressed/deflate`,
 				{
 					json: testData,
 					method: "POST",
@@ -599,37 +630,39 @@ describe( "basic", ( ) =>
 	} );
 } );
 
-describe( "response", ( ) =>
+describe( `response (${proto})`, ( ) =>
 {
 	it( "should have a proper url", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url = `http://localhost:${port}/headers`;
+		const url = `${proto}//localhost:${port}/headers`;
 
 		const response = ensureStatusSuccess( await fetch( url ) );
 
-		expect( response.url ).to.equal( url );
+		expect( response.url ).to.equal( cleanUrl( url ) );
 
 		await disconnectAll( );
 		await server.shutdown( );
 	} );
 } );
 
-describe( "goaway", ( ) =>
+if ( version === "http2" )
+describe( `goaway (${proto})`, ( ) =>
 {
+	if ( proto === "http:" ) // This race is too fast for TLS
 	it( "handle session failover (race conditioned)", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url1 = `http://localhost:${port}/goaway`;
-		const url2 = `http://localhost:${port}/headers`;
+		const url1 = `${proto}//localhost:${port}/goaway`;
+		const url2 = `${proto}//localhost:${port}/headers`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( url1 );
+		expect( response1.url ).to.equal( cleanUrl( url1 ) );
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( url2 );
+		expect( response2.url ).to.equal( cleanUrl( url2 ) );
 
 		await response1.text( );
 		await response2.text( );
@@ -642,16 +675,16 @@ describe( "goaway", ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url1 = `http://localhost:${port}/goaway`;
-		const url2 = `http://localhost:${port}/headers`;
+		const url1 = `${proto}//localhost:${port}/goaway`;
+		const url2 = `${proto}//localhost:${port}/headers`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( url1 );
+		expect( response1.url ).to.equal( cleanUrl( url1 ) );
 
 		await delay(20);
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( url2 );
+		expect( response2.url ).to.equal( cleanUrl( url2 ) );
 
 		await response1.text( );
 		await response2.text( );
@@ -664,16 +697,16 @@ describe( "goaway", ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url1 = `http://localhost:${port}/goaway/50`;
-		const url2 = `http://localhost:${port}/slow/50`;
+		const url1 = `${proto}//localhost:${port}/goaway/50`;
+		const url2 = `${proto}//localhost:${port}/slow/50`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( url1 );
+		expect( response1.url ).to.equal( cleanUrl( url1 ) );
 
 		await delay( 10 );
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( url2 );
+		expect( response2.url ).to.equal( cleanUrl( url2 ) );
 
 		await delay( 10 );
 
@@ -688,19 +721,19 @@ describe( "goaway", ( ) =>
 	} );
 } );
 
-describe( "integrity", ( ) =>
+describe( `integrity (${proto})`, ( ) =>
 {
 	it( "handle and succeed on valid integrity", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url = `http://localhost:${port}/slow/0`;
+		const url = `${proto}//localhost:${port}/slow/0`;
 
 		const data = "abcdefghij";
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
-		expect( response.url ).to.equal( url );
+		expect( response.url ).to.equal( cleanUrl( url ) );
 
 		expect( await response.text( ) ).to.equal( data );
 
@@ -712,13 +745,13 @@ describe( "integrity", ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url = `http://localhost:${port}/slow/0`;
+		const url = `${proto}//localhost:${port}/slow/0`;
 
 		const data = "abcdefghij-x";
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
-		expect( response.url ).to.equal( url );
+		expect( response.url ).to.equal( cleanUrl( url ) );
 
 		try
 		{
@@ -735,13 +768,13 @@ describe( "integrity", ( ) =>
 	} );
 } );
 
-describe( "premature stream close", ( ) =>
+describe( `premature stream close (${proto})`, ( ) =>
 {
 	it( "handle and reject fetch operation", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
-		const url = `http://localhost:${port}/prem-close`;
+		const url = `${proto}//localhost:${port}/prem-close`;
 
 		try
 		{
@@ -750,10 +783,16 @@ describe( "premature stream close", ( ) =>
 		}
 		catch ( err )
 		{
-			expect( err.message ).to.contain( "Stream prematurely closed" );
+			const expected =
+				version === "http1"
+				? "socket hang up"
+				: "Stream prematurely closed";
+			expect( err.message ).to.contain( expected );
 		}
 
 		await disconnectAll( );
 		await server.shutdown( );
 	} );
+} );
+} );
 } );

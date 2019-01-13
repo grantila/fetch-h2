@@ -12,7 +12,7 @@
   "types": "./dist/index.d.ts",
   "directories": {},
   "engines": {
-    "node": ">=10.0"
+    "node": ">=10.4"
   },
   "files": [
     "dist"
@@ -21,6 +21,7 @@
     "build": "./node_modules/.bin/rimraf dist && ./node_modules/.bin/tsc -p .",
     "lint": "node_modules/.bin/tslint --project .",
     "mocha": "node_modules/.bin/mocha --bail --check-leaks dist/test",
+    "mocha:debug": "node_modules/.bin/mocha --inspect-brk dist/test",
     "test": "npm run lint && node_modules/.bin/nyc npm run mocha",
     "testfast": "node_modules/.bin/nyc node_modules/.bin/_mocha -- --bail --check-leaks -i --grep nghttp2.org dist/test",
     "test-nocov": "node_modules/.bin/mocha --bail --check-leaks dist/test",
@@ -31,6 +32,7 @@
     "coverage": "node_modules/.bin/nyc report --reporter=html",
     "version": "./node_modules/.bin/ts-node scripts/version-update.ts && npm run buildtest && scripts/version-git-add.sh",
     "prepack": "npm run build && npm run test",
+    "makecerts": "openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout certs/key.pem -out certs/cert.pem",
     "travis-deploy-once": "travis-deploy-once",
     "semantic-release": "semantic-release",
     "cz": "git-cz"
@@ -44,6 +46,7 @@
     "h2",
     "http2",
     "client",
+    "request",
     "api",
     "typesafe",
     "typescript"
@@ -78,6 +81,9 @@
     "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "3.x"
+  },
+  "publishConfig": {
+    "tag": "beta"
   },
   "config": {
     "commitizen": {
