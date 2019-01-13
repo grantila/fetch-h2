@@ -11,12 +11,14 @@ import { H2Context, PushHandler } from "./context-http2";
 import { connectTLS } from "./context-https";
 import { CookieJar } from "./cookie-jar";
 import {
-	BaseContext,
 	Decoder,
 	FetchError,
 	FetchInit,
+	getByOrigin,
 	Http1Options,
 	HttpProtocols,
+	parsePerOrigin,
+	PerOrigin,
 	SimpleSession,
 	SimpleSessionHttp1,
 	SimpleSessionHttp2,
@@ -44,93 +46,111 @@ const defaultAccept = "application/json, text/*;0.9, */*;q=0.8";
 
 export interface ContextOptions
 {
-	userAgent: string;
-	overwriteUserAgent: boolean;
-	accept: string;
+	userAgent: string | PerOrigin< string >;
+	overwriteUserAgent: boolean | PerOrigin< boolean >;
+	accept: string | PerOrigin< string >;
 	cookieJar: CookieJar;
-	decoders: ReadonlyArray< Decoder >;
-	session: SecureClientSessionOptions;
-	httpProtocol: HttpProtocols;
-	httpsProtocols: ReadonlyArray< HttpProtocols >;
-	http1: Partial< Http1Options >;
+	decoders:
+		ReadonlyArray< Decoder > | PerOrigin< ReadonlyArray< Decoder > >;
+	session:
+		SecureClientSessionOptions | PerOrigin< SecureClientSessionOptions >;
+	httpProtocol: HttpProtocols | PerOrigin< HttpProtocols >;
+	httpsProtocols:
+		ReadonlyArray< HttpProtocols > |
+		PerOrigin< ReadonlyArray< HttpProtocols > >;
+	http1: Partial< Http1Options > | PerOrigin< Partial< Http1Options > >;
 }
 
-export class Context implements BaseContext
+export class Context
 {
-	public _decoders: ReadonlyArray< Decoder >;
-	public _sessionOptions: SecureClientSessionOptions;
-
 	private h1Context: H1Context;
-	private h2Context = new H2Context( this );
-	private _userAgent: string;
-	private _accept: string;
+	private h2Context: H2Context;
+
+	private _userAgent: string | PerOrigin< string >;
+	private _overwriteUserAgent: boolean | PerOrigin< boolean >;
+	private _accept: string | PerOrigin< string >;
 	private _cookieJar: CookieJar;
-	private _httpProtocol: HttpProtocols;
-	private _httpsProtocols: Array< HttpProtocols >;
-	private _http1Options: Http1Options;
+	private _decoders:
+		ReadonlyArray< Decoder > | PerOrigin< ReadonlyArray< Decoder > >;
+	private _sessionOptions:
+		SecureClientSessionOptions | PerOrigin< SecureClientSessionOptions >;
+	private _httpProtocol: HttpProtocols | PerOrigin< HttpProtocols >;
+	private _httpsProtocols:
+		ReadonlyArray< HttpProtocols > |
+		PerOrigin< ReadonlyArray< HttpProtocols > >;
+	private _http1Options: Partial< Http1Options | PerOrigin< Http1Options > >;
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
 		this._userAgent = "";
+		this._overwriteUserAgent = false;
 		this._accept = "";
 		this._cookieJar = < CookieJar >< any >void 0;
 		this._decoders = [ ];
 		this._sessionOptions = { };
 		this._httpProtocol = "http1";
 		this._httpsProtocols = [ "http2", "http1" ];
-		this._http1Options = {
-			keepAlive: false,
-			keepAliveMsecs: 1000,
-			maxFreeSockets: 256,
-			maxSockets: Infinity,
-			timeout: void 0,
-		};
+		this._http1Options = { };
 
 		this.setup( opts );
 
 		this.h1Context = new H1Context( this._http1Options );
+		this.h2Context = new H2Context(
+			this.decoders.bind( this ),
+			this.sessionOptions.bind( this )
+		);
 	}
 
 	public setup( opts?: Partial< ContextOptions > )
 	{
 		opts = opts || { };
 
-		this._userAgent =
-			(
-				"userAgent" in opts &&
-				"overwriteUserAgent" in opts &&
-				opts.overwriteUserAgent
-			)
-			? ( opts.userAgent || "" )
-			: "userAgent" in opts
-			? opts.userAgent + " " + defaultUserAgent
-			: defaultUserAgent;
-
-		this._accept = "accept" in opts
-			? ( opts.accept || defaultAccept )
-			: defaultAccept;
-
 		this._cookieJar = "cookieJar" in opts
 			? ( opts.cookieJar || new CookieJar( ) )
 			: new CookieJar( );
 
-		this._decoders = "decoders" in opts
-			? opts.decoders || [ ]
-			: [ ];
+		this._userAgent = parsePerOrigin( opts.userAgent, "" );
+		this._overwriteUserAgent =
+			parsePerOrigin( opts.overwriteUserAgent, false );
+		this._accept = parsePerOrigin( opts.accept, defaultAccept );
+		this._decoders = parsePerOrigin( opts.decoders, [ ] );
+		this._sessionOptions = parsePerOrigin( opts.session, { } );
+		this._httpProtocol = parsePerOrigin( opts.httpProtocol, "http1" );
 
-		this._sessionOptions = "session" in opts
-			? opts.session || { }
-			: { };
-
-		this._httpProtocol = "httpProtocol" in opts
-			? opts.httpProtocol || "http1"
-			: "http1";
-
-		this._httpsProtocols = "httpsProtocols" in opts
-			? [ ...( opts.httpsProtocols || [ ] ) ]
-			: [ "http2", "http1" ];
+		this._httpsProtocols = parsePerOrigin(
+			opts.httpsProtocols,
+			[ "http2", "http1" ]
+		);
 
 		Object.assign( this._http1Options, opts.http1 || { } );
+	}
+
+	public userAgent( origin: string )
+	{
+		const combine = ( userAgent: string, overwriteUserAgent: boolean ) =>
+		{
+			const defaultUA = overwriteUserAgent ? "" : defaultUserAgent;
+
+			return userAgent
+				? defaultUA
+				? userAgent + " " + defaultUA
+				: userAgent
+				: defaultUA;
+		};
+
+		return combine(
+			getByOrigin( this._userAgent, origin ),
+			getByOrigin( this._overwriteUserAgent, origin )
+		);
+	}
+
+	public decoders( origin: string )
+	{
+		return getByOrigin( this._decoders, origin );
+	}
+	public sessionOptions( origin: string )
+	{
+		return getByOrigin( this._sessionOptions, origin );
 	}
 
 	public onPush( pushHandler?: PushHandler )
@@ -152,15 +172,15 @@ export class Context implements BaseContext
 				: input
 			: new Request( input, { ...( init || { } ), url } );
 
-		const { rejectUnauthorized } = this._sessionOptions;
+		const { rejectUnauthorized } = this.sessionOptions( origin );
 
 		const makeSimpleSession = ( protocol: HttpProtocols ): SimpleSession =>
 			( {
-				accept: ( ) => this._accept,
-				contentDecoders: ( ) => this._decoders,
+				accept: ( ) => getByOrigin( this._accept, origin ),
+				contentDecoders: ( ) => getByOrigin( this._decoders, origin ),
 				cookieJar: this._cookieJar,
 				protocol,
-				userAgent: ( ) => this._userAgent,
+				userAgent: ( ) => this.userAgent( origin ),
 			} );
 
 		const doFetchHttp1 = ( socket: Socket ) =>
@@ -236,8 +256,8 @@ export class Context implements BaseContext
 			const { protocol, socket } = await connectTLS(
 				hostname,
 				port,
-				this._httpsProtocols,
-				this._sessionOptions
+				getByOrigin( this._httpsProtocols, origin ),
+				getByOrigin( this._sessionOptions, origin )
 			);
 
 			if ( protocol === "http2" )

@@ -12,7 +12,7 @@ import { asyncGuard, syncGuard } from "callguard";
 
 import {
 	AbortError,
-	BaseContext,
+	Decoder,
 	TimeoutError,
 } from "./core";
 
@@ -39,6 +39,10 @@ export type PushHandler =
 		getResponse: ( ) => Promise< Response >
 	) => void;
 
+export type GetDecoders = ( origin: string ) => ReadonlyArray< Decoder >;
+export type GetSessionOptions =
+	( origin: string ) => SecureClientSessionOptions;
+
 export class H2Context
 {
 	public _pushHandler?: PushHandler;
@@ -46,11 +50,16 @@ export class H2Context
 	private _h2sessions: Map< string, H2SessionItem > = new Map( );
 	private _h2staleSessions: Map< string, Set< ClientHttp2Session > > =
 		new Map( );
-	private _context: BaseContext;
+	private _getDecoders: GetDecoders;
+	private _getSessionOptions: GetSessionOptions;
 
-	constructor( context: BaseContext )
+	constructor(
+		getDecoders: GetDecoders,
+		getSessionOptions: GetSessionOptions
+	)
 	{
-		this._context = context;
+		this._getDecoders = getDecoders;
+		this._getSessionOptions = getSessionOptions;
 	}
 
 	public hasOrigin( origin: string )
@@ -262,7 +271,7 @@ export class H2Context
 				( responseHeaders: IncomingHttp2Headers ) =>
 				{
 					const response = new StreamResponse(
-						this._context._decoders,
+						this._getDecoders( origin ),
 						path,
 						pushedStream,
 						responseHeaders,
@@ -310,7 +319,7 @@ export class H2Context
 		);
 
 		const options = {
-			...this._context._sessionOptions,
+			...this._getSessionOptions( origin ),
 			...extraOptions,
 		};
 

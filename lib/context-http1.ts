@@ -6,7 +6,10 @@ import { URL } from "url";
 import { defer, Deferred } from "already";
 
 import {
+	getByOrigin,
 	Http1Options,
+	parsePerOrigin,
+	PerOrigin,
 } from "./core";
 import {
 	Request
@@ -189,12 +192,21 @@ class OriginPool
 
 class ContextPool
 {
-	private options: Http1Options;
 	private pools = new Map< string, OriginPool >( );
 
-	constructor( options: Http1Options )
+	private keepAlive: boolean | PerOrigin< boolean >;
+	private keepAliveMsecs: number | PerOrigin< number >;
+	private maxSockets: number | PerOrigin< number >;
+	private maxFreeSockets: number | PerOrigin< number >;
+	private timeout: void | number | PerOrigin< void | number >;
+
+	constructor( options: Partial< Http1Options > )
 	{
-		this.options = options;
+		this.keepAlive = parsePerOrigin( options.keepAlive, false );
+		this.keepAliveMsecs = parsePerOrigin( options.keepAliveMsecs, 1000 );
+		this.maxSockets = parsePerOrigin( options.maxSockets, 256 );
+		this.maxFreeSockets = parsePerOrigin( options.maxFreeSockets, Infinity );
+		this.timeout = parsePerOrigin( options.timeout, void 0 );
 	}
 
 	public hasOrigin( origin: string )
@@ -208,16 +220,11 @@ class ContextPool
 
 		if ( !pool )
 		{
-			const runIfFunction =
-				< T extends number | boolean | void >
-				( value: T | ( ( origin: string ) => T ) ) =>
-					typeof value === "function" ? value( origin ) : value;
-
-			const keepAlive = runIfFunction( this.options.keepAlive );
-			const keepAliveMsecs = runIfFunction( this.options.keepAliveMsecs );
-			const maxSockets = runIfFunction( this.options.maxSockets );
-			const maxFreeSockets = runIfFunction( this.options.maxFreeSockets );
-			const timeout = runIfFunction( this.options.timeout );
+			const keepAlive = getByOrigin( this.keepAlive, origin );
+			const keepAliveMsecs = getByOrigin( this.keepAliveMsecs, origin );
+			const maxSockets = getByOrigin( this.maxSockets, origin );
+			const maxFreeSockets = getByOrigin( this.maxFreeSockets, origin );
+			const timeout = getByOrigin( this.timeout, origin );
 
 			const newPool = new OriginPool(
 				keepAlive,
@@ -251,7 +258,7 @@ export class H1Context
 {
 	private contextPool: ContextPool;
 
-	constructor( options: Http1Options )
+	constructor( options: Partial< Http1Options > )
 	{
 		this.contextPool = new ContextPool( options );
 	}

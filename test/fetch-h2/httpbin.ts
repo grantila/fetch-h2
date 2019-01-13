@@ -94,6 +94,7 @@ describe( name, function( )
 		const response = await fetch(
 			`${host}/post`,
 			{
+				allowForbiddenHeaders: true,
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
 				method: "POST",
@@ -111,6 +112,7 @@ describe( name, function( )
 		const eventualResponse = fetch(
 			`${host}/post`,
 			{
+				allowForbiddenHeaders: true,
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
 				method: "POST",

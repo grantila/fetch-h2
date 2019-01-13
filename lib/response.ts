@@ -20,6 +20,7 @@ import {
 	BodyTypes,
 	DecodeFunction,
 	Decoder,
+	HttpVersion,
 	ResponseInit,
 	ResponseTypes,
 } from "./core";
@@ -41,6 +42,7 @@ import {
 
 interface Extra
 {
+	httpVersion: HttpVersion;
 	redirected: boolean;
 	integrity: string;
 	type: ResponseTypes;
@@ -65,6 +67,8 @@ export class Response extends Body
 	public readonly url: string;
 	// @ts-ignore
 	public readonly useFinalURL: boolean;
+	// @ts-ignore
+	public readonly httpVersion: HttpVersion;
 
 	constructor(
 		body: BodyTypes | Body | null,
@@ -105,6 +109,10 @@ export class Response extends Body
 			headers: {
 				enumerable: true,
 				value: headers,
+			},
+			httpVersion: {
+				enumerable: true,
+				value: _extra.httpVersion,
 			},
 			ok: {
 				enumerable: true,
@@ -207,6 +215,7 @@ function makeInitHttp2( inHeaders: IncomingHttpHeaders )
 }
 
 function makeExtra(
+	httpVersion: HttpVersion,
 	url: string,
 	redirected: boolean,
 	integrity?: string
@@ -215,7 +224,7 @@ function makeExtra(
 {
 	const type = "basic"; // TODO: Implement CORS
 
-	return { redirected, integrity, type, url };
+	return { httpVersion, redirected, integrity, type, url };
 }
 
 function handleEncoding(
@@ -261,7 +270,7 @@ export class StreamResponse extends Response
 		headers: IncomingHttpHeaders,
 		redirected: boolean,
 		init: Partial< ResponseInit >,
-		httpVersion: 1 | 2,
+		httpVersion: HttpVersion,
 		integrity?: string
 	)
 	{
@@ -279,7 +288,7 @@ export class StreamResponse extends Response
 					: makeInitHttp2( headers )
 				),
 			},
-			makeExtra( url, redirected, integrity )
+			makeExtra( httpVersion, url, redirected, integrity )
 		);
 	}
 }

@@ -16,6 +16,7 @@ import { GuardedHeaders, Headers } from "./headers";
 
 
 const defaultInit: Partial< RequestInit > = {
+	allowForbiddenHeaders: false,
 	cache: "default",
 	credentials: "omit",
 	method: "GET",
@@ -46,6 +47,8 @@ export class Request extends Body implements RequestInitWithoutBody
 	public readonly integrity: string;
 	// @ts-ignore
 	public readonly cache: CacheTypes;
+	// @ts-ignore
+	public readonly allowForbiddenHeaders: boolean;
 
 	private _url: string;
 	private _init: Partial< RequestInit >;
@@ -83,9 +86,13 @@ export class Request extends Body implements RequestInitWithoutBody
 		}
 
 		this._init = Object.assign( { }, defaultInit, init );
+		const allowForbiddenHeaders =
+			< boolean >this._init.allowForbiddenHeaders;
 
 		const headers = new GuardedHeaders(
-			this._init.mode === "no-cors"
+			allowForbiddenHeaders
+				? "none"
+				: this._init.mode === "no-cors"
 				? "request-no-cors"
 				: "request",
 			this._init.headers
@@ -107,6 +114,10 @@ export class Request extends Body implements RequestInitWithoutBody
 		}
 
 		Object.defineProperties( this, {
+			allowForbiddenHeaders: {
+				enumerable: true,
+				value: allowForbiddenHeaders,
+			},
 			cache: {
 				enumerable: true,
 				value: this._init.cache,

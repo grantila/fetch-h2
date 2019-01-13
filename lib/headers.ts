@@ -123,7 +123,7 @@ function _ensureGuard(
 			` (${name})` );
 }
 
-let _guard: string | null = null;
+let _guard: GuardTypes | null = null;
 
 export class Headers
 {
@@ -136,13 +136,22 @@ export class Headers
 		_guard = null;
 		this._data = new Map( );
 
+		const set = ( name: string, values: ReadonlyArray< string > ) =>
+		{
+			if ( values.length === 1 )
+				this.set( name, values[ 0 ] );
+			else
+				for ( const value of values )
+					this.append( name, value );
+		};
+
 		if ( !init )
 			return;
 
 		else if ( init instanceof Headers )
 		{
-			for ( const [ name, value ] of init._data.entries( ) )
-				this._data.set( name, [ ...value ] );
+			for ( const [ name, values ] of init._data.entries( ) )
+				set( name, values );
 		}
 
 		else
@@ -152,7 +161,7 @@ export class Headers
 				const name = filterName( _name );
 				const value = arrayify( init[ _name ] )
 					.map( val => `${val}` );
-				this._data.set( name, [ ...value ] );
+				set( name, [ ...value ] );
 			}
 		}
 	}

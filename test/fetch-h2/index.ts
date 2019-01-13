@@ -81,6 +81,10 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		else
 			expect( res[ ":path" ] ).to.equal( "/headers" );
 
+		const versionNumber =
+			parseInt( version.substr( version.length - 1 ), 10 );
+		expect( response.httpVersion ).to.equal( versionNumber );
+
 		await server.shutdown( );
 	} );
 
@@ -97,6 +101,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			await fetch(
 				`${proto}//localhost:${port}/headers`,
 				{
+					allowForbiddenHeaders: true,
 					body: new DataBody( "foobar" ),
 					headers,
 					method: "POST",
@@ -148,6 +153,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			await fetch(
 				`${proto}//localhost:${port}/headers`,
 				{
+					allowForbiddenHeaders: true,
 					body: new DataBody( "foobar" ),
 					headers,
 					method: "POST",
@@ -174,6 +180,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const eventualResponse = fetch(
 			`${proto}//localhost:${port}/echo`,
 			{
+				allowForbiddenHeaders: true,
 				body: new StreamBody( stream ),
 				headers: { "content-length": "6" },
 				method: "POST",
@@ -433,6 +440,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const eventualResponse = fetch(
 			`${proto}//localhost:${port}/sha256`,
 			{
+				allowForbiddenHeaders: true,
 				body: new StreamBody( stream ),
 				headers: { "content-length": "" + chunkSize * chunks },
 				method: "POST",
@@ -549,6 +557,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			await fetch(
 				`${proto}//localhost:${port}/headers`,
 				{
+					allowForbiddenHeaders: true,
 					headers: { host },
 				}
 			)

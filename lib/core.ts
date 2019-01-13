@@ -1,5 +1,5 @@
 import { ClientRequest } from "http";
-import { ClientHttp2Session, SecureClientSessionOptions } from "http2";
+import { ClientHttp2Session } from "http2";
 
 import { CookieJar } from "./cookie-jar";
 import { Headers, RawHeaders } from "./headers";
@@ -91,6 +91,8 @@ export type ResponseTypes =
 
 export type HttpProtocols = "http1" | "http2";
 
+export type HttpVersion = 1 | 2;
+
 export interface IBody
 {
 	readonly bodyUsed: boolean;
@@ -118,6 +120,7 @@ export interface RequestInitWithoutBody
 	referrer: ReferrerTypes;
 	referrerPolicy: ReferrerPolicyTypes;
 	integrity: string;
+	allowForbiddenHeaders: boolean;
 }
 
 export interface RequestInit extends RequestInitWithoutBody
@@ -189,21 +192,49 @@ export interface Decoder
 	decode: DecodeFunction;
 }
 
-export type PerOriginOption< T > = ( origin: string ) => T;
+export type PerOrigin< T > = ( origin: string ) => T;
+
+export function getByOrigin< T >(
+	val: T | PerOrigin< T >,
+	origin: string
+)
+: T
+{
+	return typeof val === "function"
+		? ( < PerOrigin< T > >val )( origin )
+		: val;
+}
+
+export function parsePerOrigin< T >(
+	val: T | PerOrigin< T > | void,
+	_default: T
+)
+: T | PerOrigin< T >
+{
+	if ( val == null )
+	{
+		return _default;
+	}
+
+	if ( typeof val === "function" )
+		return ( origin: string ) =>
+		{
+			const ret = ( < PerOrigin< T > >val )( origin );
+			if ( ret == null )
+				return _default;
+			return ret;
+		};
+
+	return val;
+}
 
 export interface Http1Options
 {
-	keepAlive: boolean | PerOriginOption< boolean >;
-	keepAliveMsecs: number | PerOriginOption< number >;
-	maxSockets: number | PerOriginOption< number >;
-	maxFreeSockets: number | PerOriginOption< number >;
-	timeout: void | number | PerOriginOption< void | number >;
-}
-
-export interface BaseContext
-{
-	_decoders: ReadonlyArray< Decoder >;
-	_sessionOptions: SecureClientSessionOptions;
+	keepAlive: boolean | PerOrigin< boolean >;
+	keepAliveMsecs: number | PerOrigin< number >;
+	maxSockets: number | PerOrigin< number >;
+	maxFreeSockets: number | PerOrigin< number >;
+	timeout: void | number | PerOrigin< void | number >;
 }
 
 export interface SimpleSession
