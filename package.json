@@ -84,9 +84,6 @@
     "to-arraybuffer": "1.x",
     "tough-cookie": "3.x"
   },
-  "publishConfig": {
-    "tag": "next"
-  },
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
