@@ -4,3 +4,4 @@ scripts
 tsconfig.json
 test/
 dist/test/
+dist/test-client/

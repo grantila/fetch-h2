@@ -17,23 +17,36 @@ import {
 import { parseInput } from "./utils";
 
 
-export interface FreeSocketInfo
-{
-	socket?: Socket;
-	shouldCreateNew: boolean;
-}
-
 export interface ConnectOptions
 {
 	rejectUnauthorized: boolean | undefined;
 	createConnection: ( ) => Socket;
 }
 
+export interface SocketAndCleanup
+{
+	socket: Socket;
+	cleanup: ( ) => void;
+}
+
+export interface FreeSocketInfoWithSocket extends SocketAndCleanup
+{
+	shouldCreateNew: boolean;
+}
+export interface FreeSocketInfoWithoutSocket
+{
+	socket: never;
+	cleanup: never;
+	shouldCreateNew: boolean;
+}
+export type FreeSocketInfo =
+	FreeSocketInfoWithSocket | FreeSocketInfoWithoutSocket;
+
 class OriginPool
 {
 	private usedSockets = new Set< Socket >( );
 	private unusedSockets = new Set< Socket >( );
-	private waiting: Array< Deferred< Socket > > = [ ];
+	private waiting: Array< Deferred< SocketAndCleanup > > = [ ];
 
 	private keepAlive: boolean;
 	private keepAliveMsecs: number;
@@ -84,23 +97,25 @@ class OriginPool
 		} );
 
 		this.usedSockets.add( socket );
+
+		return this.makeCleaner( socket );
 	}
 
 	public getFreeSocket( ): FreeSocketInfo
 	{
-		const socket = this.getFirstUnused( );
+		const socketAndCleanup = this.getFirstUnused( );
 
-		if ( socket )
-			return { socket, shouldCreateNew: false };
+		if ( socketAndCleanup )
+			return { ...socketAndCleanup, shouldCreateNew: false };
 
 		const shouldCreateNew = this.maxSockets >= this.usedSockets.size;
 
-		return { shouldCreateNew };
+		return { shouldCreateNew } as FreeSocketInfoWithoutSocket;
 	}
 
-	public waitForSocket( ): Promise< Socket >
+	public waitForSocket( ): Promise< SocketAndCleanup >
 	{
-		const deferred = defer< Socket >( );
+		const deferred = defer< SocketAndCleanup >( );
 
 		this.waiting.push( deferred );
 
@@ -127,11 +142,14 @@ class OriginPool
 		);
 	}
 
-	private getFirstUnused( )
+	private getFirstUnused( ): SocketAndCleanup | null
 	{
 		for ( const socket of this.unusedSockets.values( ) )
+		{
 			// We obviously have a socket
-			return this.moveToUsed( socket );
+			this.moveToUsed( socket );
+			return { socket, cleanup: this.makeCleaner( socket ) };
+		}
 
 		return null;
 	}
@@ -141,8 +159,8 @@ class OriginPool
 		if ( this.waiting.length === 0 )
 			return false;
 
-		const waiting = < Deferred< Socket > >this.waiting.shift( );
-		waiting.resolve( socket );
+		const waiting = < Deferred< SocketAndCleanup > >this.waiting.shift( );
+		waiting.resolve( { socket, cleanup: this.makeCleaner( socket ) } );
 		return true;
 	}
 
@@ -150,9 +168,11 @@ class OriginPool
 	{
 		while ( this.waiting.length > 0 && this.unusedSockets.size > 0 )
 		{
-			const socket = < Socket >this.getFirstUnused( );
-			const waiting = < Deferred< Socket > >this.waiting.shift( );
-			waiting.resolve( socket );
+			const socketAndCleanup =
+				< SocketAndCleanup >this.getFirstUnused( );
+			const waiting =
+				< Deferred< SocketAndCleanup > >this.waiting.shift( );
+			waiting.resolve( socketAndCleanup );
 		}
 	}
 
@@ -163,7 +183,20 @@ class OriginPool
 		);
 	}
 
-	// @ts-ignore
+	private makeCleaner( socket: Socket )
+	{
+		let hasCleaned = false;
+		return ( ) =>
+		{
+			if ( hasCleaned )
+				return;
+			hasCleaned = true;
+
+			if ( !socket.destroyed )
+				this.moveToUnused( socket );
+		};
+	}
+
 	private async moveToUnused( socket: Socket )
 	{
 		if ( this.tryReuse( socket ) )
@@ -267,7 +300,7 @@ export class H1Context
 	{
 		return this.contextPool.hasOrigin( origin )
 			? this.contextPool.getOriginPool( origin ).getFreeSocket( )
-			: { shouldCreateNew: true };
+			: { shouldCreateNew: true } as FreeSocketInfoWithoutSocket;
 	}
 
 	public addUsedSocket( origin: string, socket: Socket )
@@ -275,7 +308,7 @@ export class H1Context
 		return this.contextPool.getOriginPool( origin ).addUsed( socket );
 	}
 
-	public waitForSocket( origin: string ): Promise< Socket >
+	public waitForSocket( origin: string ): Promise< SocketAndCleanup >
 	{
 		return this.contextPool.getOriginPool( origin ).waitForSocket( );
 	}

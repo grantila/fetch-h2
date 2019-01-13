@@ -16,7 +16,7 @@ import { HttpProtocols } from "../../";
 
 export interface TestData
 {
-	proto: string;
+	proto: "http:" | "https:";
 	version: HttpProtocols;
 }
 

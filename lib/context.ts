@@ -1,6 +1,5 @@
 import { ClientRequest } from "http";
 import {
-	ClientHttp2Session,
 	SecureClientSessionOptions,
 } from "http2";
 import { Socket } from "net";
@@ -22,6 +21,7 @@ import {
 	SimpleSession,
 	SimpleSessionHttp1,
 	SimpleSessionHttp2,
+	SimpleSessionHttp2Session,
 } from "./core";
 import { fetch as fetchHttp1 } from "./fetch-http1";
 import { fetch as fetchHttp2 } from "./fetch-http2";
@@ -183,11 +183,18 @@ export class Context
 				userAgent: ( ) => this.userAgent( origin ),
 			} );
 
-		const doFetchHttp1 = ( socket: Socket ) =>
+		const doFetchHttp1 = ( socket: Socket, cleanup: ( ) => void ) =>
 		{
 			const sessionGetterHttp1: SimpleSessionHttp1 = {
 				get: ( url: string ) =>
-					this.getHttp1( url, socket, request, rejectUnauthorized ),
+					( {
+						cleanup,
+						req: this.getHttp1(
+							url,
+							socket,
+							request,
+							rejectUnauthorized ),
+					} ),
 				...makeSimpleSession( "http1" ),
 			};
 			return fetchHttp1( sessionGetterHttp1, request, init );
@@ -204,18 +211,19 @@ export class Context
 
 		const tryWaitForHttp1 = async ( ) =>
 		{
-			const { socket: freeHttp1Socket, shouldCreateNew } =
+			const { socket: freeHttp1Socket, cleanup, shouldCreateNew } =
 				this.h1Context.getFreeSocketForOrigin( origin );
 
 			if ( freeHttp1Socket )
-				return doFetchHttp1( freeHttp1Socket );
+				return doFetchHttp1( freeHttp1Socket, cleanup );
 
 			if ( !shouldCreateNew )
 			{
 				// We've maxed out HTTP/1 connections, wait for one to be
 				// freed.
-				const socket = await this.h1Context.waitForSocket( origin );
-				return doFetchHttp1( socket );
+				const { socket, cleanup } =
+					await this.h1Context.waitForSocket( origin );
+				return doFetchHttp1( socket, cleanup );
 			}
 		};
 
@@ -227,8 +235,8 @@ export class Context
 				return resp;
 
 			const socket = await this.h1Context.makeNewConnection( url );
-			this.h1Context.addUsedSocket( origin, socket );
-			return doFetchHttp1( socket );
+			const cleanup = this.h1Context.addUsedSocket( origin, socket );
+			return doFetchHttp1( socket, cleanup );
 		}
 		else if ( protocol === "http2" )
 		{
@@ -262,20 +270,23 @@ export class Context
 
 			if ( protocol === "http2" )
 			{
-				// Convert socket into http2 session
-				await this.h2Context.getOrCreateHttp2(
+				// Convert socket into http2 session, this will ref (*)
+				const { cleanup } = await this.h2Context.getOrCreateHttp2(
 					origin,
 					{
 						createConnection: ( ) => socket,
 					}
 				);
 				// Session now lingering, it will be re-used by the next get()
-				return doFetchHttp2( );
+				const ret = doFetchHttp2( );
+				// Unref lingering ref
+				cleanup( );
+				return ret;
 			}
 			else // protocol === "http1"
 			{
-				this.h1Context.addUsedSocket( origin, socket );
-				return doFetchHttp1( socket );
+				const cleanup = this.h1Context.addUsedSocket( origin, socket );
+				return doFetchHttp1( socket, cleanup );
 			}
 		}
 	}
@@ -315,9 +326,9 @@ export class Context
 	}
 
 	private getOrCreateHttp2( origin: string, created = false )
-	: Promise< ClientHttp2Session >
+	: Promise< SimpleSessionHttp2Session >
 	{
-		const { didCreate, session } =
+		const { didCreate, session, cleanup } =
 			this.h2Context.getOrCreateHttp2( origin );
 
 		return session
@@ -327,12 +338,14 @@ export class Context
 				// Created in this request, forward error
 				throw err;
 			// Not created in this request, try again
-			return this.getOrCreateHttp2( origin, true );
-		} );
+			return this.getOrCreateHttp2( origin, true )
+			.then( ( { session } ) => session );
+		} )
+		.then( session => ( { session, cleanup } ) );
 	}
 
 	private getHttp2( url: string )
-	: Promise< ClientHttp2Session >
+	: Promise< SimpleSessionHttp2Session >
 	{
 		const { origin } = typeof url === "string" ? new URL( url ) : url;
 

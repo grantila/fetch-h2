@@ -53,6 +53,7 @@
   ],
   "devDependencies": {
     "@types/chai": "4.x",
+    "@types/execa": "^0.9.0",
     "@types/from2": "2.x",
     "@types/get-stream": "3.x",
     "@types/mocha": "5.x",
@@ -62,6 +63,7 @@
     "commitizen": "3.x",
     "coveralls": "3.x",
     "cz-conventional-changelog": "2.x",
+    "execa": "^1.0.0",
     "from2": "2.x",
     "mocha": "5.x",
     "nyc": "13.x",

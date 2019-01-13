@@ -249,12 +249,24 @@ export interface SimpleSession
 	contentDecoders( ): ReadonlyArray< Decoder >;
 }
 
+export interface SimpleSessionHttp1Request
+{
+	req: ClientRequest;
+	cleanup: ( ) => void;
+}
+
+export interface SimpleSessionHttp2Session
+{
+	session: ClientHttp2Session;
+	cleanup: ( ) => void;
+}
+
 export interface SimpleSessionHttp1 extends SimpleSession
 {
-	get( url: string ): ClientRequest;
+	get( url: string ): SimpleSessionHttp1Request;
 }
 
 export interface SimpleSessionHttp2 extends SimpleSession
 {
-	get( url: string ): Promise< ClientHttp2Session >;
+	get( url: string ): Promise< SimpleSessionHttp2Session >;
 }

@@ -1,7 +1,7 @@
 import { constants as h2constants } from "http2";
 import { URL } from "url";
 
-import { Finally } from "already";
+import { Finally, rethrow } from "already";
 
 import { BodyInspector } from "./body";
 import {
@@ -248,14 +248,16 @@ export function handleSignalAndTimeout(
 	signalPromise: Promise< Response > | null,
 	timeoutInfo: TimeoutInfo | null,
 	cleanup: ( ) => void,
-	fetcher: ( ) => Promise< Response >
+	fetcher: ( ) => Promise< Response >,
+	onError: ( ) => void
 )
 {
 	return Promise.race(
 		[
 			< Promise< any > >signalPromise,
 			< Promise< any > >( timeoutInfo && timeoutInfo.promise ),
-			fetcher( ),
+			fetcher( ).catch( rethrow( onError ) ),
+
 		]
 		.filter( promise => promise )
 	)

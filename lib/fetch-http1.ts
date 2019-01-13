@@ -57,10 +57,10 @@ export async function fetchImpl(
 		url,
 	} = await setupFetch( session, input, init, extra );
 
+	const { req, cleanup: socketCleanup } = session.get( url );
+
 	const doFetch = async ( ): Promise< Response > =>
 	{
-		const req = session.get( url );
-
 		for ( const [ key, value ] of Object.entries( headersToSend ) )
 		{
 			if ( value != null )
@@ -111,6 +111,8 @@ export async function fetchImpl(
 
 			req.once( "response", guard( ( res: IncomingMessage ) =>
 			{
+				res.once( "end", socketCleanup );
+
 				if ( signal && signal.aborted )
 				{
 					// No reason to continue, the request is aborted
@@ -233,7 +235,8 @@ export async function fetchImpl(
 		signalPromise,
 		timeoutInfo,
 		cleanup,
-		doFetch
+		doFetch,
+		socketCleanup
 	);
 }
 

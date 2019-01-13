@@ -54,7 +54,7 @@ function ensureStatusSuccess( response: Response ): Response
 const { cycleOpts, makeServer } = makeMakeServer( { proto, version } );
 
 const { disconnectAll, fetch, onPush } =
-	( proto === "httpss:" && version === "http1" )
+	( proto === "http:" && version === "http1" )
 	? { disconnectAll: _disconnectAll, fetch: _fetch, onPush: _onPush }
 	: context( { ...cycleOpts } );
 

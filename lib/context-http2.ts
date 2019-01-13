@@ -30,6 +30,9 @@ interface H2SessionItem
 {
 	session: ClientHttp2Session;
 	promise: Promise< ClientHttp2Session >;
+
+	ref: ( ) => void;
+	unref: ( ) => void;
 }
 
 export type PushHandler =
@@ -71,7 +74,11 @@ export class H2Context
 		origin: string,
 		extraOptions?: SecureClientSessionOptions
 	)
-	: { didCreate: boolean; session: Promise< ClientHttp2Session > }
+	: {
+		didCreate: boolean;
+		session: Promise< ClientHttp2Session >;
+		cleanup: ( ) => void;
+	}
 	{
 		const willCreate = !this._h2sessions.has( origin );
 
@@ -112,10 +119,28 @@ export class H2Context
 			this._h2sessions.set( origin, sessionItem );
 		}
 
-		const session =
-			( < H2SessionItem >this._h2sessions.get( origin ) ).promise;
+		const { promise: session, ref, unref } =
+			( < H2SessionItem >this._h2sessions.get( origin ) );
 
-		return { didCreate: willCreate, session };
+		if ( !willCreate )
+			// This was re-used
+			ref( );
+
+		// Avoid potential double-clean races
+		let hasCleanedUp = false;
+		const cleanup = ( ) =>
+		{
+			if ( hasCleanedUp )
+				return;
+			hasCleanedUp = true;
+			unref( );
+		};
+
+		return {
+			cleanup,
+			didCreate: willCreate,
+			session,
+		};
 	}
 
 	public disconnectSession( session: ClientHttp2Session ): Promise< void >
@@ -240,7 +265,9 @@ export class H2Context
 	private handlePush(
 		origin: string,
 		pushedStream: ClientHttp2Stream,
-		requestHeaders: IncomingHttp2Headers
+		requestHeaders: IncomingHttp2Headers,
+		ref: ( ) => void,
+		unref: ( ) => void
 	)
 	{
 		if ( !this._pushHandler )
@@ -255,9 +282,13 @@ export class H2Context
 
 		const pushedRequest = new Request( path, { headers: requestHeaders } );
 
+		ref( );
+
 		const futureResponse = new Promise< Response >( ( resolve, reject ) =>
 		{
 			const guard = syncGuard( reject, { catchAsync: true } );
+
+			pushedStream.once( "close", unref );
 
 			pushedStream.once( "aborted", ( ) =>
 				reject( new AbortError( "Response aborted" ) )
@@ -313,10 +344,32 @@ export class H2Context
 		// tslint:disable-next-line
 		const aGuard = asyncGuard( console.error.bind( console ) );
 
-		const pushHandler = aGuard(
-			( stream: ClientHttp2Stream, headers: IncomingHttp2Headers ) =>
-				this.handlePush( origin, stream, headers )
-		);
+		const sessionRefs: Partial< H2SessionItem > = { };
+
+		const makeRefs = ( session: ClientHttp2Session ) =>
+		{
+			let counter = 1; // Begins ref'd
+			sessionRefs.ref = ( ) =>
+			{
+				if ( session.destroyed )
+					return;
+
+				if ( counter === 0 )
+					// Go from unref'd to ref'd
+					session.ref( );
+				++counter;
+			};
+			sessionRefs.unref = ( ) =>
+			{
+				if ( session.destroyed )
+					return;
+
+				--counter;
+				if ( counter === 0 )
+					// Go from ref'd to unref'd
+					session.unref( );
+			};
+		};
 
 		const options = {
 			...this._getSessionOptions( origin ),
@@ -329,7 +382,21 @@ export class H2Context
 				session =
 					http2Connect( origin, options, ( ) => resolve( session ) );
 
-				session.on( "stream", pushHandler );
+				makeRefs( session );
+
+				session.on( "stream", aGuard(
+					(
+						stream: ClientHttp2Stream,
+						headers: IncomingHttp2Headers
+					) =>
+						this.handlePush(
+							origin,
+							stream,
+							headers,
+							< ( ) => void >sessionRefs.ref,
+							< ( ) => void >sessionRefs.unref
+						)
+				) );
 
 				session.once( "close", ( ) =>
 					reject( makeOkError( makeError( ) ) ) );
@@ -341,6 +408,11 @@ export class H2Context
 			}
 		);
 
-		return { promise, session };
+		return {
+			promise,
+			ref: < ( ) => void >sessionRefs.ref,
+			session,
+			unref: < ( ) => void >sessionRefs.unref,
+		};
 	}
 }
