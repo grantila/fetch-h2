@@ -153,12 +153,12 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * The `body` that can be sent in a Request, and that is available on the Response, can be a Node.js `ReadableStream`. You can thereby stream data with a request, and stream the response body.
  * The `body` that can be sent in a Request can be a [`Body`](https://developer.mozilla.org/docs/Web/API/Body) object. It can also be a string or buffer.
  * `fetch()` has an extra option, `json` that can be used instead of `body` to send an object that will be JSON stringified. The appropriate `content-type` will be set if it isn't already.
- * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with an `TimeoutError`).
+ * `fetch()` has an extra option, `timeout` which is a timeout in milliseconds before the request should be aborted and the returned promise thereby *rejected* (with a `TimeoutError`).
  * `fetch()` has an extra option, `onTrailers` (of the type `OnTrailers`) which is a callback that will receive trailing headers.
- * The `Request.clone()` member function has an optional `url` argument.
+ * The `Request.clone()` member function has an optional `url` argument for the cloned `Request`.
  * The response `text()` and `arrayBuffer()` has an optional argument `allowIncomplete` which defaults to `false`. If set to `true` these function will return incomplete bodies, i.e. "as much as was read" before the stream was prematurely closed (disconnected). If integrity checks are enabled, the functions will throw anyway if the body is incomplete.
  * The `Request` class (options to `fetch`) has an extra property `allowForbiddenHeaders`, which defaults to `false`.
- * The response object has an extra property `httpVersion` which is either `1` or `2`, depending on what was negotiated with the server.
+ * The response object has an extra property `httpVersion` which is either `1` or `2` (numbers), depending on what was negotiated with the server.
 
 
 ## Contexts
