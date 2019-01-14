@@ -19,7 +19,12 @@ import {
 import { Request } from "./request";
 import { Response, StreamResponse } from "./response";
 import { makeOkError } from "./utils";
-import { setGotGoaway } from "./utils-http2";
+import {
+	isDestroyed,
+	MonkeyH2Session,
+	setDestroyed,
+	setGotGoaway,
+} from "./utils-http2";
 
 
 const {
@@ -171,11 +176,16 @@ export class H2Context
 
 	public deleteActiveSession( origin: string ): H2SessionItem | void
 	{
-		if ( !this._h2sessions.has( origin ) )
+		const sessionItem = this._h2sessions.get( origin );
+
+		if ( !sessionItem )
 			return;
 
-		const sessionItem = this._h2sessions.get( origin );
 		this._h2sessions.delete( origin );
+
+		sessionItem.session.unref( );
+		// Never re-ref, this session is over
+		setDestroyed( sessionItem.session );
 
 		return sessionItem;
 	}
@@ -184,11 +194,11 @@ export class H2Context
 	{
 		const promises: Array< Promise< void > > = [ ];
 
-		if ( !this._h2staleSessions.has( origin ) )
+		const sessionSet = this._h2staleSessions.get( origin );
+
+		if ( !sessionSet )
 			return;
 
-		const sessionSet =
-			< Set< ClientHttp2Session > >this._h2staleSessions.get( origin );
 		this._h2staleSessions.delete( origin );
 
 		for ( const session of sessionSet )
@@ -348,24 +358,25 @@ export class H2Context
 
 		const makeRefs = ( session: ClientHttp2Session ) =>
 		{
-			let counter = 1; // Begins ref'd
+			const monkeySession = < MonkeyH2Session >session;
+			monkeySession.__fetch_h2_refcount = 1; // Begins ref'd
 			sessionRefs.ref = ( ) =>
 			{
-				if ( session.destroyed )
+				if ( isDestroyed( session ) )
 					return;
 
-				if ( counter === 0 )
+				if ( monkeySession.__fetch_h2_refcount === 0 )
 					// Go from unref'd to ref'd
 					session.ref( );
-				++counter;
+				++monkeySession.__fetch_h2_refcount;
 			};
 			sessionRefs.unref = ( ) =>
 			{
 				if ( session.destroyed )
 					return;
 
-				--counter;
-				if ( counter === 0 )
+				--monkeySession.__fetch_h2_refcount;
+				if ( monkeySession.__fetch_h2_refcount === 0 )
 					// Go from ref'd to unref'd
 					session.unref( );
 			};
