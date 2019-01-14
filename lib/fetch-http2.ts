@@ -87,6 +87,41 @@ async function fetchImpl(
 		{
 			const guard = syncGuard( reject, { catchAsync: true } );
 
+			const tryRetryOnGoaway = ( ) =>
+			{
+				// This could be due to a race-condition in GOAWAY.
+				// As of current Node.js, the 'goaway' event is emitted on the
+				// session before this event (at least frameError, probably
+				// 'error' too) is emitted, so we will know if we got it.
+				if (
+					!raceConditionedGoaway.has( origin ) &&
+					hasGotGoaway( h2session )
+				)
+				{
+					// Don't retry again due to potential GOAWAY
+					raceConditionedGoaway.add( origin );
+
+					// Since we've got the 'goaway' event, the
+					// context has already released the session,
+					// so a retry will create a new session.
+					resolve(
+						fetchImpl(
+							session,
+							request,
+							{ signal, onTrailers },
+							{
+								raceConditionedGoaway,
+								redirected,
+								timeoutAt,
+							}
+						)
+					);
+
+					return true;
+				}
+				return false;
+			};
+
 			stream.on( "aborted", guard( ( ..._whatever ) =>
 			{
 				reject( makeAbortedError( ) );
@@ -94,6 +129,16 @@ async function fetchImpl(
 
 			stream.on( "error", guard( ( err: Error ) =>
 			{
+				if (
+					err &&
+					( < any >err ).code === "ERR_HTTP2_STREAM_ERROR" &&
+					err.message &&
+					err.message.includes( "NGHTTP2_REFUSED_STREAM" )
+				)
+				{
+					if ( tryRetryOnGoaway( ) )
+						return;
+				}
 				reject( err );
 			} ) );
 
@@ -105,36 +150,8 @@ async function fetchImpl(
 						endStream
 					)
 					{
-						// This could be due to a race-condition in GOAWAY.
-						// As of current Node.js, the 'goaway' event is
-						// emitted on the session before this event
-						// is emitted, so we will know if we got it.
-						if (
-							!raceConditionedGoaway.has( origin ) &&
-							hasGotGoaway( h2session )
-						)
-						{
-							// Don't retry again due to potential GOAWAY
-							raceConditionedGoaway.add( origin );
-
-							// Since we've got the 'goaway' event, the
-							// context has already released the session,
-							// so a retry will create a new session.
-							resolve(
-								fetchImpl(
-									session,
-									request,
-									{ signal, onTrailers },
-									{
-										raceConditionedGoaway,
-										redirected,
-										timeoutAt,
-									}
-								)
-							);
-
+						if ( tryRetryOnGoaway( ) )
 							return;
-						}
 					}
 
 					reject( new Error( "Request failed" ) );
