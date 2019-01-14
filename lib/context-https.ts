@@ -1,7 +1,7 @@
 import { SecureClientSessionOptions } from "http2";
 import { connect, ConnectionOptions, TLSSocket } from "tls";
 
-import { FetchError, HttpProtocols } from "./core";
+import { HttpProtocols } from "./core";
 
 const alpnProtocols =
 {
@@ -14,6 +14,8 @@ export interface HttpsSocketResult
 	socket: TLSSocket;
 	protocol: "http1" | "http2";
 }
+
+const defaultMethod: Array< HttpProtocols > = [ "http2", "http1" ];
 
 export function connectTLS(
 	host: string,
@@ -34,7 +36,8 @@ export function connectTLS(
 	} );
 
 	const orderedProtocols = Buffer.concat(
-		_protocols.map( protocol => alpnProtocols[ protocol ] )
+		( _protocols.length === 0 ? _protocols : defaultMethod )
+		.map( protocol => alpnProtocols[ protocol ] )
 	);
 
 	const opts: ConnectionOptions = {
@@ -54,7 +57,14 @@ export function connectTLS(
 				return reject( authorizationError );
 
 			if ( ![ "h2", "http/1.1", "http/1.0" ].includes( alpnProtocol ) )
-				return reject( new FetchError( "Invalid ALPN response" ) );
+			{
+				// Maybe the server doesn't understand ALPN, enforce
+				// user-provided protocol, or fallback to HTTP/1
+				if ( _protocols.length === 1 )
+					return resolve( { protocol: _protocols[ 0 ], socket } );
+				else
+					return resolve( { protocol: "http1", socket } );
+			}
 
 			const protocol = alpnProtocol === "h2" ? "http2" : "http1";
 
