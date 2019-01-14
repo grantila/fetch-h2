@@ -68,6 +68,47 @@ export class H2Context
 	{
 		this._getDecoders = getDecoders;
 		this._getSessionOptions = getSessionOptions;
+
+		/* istanbul ignore next */
+		if ( process.env.DEBUG_FETCH_H2 )
+		{
+			const debug = ( line: string, ...args: Array< any > ) =>
+			{
+				// tslint:disable-next-line
+				console.error( line, ...args );
+			};
+
+			const printSession = ( origin: string, session: MonkeyH2Session ) =>
+			{
+				debug( "  Origin:", origin );
+				debug( "   Ref-counter:", session.__fetch_h2_refcount );
+				debug( "   Destroyed:", session.destroyed );
+				debug( "   Destroyed mark:", session.__fetch_h2_destroyed );
+			};
+
+			process.on( "SIGUSR2", ( ) =>
+			{
+				debug( "[Debug fetch-h2]: H2 sessions" );
+
+				debug( " Active sessions" );
+				[ ...this._h2sessions.entries( ) ]
+				.forEach( ( [ origin, { session } ] ) =>
+				{
+					printSession( origin, < MonkeyH2Session >session );
+				} );
+
+				debug( " Stale sessions" );
+				[ ...this._h2staleSessions.entries( ) ]
+				.forEach( ( [ origin, set ] ) =>
+				{
+					[ ...set ]
+					.forEach( ( session ) =>
+					{
+						printSession( origin, < MonkeyH2Session >session );
+					} );
+				} );
+			} );
+		}
 	}
 
 	public hasOrigin( origin: string )
