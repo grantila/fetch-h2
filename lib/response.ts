@@ -71,8 +71,8 @@ export class Response extends Body
 	public readonly httpVersion: HttpVersion;
 
 	constructor(
-		body: BodyTypes | Body | null,
-		init: Partial< ResponseInit >,
+		body: BodyTypes | Body | null = null,
+		init: Partial< ResponseInit > = {},
 		extra?: Partial< Extra >
 	)
 	{
