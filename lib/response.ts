@@ -72,7 +72,7 @@ export class Response extends Body
 
 	constructor(
 		body: BodyTypes | Body | null = null,
-		init: Partial< ResponseInit > = {},
+		init: Partial< ResponseInit > = { },
 		extra?: Partial< Extra >
 	)
 	{
