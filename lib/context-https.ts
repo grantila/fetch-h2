@@ -36,7 +36,7 @@ export function connectTLS(
 	} );
 
 	const orderedProtocols = Buffer.concat(
-		( _protocols.length === 0 ? _protocols : defaultMethod )
+		( _protocols.length !== 0 ? _protocols : defaultMethod )
 		.map( protocol => alpnProtocols[ protocol ] )
 	);
 
