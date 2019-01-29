@@ -124,11 +124,11 @@ export class Response extends Body
 			},
 			status: {
 				enumerable: true,
-				value: init.status,
+				value: init.status || 200,
 			},
 			statusText: {
 				enumerable: true,
-				value: init.statusText,
+				value: init.statusText || "",
 			},
 			type: {
 				enumerable: true,
