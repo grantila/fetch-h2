@@ -1,7 +1,7 @@
 {
   "name": "fetch-h2",
   "version": "1.0.1",
-  "description": "HTTP/2-only Fetch API client for Node.js",
+  "description": "HTTP/1+2 Fetch API client for Node.js",
   "author": "Gustaf Räntilä",
   "license": "MIT",
   "bugs": {
@@ -53,7 +53,7 @@
   ],
   "devDependencies": {
     "@types/chai": "4.x",
-    "@types/execa": "^0.9.0",
+    "@types/execa": "0.x",
     "@types/from2": "2.x",
     "@types/get-stream": "3.x",
     "@types/mocha": "5.x",
@@ -71,7 +71,7 @@
     "semantic-release": "15.x",
     "source-map-support": "0.x",
     "travis-deploy-once": "5.x",
-    "ts-node": "7.x",
+    "ts-node": "8.x",
     "tslint": "5.x",
     "typescript": "3.x"
   },
