@@ -54,7 +54,7 @@ export abstract class Server
 		.then( ( ) =>
 		{
 			const address = this._server.address( );
-			if ( typeof address === "string" )
+			if ( !address || typeof address === "string" )
 				return 0;
 			return address.port;
 		} )
