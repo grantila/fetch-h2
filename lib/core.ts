@@ -154,6 +154,7 @@ export interface ResponseInit
 	status: number;
 	statusText: string;
 	headers: RawHeaders | Headers;
+	allowForbiddenHeaders: boolean;
 }
 
 export class FetchError extends Error

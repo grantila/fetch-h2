@@ -234,6 +234,7 @@ export class GuardedHeaders extends Headers
 	constructor( guard: GuardTypes, init?: RawHeaders | Headers )
 	{
 		super( ( _guard = guard, init ) );
+		_guard = null;
 	}
 }
 

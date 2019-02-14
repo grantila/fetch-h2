@@ -359,7 +359,8 @@ export class H2Context
 						responseHeaders,
 						false,
 						{ },
-						2
+						2,
+						false
 					);
 
 					resolve( response );

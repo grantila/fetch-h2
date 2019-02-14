@@ -267,6 +267,7 @@ async function fetchImpl(
 								: extra.redirected.length > 0,
 							{ },
 							2,
+							input.allowForbiddenHeaders,
 							integrity
 						)
 					);

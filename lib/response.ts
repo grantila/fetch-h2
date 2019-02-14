@@ -78,7 +78,11 @@ export class Response extends Body
 	{
 		super( );
 
-		const headers = ensureHeaders( init.headers );
+		const headers = ensureHeaders(
+			init.allowForbiddenHeaders
+			? new GuardedHeaders( "none", init.headers )
+			: init.headers
+		);
 
 		const _extra = < Partial< Extra > >( extra || { } );
 
@@ -271,6 +275,7 @@ export class StreamResponse extends Response
 		redirected: boolean,
 		init: Partial< ResponseInit >,
 		httpVersion: HttpVersion,
+		allowForbiddenHeaders: boolean,
 		integrity?: string
 	)
 	{
@@ -282,6 +287,7 @@ export class StreamResponse extends Response
 			),
 			{
 				...init,
+				allowForbiddenHeaders,
 				...(
 					httpVersion === 1
 					? makeInitHttp1( headers )

@@ -184,6 +184,7 @@ export async function fetchImpl(
 								statusText: res.statusMessage,
 							},
 							1,
+							input.allowForbiddenHeaders,
 							integrity
 						)
 					);
