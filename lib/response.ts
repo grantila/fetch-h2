@@ -179,9 +179,14 @@ export class Response extends Body
 	}
 }
 
-function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
+function makeHeadersFromH2Headers(
+	headers: IncomingHttpHeaders,
+	allowForbiddenHeaders: boolean
+)
+: Headers
 {
-	const out = new GuardedHeaders( "response" );
+	const out = new GuardedHeaders(
+		allowForbiddenHeaders ? "none" : "response" );
 
 	for ( const key of Object.keys( headers ) )
 	{
@@ -199,21 +204,29 @@ function makeHeadersFromH2Headers( headers: IncomingHttpHeaders ): Headers
 	return out;
 }
 
-function makeInitHttp1( inHeaders: IncomingHttpHeaders )
+function makeInitHttp1(
+	inHeaders: IncomingHttpHeaders,
+	allowForbiddenHeaders: boolean
+)
 : Partial< ResponseInit >
 {
 	// Headers in HTTP/2 are compatible with HTTP/1 (colon illegal in HTTP/1)
-	const headers = makeHeadersFromH2Headers( inHeaders );
+	const headers =
+		makeHeadersFromH2Headers( inHeaders, allowForbiddenHeaders );
 
 	return { headers };
 }
 
-function makeInitHttp2( inHeaders: IncomingHttpHeaders )
+function makeInitHttp2(
+	inHeaders: IncomingHttpHeaders,
+	allowForbiddenHeaders: boolean
+)
 : Partial< ResponseInit >
 {
 	const status = parseInt( "" + inHeaders[ HTTP2_HEADER_STATUS ], 10 );
 	const statusText = ""; // Not supported in H2
-	const headers = makeHeadersFromH2Headers( inHeaders );
+	const headers =
+		makeHeadersFromH2Headers( inHeaders, allowForbiddenHeaders );
 
 	return { status, statusText, headers };
 }
@@ -290,8 +303,8 @@ export class StreamResponse extends Response
 				allowForbiddenHeaders,
 				...(
 					httpVersion === 1
-					? makeInitHttp1( headers )
-					: makeInitHttp2( headers )
+					? makeInitHttp1( headers, allowForbiddenHeaders )
+					: makeInitHttp2( headers, allowForbiddenHeaders )
 				),
 			},
 			makeExtra( httpVersion, url, redirected, integrity )

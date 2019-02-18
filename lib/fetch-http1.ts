@@ -163,8 +163,11 @@ export async function fetchImpl(
 					session.cookieJar.setCookies( setCookies, url );
 				}
 
-				delete headers[ "set-cookie" ];
-				delete headers[ "set-cookie2" ];
+				if ( !input.allowForbiddenHeaders )
+				{
+					delete headers[ "set-cookie" ];
+					delete headers[ "set-cookie2" ];
+				}
 
 				if ( isRedirected && !location )
 					return reject( makeIllegalRedirectError( ) );

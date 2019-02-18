@@ -219,6 +219,51 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 
 			await server.shutdown( );
 		} );
+
+		it( "shouldn't be able to read cookie headers be default", async ( ) =>
+		{
+			const { server, port } = await makeServer( );
+
+			const { disconnectAll, fetch } = context( { ...cycleOpts } );
+
+			const response = await fetch(
+				`${proto}//localhost:${port}/set-cookie`,
+				{
+					json: [ "a=b" , "c=d" ],
+					method: "POST",
+				}
+			);
+
+			expect( response.headers.get( "set-cookie" ) ).to.be.null;
+			expect( response.headers.get( "set-cookie2" ) ).to.be.null;
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+
+		it( "should be able to read cookie headers if allowed", async ( ) =>
+		{
+			const { server, port } = await makeServer( );
+
+			const { disconnectAll, fetch } = context( { ...cycleOpts } );
+
+			const response = await fetch(
+				`${proto}//localhost:${port}/set-cookie`,
+				{
+					allowForbiddenHeaders: true,
+					json: [ "a=b" , "c=d" ],
+					method: "POST",
+				}
+			);
+
+			expect( response.headers.get( "set-cookie" ) )
+				.to.equal( "a=b,c=d" );
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
 	} );
 
 	describe( "disconnection", ( ) =>
