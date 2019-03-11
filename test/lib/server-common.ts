@@ -68,9 +68,14 @@ export abstract class Server
 	public async shutdown( ): Promise< void >
 	{
 		await this._shutdown( );
-		return new Promise< void >( ( resolve, _reject ) =>
+		return new Promise< void >( ( resolve, reject ) =>
 		{
-			this._server.close( resolve );
+			this._server.close( ( err?: Error ) =>
+			{
+				if ( err )
+					return reject( err );
+				resolve( );
+			} );
 		} );
 	}
 
