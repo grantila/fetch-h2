@@ -4,6 +4,7 @@ import {
 } from "http2";
 
 import {
+	createBrotliDecompress,
 	createGunzip,
 	createInflate,
 } from "zlib";
@@ -24,6 +25,10 @@ import {
 	ResponseInit,
 	ResponseTypes,
 } from "./core";
+
+import {
+	hasBuiltinBrotli,
+} from "./utils";
 
 import {
 	ensureHeaders,
@@ -262,6 +267,12 @@ function handleEncoding(
 		gzip: ( stream: NodeJS.ReadableStream ) =>
 			stream.pipe( createGunzip( ) ),
 	};
+
+	if ( hasBuiltinBrotli( ) )
+	{
+		decoders.br = ( stream: NodeJS.ReadableStream ) =>
+			stream.pipe( createBrotliDecompress( ) );
+	}
 
 	contentDecoders.forEach( decoder =>
 	{

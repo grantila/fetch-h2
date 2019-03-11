@@ -19,7 +19,7 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 `fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
 
-By default, `fetch-h2` will accept `gzip` and `deflate` encodings, and decode transparently. If you also want to allow Brotli (`br`), use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
+By default, `fetch-h2` will accept `gzip` and `deflate` encodings (and Brolti `br` if running on Node.js 11.7 or later), and decode transparently. If you want to allow Brotli for older versions node Node.js, use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
 
 
 ## Releases
@@ -278,9 +278,9 @@ where `Cookie` is a [`tough-cookie` Cookie](https://www.npmjs.com/package/tough-
 
 ### Content encodings (compression)
 
-By default, `gzip` and `deflate` are supported.
+By default, `gzip` and `deflate` are supported, and `br` (Brotli) if running on Node.js 11.7+.
 
-`decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support.
+`decoders` can be an array of custom decoders, such as [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) which adds Brotli content decoding support for older versions of node (< 11.7).
 
 
 ### Low-level session configuration

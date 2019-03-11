@@ -1,4 +1,5 @@
 import { URL } from "url";
+import { createBrotliCompress } from "zlib";
 
 export function arrayify< T >(
 	value:
@@ -62,4 +63,32 @@ export function parseInput( url: string )
 		protocol: explicitProtocol || protocol.replace( ":", "" ),
 		url,
 	};
+}
+
+export const identity = < T >( t: T ) => t;
+
+export function uniq< T >( arr: ReadonlyArray< T > ): Array< T >;
+export function uniq< T, U >( arr: ReadonlyArray< T >, pred: ( t: T ) => U )
+: Array< T >;
+export function uniq< T, U >( arr: ReadonlyArray< T >, pred?: ( t: T ) => U )
+: Array< T >
+{
+	if ( !pred )
+		return Array.from( new Set< T >( arr ) );
+
+	const known = new Set< U >( );
+	return arr.filter( value =>
+	{
+		const u = pred( value );
+		const first = !known.has( u );
+
+		known.add( u );
+
+		return first;
+	} );
+}
+
+export function hasBuiltinBrotli( )
+{
+	return typeof createBrotliCompress === "function";
 }

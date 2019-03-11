@@ -10,6 +10,8 @@ import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 import { cleanUrl, createIntegrity } from "../lib/utils";
 
+import { hasBuiltinBrotli } from "../../lib/utils";
+
 import {
 	context,
 	DataBody,
@@ -604,6 +606,9 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			)
 		);
 
+		expect( response.headers.get( "content-encoding" ) )
+			.to.equal( "gzip" );
+
 		const stream = await response.readable( );
 
 		const data = await getStreamAsBuffer( stream );
@@ -628,6 +633,39 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				}
 			)
 		);
+
+		expect( response.headers.get( "content-encoding" ) )
+			.to.equal( "deflate" );
+
+		const stream = await response.readable( );
+
+		const data = await getStreamAsBuffer( stream );
+
+		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
+
+		await server.shutdown( );
+	} );
+
+	it( "should accept content-encoding (br)", async ( ) =>
+	{
+		if ( !hasBuiltinBrotli( ) )
+			return;
+
+		const { server, port } = await makeServer( );
+
+		const testData = { foo: "bar" };
+
+		const response = ensureStatusSuccess(
+			await fetch(
+				`${proto}//localhost:${port}/compressed/br`,
+				{
+					json: testData,
+					method: "POST",
+				}
+			)
+		);
+
+		expect( response.headers.get( "content-encoding" ) ).to.equal( "br" );
 
 		const stream = await response.readable( );
 

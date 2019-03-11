@@ -6,6 +6,7 @@ import { Finally, rethrow } from "already";
 import { BodyInspector } from "./body";
 import {
 	AbortError,
+	Decoder,
 	FetchInit,
 	SimpleSession,
 	TimeoutError,
@@ -13,7 +14,7 @@ import {
 import { Headers, RawHeaders } from "./headers";
 import { Request } from "./request";
 import { Response } from "./response";
-import { arrayify } from "./utils";
+import { arrayify, hasBuiltinBrotli } from "./utils";
 
 const {
 	// Required for a request
@@ -62,6 +63,54 @@ export interface TimeoutInfo
 	clear: ( ) => void;
 }
 
+
+interface AcceptEncodings
+{
+	name: string;
+	score: number;
+}
+
+const makeDefaultEncodings = ( mul = 1 ) =>
+	hasBuiltinBrotli( )
+	? [
+		{ name: "br", score: 1.0 * mul },
+		{ name: "gzip", score: 0.8 * mul },
+		{ name: "deflate", score: 0.5 * mul },
+	]
+	: [
+		{ name: "gzip", score: 1.0 * mul },
+		{ name: "deflate", score: 0.5 * mul },
+	];
+
+const defaultEncodings = makeDefaultEncodings( );
+const fallbackEncodings = makeDefaultEncodings( 0.8 );
+
+const stringifyEncoding = ( acceptEncoding: AcceptEncodings ) =>
+	`${acceptEncoding.name};q=${acceptEncoding.score}`;
+
+const stringifyEncodings = ( accepts: ReadonlyArray< AcceptEncodings > ) =>
+	accepts
+	.map( acceptEncoding => stringifyEncoding( acceptEncoding ) )
+	.join( ", " );
+
+function getEncodings( contentDecoders: ReadonlyArray< Decoder > ): string
+{
+	if ( contentDecoders.length === 0 )
+		return stringifyEncodings( defaultEncodings );
+
+	const makeScore = ( index: number ) =>
+		1 - ( index / ( contentDecoders.length ) ) * 0.2;
+
+	return stringifyEncodings(
+		[
+			...contentDecoders.map( ( { name }, index ) =>
+				( { name, score: makeScore( index ) } )
+			),
+			...fallbackEncodings,
+		]
+	);
+}
+
 export async function setupFetch(
 	session: SimpleSession,
 	request: Request,
@@ -94,12 +143,7 @@ export async function setupFetch(
 
 	const contentDecoders = session.contentDecoders( );
 
-	const acceptEncoding =
-		contentDecoders.length === 0
-		? "gzip;q=1.0, deflate;q=0.5"
-		: contentDecoders
-			.map( decoder => `${decoder.name};q=1.0` )
-			.join( ", " ) + ", gzip;q=0.8, deflate;q=0.5";
+	const acceptEncoding = getEncodings( contentDecoders );
 
 	if ( headers.has( HTTP2_HEADER_COOKIE ) )
 		cookies.push( ...arrayify( headers.get( HTTP2_HEADER_COOKIE ) ) );

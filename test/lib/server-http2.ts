@@ -10,7 +10,7 @@ import {
 } from "http2";
 
 import { createHash } from "crypto";
-import { createDeflate, createGzip } from "zlib";
+import { createBrotliCompress, createDeflate, createGzip } from "zlib";
 
 import { delay } from "already";
 import { buffer as getStreamAsBuffer } from "get-stream";
@@ -236,6 +236,8 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				? createGzip( )
 				: encoding === "deflate"
 				? createDeflate( )
+				: encoding === "br"
+				? createBrotliCompress( )
 				: null;
 
 			const responseHeaders = {
