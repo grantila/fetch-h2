@@ -79,7 +79,7 @@
     "@types/tough-cookie": "2.x",
     "already": "1.x",
     "callguard": "1.x",
-    "get-stream": "4.x",
+    "get-stream": "^5.0.0",
     "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "3.x"
