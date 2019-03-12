@@ -223,9 +223,10 @@ class OriginPool
 
 class ContextPool
 {
+	public readonly keepAlive: boolean | PerOrigin< boolean >;
+
 	private pools = new Map< string, OriginPool >( );
 
-	private keepAlive: boolean | PerOrigin< boolean >;
 	private keepAliveMsecs: number | PerOrigin< number >;
 	private maxSockets: number | PerOrigin< number >;
 	private maxFreeSockets: number | PerOrigin< number >;
@@ -233,7 +234,7 @@ class ContextPool
 
 	constructor( options: Partial< Http1Options > )
 	{
-		this.keepAlive = parsePerOrigin( options.keepAlive, false );
+		this.keepAlive = parsePerOrigin( options.keepAlive, true );
 		this.keepAliveMsecs = parsePerOrigin( options.keepAliveMsecs, 1000 );
 		this.maxSockets = parsePerOrigin( options.maxSockets, 256 );
 		this.maxFreeSockets = parsePerOrigin( options.maxFreeSockets, Infinity );
@@ -344,6 +345,13 @@ export class H1Context
 			protocol,
 			...auth,
 		};
+
+		if ( !options.headers )
+			options.headers = { };
+
+		options.headers.connection = this.contextPool.keepAlive
+			? "keep-alive"
+			: "close";
 
 		return this.contextPool.getOriginPool( origin ).connect( options );
 	}

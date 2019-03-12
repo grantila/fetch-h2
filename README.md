@@ -308,7 +308,7 @@ The `http1` options object can be used to configure this.
 
 #### Keep-alive
 
-`http1.keepAlive` defaults to false, but can be set to true, to allow connections to linger so that they can be reused. The `http1.keepAliveMsecs` time (defaults to 1000ms, i.e. 1s) specifies the delay before keep-alive probing.
+`http1.keepAlive` defaults to true, to allow connections to linger so that they can be reused. The `http1.keepAliveMsecs` time (defaults to 1000ms, i.e. 1s) specifies the delay before keep-alive probing.
 
 
 #### Sockets
