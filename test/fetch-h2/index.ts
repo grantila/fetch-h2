@@ -58,11 +58,13 @@ const { disconnectAll, fetch, onPush } =
 	? { disconnectAll: _disconnectAll, fetch: _fetch, onPush: _onPush }
 	: context( { ...cycleOpts } );
 
+const protoVersion = `${version} over ${proto.replace( ":", "" )}`;
+
 describe( "basic", ( ) =>
 {
 afterEach( disconnectAll );
 
-describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
+describe( `generic (${protoVersion})`, ( ) =>
 {
 	it( "should be able to perform simple GET", async ( ) =>
 	{
@@ -673,7 +675,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 	} );
 } );
 
-describe( `response (${proto})`, ( ) =>
+describe( `response (${protoVersion})`, ( ) =>
 {
 	it( "should have a proper url", async ( ) =>
 	{
@@ -691,7 +693,7 @@ describe( `response (${proto})`, ( ) =>
 } );
 
 if ( version === "http2" )
-describe( `goaway (${proto})`, ( ) =>
+describe( `goaway (${protoVersion})`, ( ) =>
 {
 	if ( proto === "http:" ) // This race is too fast for TLS
 	it( "handle session failover (race conditioned)", async ( ) =>
@@ -764,7 +766,7 @@ describe( `goaway (${proto})`, ( ) =>
 	} );
 } );
 
-describe( `integrity (${proto})`, ( ) =>
+describe( `integrity (${protoVersion})`, ( ) =>
 {
 	it( "handle and succeed on valid integrity", async ( ) =>
 	{
@@ -811,7 +813,7 @@ describe( `integrity (${proto})`, ( ) =>
 	} );
 } );
 
-describe( `premature stream close (${proto})`, ( ) =>
+describe( `premature stream close (${protoVersion})`, ( ) =>
 {
 	it( "handle and reject fetch operation", async ( ) =>
 	{
