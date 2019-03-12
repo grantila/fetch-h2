@@ -1,17 +1,16 @@
 import * as path from "path";
 
-import { expect } from "chai";
 import * as execa from "execa";
 
 import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 
 
-const script = path.resolve( __dirname, "../../../scripts/test-client" );
+const script = path.resolve( path.join( process.cwd( ), "scripts", "test-client" ) );
 
-describe( "event-loop", function( )
+describe( "event-loop", ( ) =>
 {
-	this.timeout( 20000 );
+	jest.setTimeout( 20000 );
 
 	const runs: Array< TestData > = [
 		{ proto: "http:", version: "http1" },
@@ -39,7 +38,7 @@ describe( "event-loop", function( )
 			);
 
 			const responseBody = JSON.parse( stdout );
-			expect( responseBody[ "user-agent" ] ).to.include( "fetch-h2/" );
+			expect( responseBody[ "user-agent" ] ).toContain( "fetch-h2/" );
 
 			await server.shutdown( );
 		} );

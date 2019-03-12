@@ -1,8 +1,6 @@
 import { URL } from "url";
 
 import { delay } from "already";
-import { expect } from "chai";
-import "mocha";
 import * as through2 from "through2";
 
 import {
@@ -33,9 +31,9 @@ const baseHost = new URL( host ).origin;
 
 const name = `${site} (${protos[ 0 ]} over ${protocol.replace( ":", "" )})`;
 
-describe( name, function( )
+describe( name, ( ) =>
 {
-	this.timeout( 5000 );
+	jest.setTimeout( 5000 );
 
 	const { fetch, disconnectAll } = context( {
 		httpsProtocols: protos,
@@ -47,7 +45,7 @@ describe( name, function( )
 	{
 		const response = await fetch( `${host}/user-agent` );
 		const data = await response.json( );
-		expect( data[ "user-agent" ] ).to.include( "fetch-h2/" );
+		expect( data[ "user-agent" ] ).toContain( "fetch-h2/" );
 	} );
 
 	it( "should be possible to POST JSON", async ( ) =>
@@ -62,9 +60,9 @@ describe( name, function( )
 			}
 		);
 		const data = await response.json( );
-		expect( testData ).to.deep.equal( data.json );
+		expect( testData ).toEqual( data.json );
 		// fetch-h2 should set content type for JsonBody
-		expect( data.headers[ "Content-Type" ] ).to.equal( "application/json" );
+		expect( data.headers[ "Content-Type" ] ).toBe( "application/json" );
 	} );
 
 	it( "should be possible to POST buffer-data", async ( ) =>
@@ -79,8 +77,8 @@ describe( name, function( )
 			}
 		);
 		const data = await response.json( );
-		expect( data.data ).to.equal( testData );
-		expect( Object.keys( data.headers ) ).to.not.contain( "Content-Type" );
+		expect( data.data ).toBe( testData );
+		expect( data.headers ).not.toHaveProperty( "Content-Type" );
 	} );
 
 	it( "should be possible to POST already ended stream-data", async ( ) =>
@@ -102,7 +100,7 @@ describe( name, function( )
 		);
 
 		const data = await response.json( );
-		expect( data.data ).to.equal( "foobar" );
+		expect( data.data ).toBe( "foobar" );
 	} );
 
 	it( "should be possible to POST not yet ended stream-data", async ( ) =>
@@ -128,7 +126,7 @@ describe( name, function( )
 		const response = await eventualResponse;
 
 		const data = await response.json( );
-		expect( data.data ).to.equal( "foobar" );
+		expect( data.data ).toBe( "foobar" );
 	} );
 
 	it( "should save and forward cookies", async ( ) =>
@@ -139,13 +137,13 @@ describe( name, function( )
 			`${host}/cookies/set?foo=bar`,
 			{ redirect: "manual" } );
 
-		expect( responseSet.headers.has( "location" ) ).to.be.true;
+		expect( responseSet.headers.has( "location" ) ).toBe( true );
 		const redirectedTo = responseSet.headers.get( "location" );
 
 		const response = await fetch( baseHost + redirectedTo );
 
 		const data = await response.json( );
-		expect( data.cookies ).to.deep.equal( { foo: "bar" } );
+		expect( data.cookies ).toEqual( { foo: "bar" } );
 
 		await disconnectAll( );
 	} );
@@ -158,7 +156,7 @@ describe( name, function( )
 			`${host}/relative-redirect/2`,
 			{ redirect: "follow" } );
 
-		expect( response.url ).to.equal( `${host}/get` );
+		expect( response.url ).toBe( `${host}/get` );
 		await response.text( );
 
 		await disconnectAll( );
@@ -168,7 +166,7 @@ describe( name, function( )
 	{
 		const response = await fetch( `${host}/gzip` );
 		const data = await response.json( );
-		expect( data ).to.deep.include( { gzipped: true, method: "GET" } );
+		expect( data ).toMatchObject( { gzipped: true, method: "GET" } );
 	} );
 } );
 } );

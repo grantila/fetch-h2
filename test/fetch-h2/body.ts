@@ -1,7 +1,5 @@
-import { expect } from "chai";
 import { createHash } from "crypto";
 import getStream from "get-stream";
-import "mocha";
 import * as through2 from "through2";
 
 import { createIntegrity } from "../lib/utils";
@@ -57,11 +55,11 @@ describe( "body", ( ) =>
 		it( "throw on multiple reads", async ( ) =>
 		{
 			const body = new DataBody( "foo" );
-			expect( body.bodyUsed ).to.be.false;
-			expect( await body.text( ) ).to.equal( "foo" );
-			expect( body.bodyUsed ).to.be.true;
+			expect( body.bodyUsed ).toBe( false );
+			expect( await body.text( ) ).toBe( "foo" );
+			expect( body.bodyUsed ).toBe( true );
 			expect( await makeSync( ( ) => body.text( ) ) )
-				.to.throw( ReferenceError );
+				.toThrow( ReferenceError );
 		} );
 	} );
 
@@ -71,13 +69,13 @@ describe( "body", ( ) =>
 		{
 			const body = new DataBody( "foo" );
 			expect( await makeSync( ( ) => ( < any >body ).blob( ) ) )
-				.to.throw( );
+				.toThrow( );
 		} );
 
 		it( "throw on unimplemented formData()", async ( ) =>
 		{
 			const body = new DataBody( "foo" );
-			expect( await makeSync( ( ) => body.formData( ) ) ).to.throw( );
+			expect( await makeSync( ( ) => body.formData( ) ) ).toThrow( );
 		} );
 	} );
 
@@ -88,28 +86,28 @@ describe( "body", ( ) =>
 		{
 			const body = new DataBody( < string >< any >1 );
 			expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-				.to.throw( "Unknown body data" );
+				.toThrow( "Unknown body data" );
 		} );
 
 		it( "handle invalid body type when reading as json", async ( ) =>
 		{
 			const body = new DataBody( < string >< any >1 );
 			expect( await makeSync( ( ) => body.json( ) ) )
-				.to.throw( "Unknown body data" );
+				.toThrow( "Unknown body data" );
 		} );
 
 		it( "handle invalid body type when reading as text", async ( ) =>
 		{
 			const body = new DataBody( < string >< any >1 );
 			expect( await makeSync( ( ) => body.text( ) ) )
-				.to.throw( "Unknown body data" );
+				.toThrow( "Unknown body data" );
 		} );
 
 		it( "handle invalid body type when reading as readable", async ( ) =>
 		{
 			const body = new DataBody( < string >< any >1 );
 			expect( await makeSync( ( ) => body.readable( ) ) )
-				.to.throw( "Unknown body data" );
+				.toThrow( "Unknown body data" );
 		} );
 	} );
 
@@ -121,28 +119,28 @@ describe( "body", ( ) =>
 			{
 				const body = new DataBody( null );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.equal( "" );
+				expect( data.toString( ) ).toBe( "" );
 			} );
 
 			it( "handle string", async ( ) =>
 			{
 				const body = new DataBody( "foo" );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( "foo" );
+				expect( data.toString( ) ).toBe( "foo" );
 			} );
 
 			it( "handle buffer", async ( ) =>
 			{
 				const body = new DataBody( Buffer.from( "foo" ) );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( "foo" );
+				expect( data.toString( ) ).toBe( "foo" );
 			} );
 
 			it( "handle JsonBody", async ( ) =>
 			{
 				const body = new JsonBody( { foo: "bar" } );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( '{"foo":"bar"}' );
+				expect( data.toString( ) ).toBe( '{"foo":"bar"}' );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -151,7 +149,7 @@ describe( "body", ( ) =>
 				stream.end( "foo" );
 				const body = new StreamBody( stream );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( "foo" );
+				expect( data.toString( ) ).toBe( "foo" );
 			} );
 		} );
 
@@ -161,7 +159,7 @@ describe( "body", ( ) =>
 			{
 				const body = new IntegrityBody( null, "" );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.equal( "" );
+				expect( data.toString( ) ).toBe( "" );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -169,7 +167,7 @@ describe( "body", ( ) =>
 				const testData = "foo";
 				const body = new IntegrityBody( testData, testData );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( testData );
+				expect( data.toString( ) ).toBe( testData );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -178,7 +176,7 @@ describe( "body", ( ) =>
 				const body = new IntegrityBody(
 					Buffer.from( testData ), testData );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( testData );
+				expect( data.toString( ) ).toBe( testData );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -188,7 +186,7 @@ describe( "body", ( ) =>
 				stream.end( testData );
 				const body = new IntegrityBody( stream, testData );
 				const data = Buffer.from( await body.arrayBuffer( ) );
-				expect( data.toString( ) ).to.deep.equal( testData );
+				expect( data.toString( ) ).toBe( testData );
 			} );
 		} );
 
@@ -198,14 +196,14 @@ describe( "body", ( ) =>
 			{
 				const body = new IntegrityBody( null, "", "acme-hash" );
 				expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-					.to.throw( "not supported" );
+					.toThrow( "not supported" );
 			} );
 
 			it( "handle null", async ( ) =>
 			{
 				const body = new IntegrityBody( null, "" + "x" );
 				expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -213,7 +211,7 @@ describe( "body", ( ) =>
 				const testData = "foo";
 				const body = new IntegrityBody( testData, testData + "x" );
 				expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -222,7 +220,7 @@ describe( "body", ( ) =>
 				const body = new IntegrityBody(
 					Buffer.from( testData ), testData + "x" );
 				expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -232,7 +230,7 @@ describe( "body", ( ) =>
 				stream.end( testData );
 				const body = new IntegrityBody( stream, testData + "x" );
 				expect( await makeSync( ( ) => body.arrayBuffer( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 		} );
 	} );
@@ -244,37 +242,37 @@ describe( "body", ( ) =>
 			it( "handle null", async ( ) =>
 			{
 				const body = new DataBody( null );
-				expect( await body.json( ) ).to.be.null;
+				expect( await body.json( ) ).toBe( null );
 			} );
 
 			it( "handle invalid string", async ( ) =>
 			{
 				const body = new DataBody( "invalid json" );
-				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+				expect( await makeSync( ( ) => body.json( ) ) ).toThrow( );
 			} );
 
 			it( "handle valid string", async ( ) =>
 			{
 				const body = new DataBody( '{"foo":"bar"}' );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle invalid buffer", async ( ) =>
 			{
 				const body = new DataBody( Buffer.from( "invalid json" ) );
-				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+				expect( await makeSync( ( ) => body.json( ) ) ).toThrow( );
 			} );
 
 			it( "handle valid buffer", async ( ) =>
 			{
 				const body = new DataBody( Buffer.from( '{"foo":"bar"}' ) );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle valid JsonBody", async ( ) =>
 			{
 				const body = new JsonBody( { foo: "bar" } );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle invalid stream", async ( ) =>
@@ -282,7 +280,7 @@ describe( "body", ( ) =>
 				const stream = through2( );
 				stream.end( "invalid json" );
 				const body = new StreamBody( stream );
-				expect( await makeSync( ( ) => body.json( ) ) ).to.throw( );
+				expect( await makeSync( ( ) => body.json( ) ) ).toThrow( );
 			} );
 
 			it( "handle valid stream", async ( ) =>
@@ -290,7 +288,7 @@ describe( "body", ( ) =>
 				const stream = through2( );
 				stream.end( '{"foo":"bar"}' );
 				const body = new StreamBody( stream );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 		} );
 
@@ -300,7 +298,7 @@ describe( "body", ( ) =>
 			{
 				const body = new DataBody( null );
 				setHash( body, "" );
-				expect( await body.json( ) ).to.be.null;
+				expect( await body.json( ) ).toBe( null );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -308,7 +306,7 @@ describe( "body", ( ) =>
 				const testData = '{"foo":"bar"}';
 				const body = new DataBody( testData );
 				setHash( body, testData );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -316,14 +314,14 @@ describe( "body", ( ) =>
 				const testData = '{"foo":"bar"}';
 				const body = new DataBody( Buffer.from( testData ) );
 				setHash( body, testData );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle JsonBody", async ( ) =>
 			{
 				const body = new JsonBody( { foo: "bar" } );
 				setHash( body, '{"foo":"bar"}' );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -333,7 +331,7 @@ describe( "body", ( ) =>
 				stream.end( testData );
 				const body = new StreamBody( stream );
 				setHash( body, testData );
-				expect( await body.json( ) ).to.deep.equal( { foo: "bar" } );
+				expect( await body.json( ) ).toEqual( { foo: "bar" } );
 			} );
 		} );
 
@@ -344,7 +342,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( null );
 				setHash( body, "" + "x" );
 				expect( await makeSync( ( ) => body.json( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -353,7 +351,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( testData );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.json( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -362,7 +360,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( Buffer.from( testData ) );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.json( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle JsonBody", async ( ) =>
@@ -370,7 +368,7 @@ describe( "body", ( ) =>
 				const body = new JsonBody( { foo: "bar" } );
 				setHash( body, '{"foo":"bar"}' + "x" );
 				expect( await makeSync( ( ) => body.json( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -381,7 +379,7 @@ describe( "body", ( ) =>
 				const body = new StreamBody( stream );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.json( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 		} );
 	} );
@@ -393,19 +391,19 @@ describe( "body", ( ) =>
 			it( "handle null", async ( ) =>
 			{
 				const body = new DataBody( null );
-				expect( await body.text( ) ).to.be.null;
+				expect( await body.text( ) ).toBe( null );
 			} );
 
 			it( "handle string", async ( ) =>
 			{
 				const body = new DataBody( "foo" );
-				expect( await body.text( ) ).to.equal( "foo" );
+				expect( await body.text( ) ).toBe( "foo" );
 			} );
 
 			it( "handle buffer", async ( ) =>
 			{
 				const body = new DataBody( Buffer.from( "foo" ) );
-				expect( await body.text( ) ).to.equal( "foo" );
+				expect( await body.text( ) ).toBe( "foo" );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -413,7 +411,7 @@ describe( "body", ( ) =>
 				const stream = through2( );
 				stream.end( "foo" );
 				const body = new StreamBody( stream );
-				expect( await body.text( ) ).to.equal( "foo" );
+				expect( await body.text( ) ).toBe( "foo" );
 			} );
 		} );
 
@@ -423,7 +421,7 @@ describe( "body", ( ) =>
 			{
 				const body = new DataBody( null );
 				setHash( body, "" );
-				expect( await body.text( ) ).to.be.null;
+				expect( await body.text( ) ).toBe( null );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -431,7 +429,7 @@ describe( "body", ( ) =>
 				const testData = "foo";
 				const body = new DataBody( testData );
 				setHash( body, testData );
-				expect( await body.text( ) ).to.equal( testData );
+				expect( await body.text( ) ).toBe( testData );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -439,7 +437,7 @@ describe( "body", ( ) =>
 				const testData = "foo";
 				const body = new DataBody( Buffer.from( testData ) );
 				setHash( body, testData );
-				expect( await body.text( ) ).to.equal( testData );
+				expect( await body.text( ) ).toBe( testData );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -449,7 +447,7 @@ describe( "body", ( ) =>
 				stream.end( testData );
 				const body = new StreamBody( stream );
 				setHash( body, testData );
-				expect( await body.text( ) ).to.equal( testData );
+				expect( await body.text( ) ).toBe( testData );
 			} );
 		} );
 
@@ -460,7 +458,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( null );
 				setHash( body, "" + "x" );
 				expect( await makeSync( ( ) => body.text( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle string", async ( ) =>
@@ -469,7 +467,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( testData );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.text( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle buffer", async ( ) =>
@@ -478,7 +476,7 @@ describe( "body", ( ) =>
 				const body = new DataBody( Buffer.from( testData ) );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.text( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 
 			it( "handle stream", async ( ) =>
@@ -489,7 +487,7 @@ describe( "body", ( ) =>
 				const body = new StreamBody( stream );
 				setHash( body, testData + "x" );
 				expect( await makeSync( ( ) => body.text( ) ) )
-					.to.throw( "Resource integrity mismatch" );
+					.toThrow( "Resource integrity mismatch" );
 			} );
 		} );
 	} );
@@ -500,21 +498,21 @@ describe( "body", ( ) =>
 		{
 			const body = new DataBody( null );
 			const data = await getStream.buffer( await body.readable( ) );
-			expect( data.toString( ) ).to.equal( "" );
+			expect( data.toString( ) ).toBe( "" );
 		} );
 
 		it( "handle string", async ( ) =>
 		{
 			const body = new DataBody( "foo" );
 			const data = await getStream.buffer( await body.readable( ) );
-			expect( data.toString( ) ).to.equal( "foo" );
+			expect( data.toString( ) ).toBe( "foo" );
 		} );
 
 		it( "handle buffer", async ( ) =>
 		{
 			const body = new DataBody( Buffer.from( "foo" ) );
 			const data = await getStream.buffer( await body.readable( ) );
-			expect( data.toString( ) ).to.equal( "foo" );
+			expect( data.toString( ) ).toBe( "foo" );
 		} );
 
 		it( "handle stream", async ( ) =>
@@ -523,7 +521,7 @@ describe( "body", ( ) =>
 			stream.end( "foo" );
 			const body = new StreamBody( stream );
 			const data = await getStream.buffer( await body.readable( ) );
-			expect( data.toString( ) ).to.equal( "foo" );
+			expect( data.toString( ) ).toBe( "foo" );
 		} );
 	} );
 } );

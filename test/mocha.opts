@@ -1,3 +1,0 @@
---recursive
---timeout 200
---require source-map-support/register

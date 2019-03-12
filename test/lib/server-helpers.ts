@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import * as path from "path";
 
 import {
 	ServerOptions,
@@ -12,8 +13,8 @@ import {
 } from "./server-http2";
 
 
-const key = readFileSync( __dirname + "/../../../certs/key.pem" );
-const cert = readFileSync( __dirname + "/../../../certs/cert.pem" );
+const key = readFileSync( path.join( process.cwd(), "certs", "key.pem" ) );
+const cert = readFileSync( path.join( process.cwd(), "certs", "cert.pem" ) );
 
 export function makeMakeServer( { proto, version }: TestData )
 {

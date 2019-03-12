@@ -1,9 +1,7 @@
 import { defer, delay } from "already";
-import { expect } from "chai";
 import { createHash } from "crypto";
 import * as from2 from "from2";
 import getStream from "get-stream";
-import "mocha";
 import * as through2 from "through2";
 
 import { TestData } from "../lib/server-common";
@@ -79,13 +77,13 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const res = await response.json( );
 		if ( version === "http1" )
-			expect( res[ "http1-path" ] ).to.equal( "/headers" );
+			expect( res[ "http1-path" ] ).toBe( "/headers" );
 		else
-			expect( res[ ":path" ] ).to.equal( "/headers" );
+			expect( res[ ":path" ] ).toBe( "/headers" );
 
 		const versionNumber =
 			parseInt( version.substr( version.length - 1 ), 10 );
-		expect( response.httpVersion ).to.equal( versionNumber );
+		expect( response.httpVersion ).toBe( versionNumber );
 
 		await server.shutdown( );
 	} );
@@ -114,7 +112,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const res = await response.json( );
 
 		for ( const [ key, val ] of Object.entries( headers ) )
-			expect( res[ key.toLowerCase( ) ] ).to.equal( val );
+			expect( res[ key.toLowerCase( ) ] ).toBe( val );
 
 		await server.shutdown( );
 	} );
@@ -136,8 +134,8 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const data = await response.json( );
 		const { headers } = response;
 
-		expect( headers.get( "Content-Type" ) ).to.equal( "application/json" );
-		expect( data ).to.deep.equal( json );
+		expect( headers.get( "Content-Type" ) ).toBe( "application/json" );
+		expect( data ).toEqual( json );
 
 		await server.shutdown( );
 	} );
@@ -166,7 +164,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const res = await response.json( );
 
 		for ( const [ key, val ] of Object.entries( headers ) )
-			expect( res[ key ] ).to.equal( `${val}` );
+			expect( res[ key ] ).toBe( `${val}` );
 
 		await server.shutdown( );
 	} );
@@ -197,7 +195,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
-		expect( data ).to.equal( "foobar" );
+		expect( data ).toBe( "foobar" );
 
 		await server.shutdown( );
 	} );
@@ -226,7 +224,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
-		expect( data ).to.equal( "foobar" );
+		expect( data ).toBe( "foobar" );
 
 		await server.shutdown( );
 	} );
@@ -246,7 +244,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const err = await getRejection( eventualResponse );
 
-		expect( err.message ).to.contain( "Cannot specify both" );
+		expect( err.message ).toContain( "Cannot specify both" );
 
 		await server.shutdown( );
 	} );
@@ -268,8 +266,8 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const data = await response.json( );
 		const { headers } = response;
 
-		expect( headers.get( "content-type" ) ).to.equal( "application/json" );
-		expect( data ).to.deep.equal( json );
+		expect( headers.get( "content-type" ) ).toBe( "application/json" );
+		expect( data ).toEqual( json );
 
 		await server.shutdown( );
 	} );
@@ -290,7 +288,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const data = await response.text( );
 
-		expect( data ).to.deep.equal( body );
+		expect( data ).toEqual( body );
 
 		await server.shutdown( );
 	} );
@@ -311,7 +309,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const data = await response.arrayBuffer( );
 
-		expect( Buffer.compare( Buffer.from( data ), body ) ).to.equal( 0 );
+		expect( Buffer.compare( Buffer.from( data ), body ) ).toBe( 0 );
 
 		await server.shutdown( );
 	} );
@@ -336,7 +334,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const data = await response.text( );
 
-		expect( data ).to.equal( "foobar" );
+		expect( data ).toBe( "foobar" );
 
 		await server.shutdown( );
 	} );
@@ -362,20 +360,20 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const data = await response.text( );
 		const receivedTrailers = await deferredTrailers.promise;
 
-		expect( data ).to.contain( "trailers will be sent" );
+		expect( data ).toContain( "trailers will be sent" );
 
 		Object.keys( trailers )
 		.forEach( key =>
 		{
-			expect( receivedTrailers.get( key ) ).to.equal( trailers[ key ] );
+			expect( receivedTrailers.get( key ) ).toBe( trailers[ key ] );
 		} );
 
 		await server.shutdown( );
 	} );
 
-	it( "should timeout on a slow request", async function( )
+	it( "should timeout on a slow request", async ( ) =>
 	{
-		this.timeout( 500 );
+		jest.setTimeout( 500 );
 
 		const { server, port } = await makeServer( );
 
@@ -389,7 +387,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const err = await getRejection( eventualResponse );
 
-		expect( err.message ).to.contain( "timed out" );
+		expect( err.message ).toContain( "timed out" );
 
 		await server.shutdown( );
 	} );
@@ -406,15 +404,15 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			}
 		);
 
-		expect( response.status ).to.equal( 200 );
+		expect( response.status ).toBe( 200 );
 
 		await server.shutdown( );
 	} );
 
 	it( "should be able to POST large (16MiB) stream with known length",
-		async function( )
+		async ( ) =>
 	{
-		this.timeout( 2000 );
+		jest.setTimeout( 2000 );
 
 		const { server, port } = await makeServer( );
 
@@ -454,15 +452,15 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
-		expect( data ).to.equal( referenceHash );
+		expect( data ).toBe( referenceHash );
 
 		await server.shutdown( );
 	} );
 
 	it( "should be able to POST large (16MiB) stream with unknown length",
-		async function( )
+		async ( ) =>
 	{
-		this.timeout( 2000 );
+		jest.setTimeout( 2000 );
 
 		const { server, port } = await makeServer( );
 
@@ -500,7 +498,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const response = ensureStatusSuccess( await eventualResponse );
 
 		const data = await response.text( );
-		expect( data ).to.equal( referenceHash );
+		expect( data ).toBe( referenceHash );
 
 		await server.shutdown( );
 	} );
@@ -537,12 +535,12 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const responseText = await response.text( );
 
-		expect( responseText ).to.equal( "push-route" );
+		expect( responseText ).toBe( "push-route" );
 
 		const pushedResponse = await onPushPromise;
 		const pushedData = await pushedResponse.json( );
 
-		expect( pushedData ).to.deep.equal( data );
+		expect( pushedData ).toEqual( data );
 
 		onPush( );
 
@@ -568,9 +566,9 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		const responseData = await response.json( );
 
 		if ( version === "http2" )
-			expect( responseData[ ":authority" ] ).to.equal( host );
+			expect( responseData[ ":authority" ] ).toBe( host );
 		else
-			expect( responseData.host ).to.equal( host );
+			expect( responseData.host ).toBe( host );
 
 		await server.shutdown( );
 	} );
@@ -585,7 +583,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const responseData = await response.json( );
 
-		expect( responseData[ "accept-encoding" ] ).to.contain( "gzip" );
+		expect( responseData[ "accept-encoding" ] ).toContain( "gzip" );
 
 		await server.shutdown( );
 	} );
@@ -606,14 +604,13 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			)
 		);
 
-		expect( response.headers.get( "content-encoding" ) )
-			.to.equal( "gzip" );
+		expect( response.headers.get( "content-encoding" ) ).toBe( "gzip" );
 
 		const stream = await response.readable( );
 
 		const data = await getStream.buffer( stream );
 
-		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
+		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
 		await server.shutdown( );
 	} );
@@ -634,14 +631,13 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			)
 		);
 
-		expect( response.headers.get( "content-encoding" ) )
-			.to.equal( "deflate" );
+		expect( response.headers.get( "content-encoding" ) ).toBe( "deflate" );
 
 		const stream = await response.readable( );
 
 		const data = await getStream.buffer( stream );
 
-		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
+		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
 		await server.shutdown( );
 	} );
@@ -665,13 +661,13 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			)
 		);
 
-		expect( response.headers.get( "content-encoding" ) ).to.equal( "br" );
+		expect( response.headers.get( "content-encoding" ) ).toBe( "br" );
 
 		const stream = await response.readable( );
 
 		const data = await getStream.buffer( stream );
 
-		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
+		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
 		await server.shutdown( );
 	} );
@@ -687,7 +683,7 @@ describe( `response (${proto})`, ( ) =>
 
 		const response = ensureStatusSuccess( await fetch( url ) );
 
-		expect( response.url ).to.equal( cleanUrl( url ) );
+		expect( response.url ).toBe( cleanUrl( url ) );
 
 		await disconnectAll( );
 		await server.shutdown( );
@@ -706,10 +702,10 @@ describe( `goaway (${proto})`, ( ) =>
 		const url2 = `${proto}//localhost:${port}/headers`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( cleanUrl( url1 ) );
+		expect( response1.url ).toBe( cleanUrl( url1 ) );
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( cleanUrl( url2 ) );
+		expect( response2.url ).toBe( cleanUrl( url2 ) );
 
 		await response1.text( );
 		await response2.text( );
@@ -726,12 +722,12 @@ describe( `goaway (${proto})`, ( ) =>
 		const url2 = `${proto}//localhost:${port}/headers`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( cleanUrl( url1 ) );
+		expect( response1.url ).toBe( cleanUrl( url1 ) );
 
 		await delay(20);
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( cleanUrl( url2 ) );
+		expect( response2.url ).toBe( cleanUrl( url2 ) );
 
 		await response1.text( );
 		await response2.text( );
@@ -748,12 +744,12 @@ describe( `goaway (${proto})`, ( ) =>
 		const url2 = `${proto}//localhost:${port}/slow/50`;
 
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
-		expect( response1.url ).to.equal( cleanUrl( url1 ) );
+		expect( response1.url ).toBe( cleanUrl( url1 ) );
 
 		await delay( 10 );
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
-		expect( response2.url ).to.equal( cleanUrl( url2 ) );
+		expect( response2.url ).toBe( cleanUrl( url2 ) );
 
 		await delay( 10 );
 
@@ -761,8 +757,8 @@ describe( `goaway (${proto})`, ( ) =>
 
 		const text1 = await response1.text( true );
 		const text2 = await response2.text( true );
-		expect( text1 ).to.equal( "abcde" );
-		expect( text2 ).to.equal( "abcde" );
+		expect( text1 ).toBe( "abcde" );
+		expect( text2 ).toBe( "abcde" );
 
 		await server.shutdown( );
 	} );
@@ -780,9 +776,9 @@ describe( `integrity (${proto})`, ( ) =>
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
-		expect( response.url ).to.equal( cleanUrl( url ) );
+		expect( response.url ).toBe( cleanUrl( url ) );
 
-		expect( await response.text( ) ).to.equal( data );
+		expect( await response.text( ) ).toBe( data );
 
 		await disconnectAll( );
 		await server.shutdown( );
@@ -798,16 +794,16 @@ describe( `integrity (${proto})`, ( ) =>
 		const integrity = createIntegrity( data );
 
 		const response = ensureStatusSuccess( await fetch( url, { integrity } ) );
-		expect( response.url ).to.equal( cleanUrl( url ) );
+		expect( response.url ).toBe( cleanUrl( url ) );
 
 		try
 		{
 			await response.text( );
-			expect( false ).to.equal( true );
+			expect( false ).toBe( true );
 		}
 		catch ( err )
 		{
-			expect( err.message ).to.contain( "integrity" );
+			expect( err.message ).toContain( "integrity" );
 		}
 
 		await disconnectAll( );
@@ -826,7 +822,7 @@ describe( `premature stream close (${proto})`, ( ) =>
 		try
 		{
 			await fetch( url );
-			expect( false ).to.equal( true );
+			expect( false ).toBe( true );
 		}
 		catch ( err )
 		{
@@ -834,7 +830,7 @@ describe( `premature stream close (${proto})`, ( ) =>
 				version === "http1"
 				? "socket hang up"
 				: "Stream prematurely closed";
-			expect( err.message ).to.contain( expected );
+			expect( err.message ).toContain( expected );
 		}
 
 		await disconnectAll( );

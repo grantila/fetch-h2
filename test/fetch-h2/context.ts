@@ -1,6 +1,3 @@
-import { expect } from "chai";
-import "mocha";
-
 import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 
@@ -26,11 +23,11 @@ function ensureStatusSuccess( response: Response ): Response
 ] as Array< TestData > )
 .forEach( ( { proto, version } ) =>
 {
-describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
+describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 {
 	const { cycleOpts, makeServer } = makeMakeServer( { proto, version } );
 
-	this.timeout( 500 );
+	jest.setTimeout( 500 );
 
 	describe( "options", ( ) =>
 	{
@@ -49,7 +46,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ "user-agent" ] ).to.equal( "foobar" );
+			expect( res[ "user-agent" ] ).toBe( "foobar" );
 
 			disconnectAll( );
 
@@ -70,8 +67,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ "user-agent" ] ).to.contain( "foobar" );
-			expect( res[ "user-agent" ] ).to.contain( "fetch-h2" );
+			expect( res[ "user-agent" ] ).toContain( "foobar" );
+			expect( res[ "user-agent" ] ).toContain( "fetch-h2" );
 
 			disconnectAll( );
 
@@ -94,7 +91,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			);
 
 			const res = await response.json( );
-			expect( res.accept ).to.equal( accept );
+			expect( res.accept ).toBe( accept );
 
 			disconnectAll( );
 
@@ -119,17 +116,17 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			try
 			{
 				await fetch( `https://localhost:${port}/headers` );
-				expect( true ).to.be.false;
+				expect( true ).toEqual( false );
 			}
 			catch ( err )
 			{
-				expect( err.message ).to.satisfy( ( message: string ) =>
-					message.includes( "closed" ) // < Node 9.4
+				expect(
+					err.message.includes( "closed" ) // < Node 9.4
 					||
-					message.includes( "self signed" ) // >= Node 9.4
+					err.message.includes( "self signed" ) // >= Node 9.4
 					||
-					message.includes( "expired" )
-				);
+					err.message.includes( "expired" )
+				).toBeTruthy( );
 			}
 
 			disconnectAll( );
@@ -153,7 +150,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			);
 
 			const res = await response.json( );
-			expect( res[ "user-agent" ] ).to.equal( "foobar" );
+			expect( res[ "user-agent" ] ).toBe( "foobar" );
 
 			disconnectAll( );
 
@@ -171,7 +168,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 
 			expect(
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` )
-			).to.be.empty;
+			).toEqual( [ ] );
 
 			const { disconnectAll, fetch } = context( {
 				...cycleOpts,
@@ -188,11 +185,11 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			const cookies =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
-			expect( cookies ).to.not.be.empty;
-			expect( cookies[ 0 ].key ).to.equal( "a" );
-			expect( cookies[ 0 ].value ).to.equal( "b" );
-			expect( cookies[ 1 ].key ).to.equal( "c" );
-			expect( cookies[ 1 ].value ).to.equal( "d" );
+			expect( cookies.length ).toBeGreaterThan( 1 );
+			expect( cookies[ 0 ].key ).toBe( "a" );
+			expect( cookies[ 0 ].value ).toBe( "b" );
+			expect( cookies[ 1 ].key ).toBe( "c" );
+			expect( cookies[ 1 ].value ).toBe( "d" );
 
 			// Next request should maintain cookies
 
@@ -201,7 +198,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			const cookies2 =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
-			expect( cookies2 ).to.not.be.empty;
+			expect( cookies2.length ).toBeGreaterThan( 0 );
 
 			// If we manually clear the cookie jar, subsequent requests
 			// shouldn't have any cookies
@@ -213,7 +210,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 			const cookies3 =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
-			expect( cookies3 ).to.be.empty;
+			expect( cookies3 ).toEqual( [ ] );
 
 			disconnectAll( );
 
@@ -234,8 +231,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 				}
 			);
 
-			expect( response.headers.get( "set-cookie" ) ).to.be.null;
-			expect( response.headers.get( "set-cookie2" ) ).to.be.null;
+			expect( response.headers.get( "set-cookie" ) ).toBe( null );
+			expect( response.headers.get( "set-cookie2" ) ).toBe( null );
 
 			disconnectAll( );
 
@@ -257,8 +254,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, function( )
 				}
 			);
 
-			expect( response.headers.get( "set-cookie" ) )
-				.to.equal( "a=b,c=d" );
+			expect( response.headers.get( "set-cookie" ) ).toBe( "a=b,c=d" );
 
 			disconnectAll( );
 

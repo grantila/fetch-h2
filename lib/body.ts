@@ -224,10 +224,14 @@ export class Body implements IBody
 		const { algorithm, hash: expectedHash } =
 			parseIntegrity( this._integrity );
 
+		// jest (I presume) modifies ArrayBuffer, breaking instanceof
+		const instanceOfArrayBuffer = ( val: any ) =>
+			val && val.constructor && val.constructor.name === "ArrayBuffer";
+
 		const hash = createHash( algorithm )
 			.update(
-				data instanceof ArrayBuffer
-				? new DataView( data ) as any
+				instanceOfArrayBuffer( data )
+				? new DataView( data )
 				: < Buffer >data
 			)
 			.digest( "base64" );
