@@ -178,9 +178,7 @@ class OriginPool
 
 	private async disconnectSocket( socket: Socket )
 	{
-		await new Promise< void >( ( resolve ) =>
-			socket.end( Buffer.from( [ ] ), ( ) => resolve )
-		);
+		socket.destroy( );
 	}
 
 	private makeCleaner( socket: Socket )
