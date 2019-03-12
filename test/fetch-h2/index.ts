@@ -2,7 +2,7 @@ import { defer, delay } from "already";
 import { expect } from "chai";
 import { createHash } from "crypto";
 import * as from2 from "from2";
-import { buffer as getStreamAsBuffer } from "get-stream";
+import getStream from "get-stream";
 import "mocha";
 import * as through2 from "through2";
 
@@ -611,7 +611,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStreamAsBuffer( stream );
+		const data = await getStream.buffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
 
@@ -639,7 +639,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStreamAsBuffer( stream );
+		const data = await getStream.buffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
 
@@ -669,7 +669,7 @@ describe( `(${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStreamAsBuffer( stream );
+		const data = await getStream.buffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).to.deep.equal( testData );
 

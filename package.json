@@ -55,7 +55,6 @@
     "@types/chai": "4.x",
     "@types/execa": "0.x",
     "@types/from2": "2.x",
-    "@types/get-stream": "3.x",
     "@types/mocha": "5.x",
     "@types/node": "11.x",
     "@types/through2": "2.x",
@@ -79,7 +78,7 @@
     "@types/tough-cookie": "2.x",
     "already": "1.x",
     "callguard": "1.x",
-    "get-stream": "4.x",
+    "get-stream": "5.x",
     "through2": "3.x",
     "to-arraybuffer": "1.x",
     "tough-cookie": "3.x"

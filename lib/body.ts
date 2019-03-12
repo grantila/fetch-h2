@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 
 import { tap } from "already";
-import { buffer as getStreamAsBuffer } from "get-stream";
+import getStream from "get-stream";
 import * as through2 from "through2";
 import * as toArrayBuffer from "to-arraybuffer";
 
@@ -69,7 +69,7 @@ export class Body implements IBody
 			return this.validateIntegrity( emptyBuffer, allowIncomplete );
 
 		else if ( isStream( this._body ) )
-			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
+			return getStream.buffer( < NodeJS.ReadableStream >this._body )
 			.then( buffer =>
 				this.validateIntegrity( buffer, allowIncomplete )
 			)
@@ -100,7 +100,7 @@ export class Body implements IBody
 			)
 			.then( ( ) => this._body );
 		else if ( isStream( this._body ) )
-			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
+			return getStream.buffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, false )
 				) )
@@ -125,7 +125,7 @@ export class Body implements IBody
 			)
 			.then( ( ) => < string >< BodyTypes >this._body );
 		else if ( isStream( this._body ) )
-			return getStreamAsBuffer( < NodeJS.ReadableStream >this._body )
+			return getStream.buffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, allowIncomplete )
 				) )
