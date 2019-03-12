@@ -1,11 +1,12 @@
 import { URL } from "url";
 
-import { delay } from "already";
+import { delay, Finally } from "already";
 import * as through2 from "through2";
 
 import {
 	context,
 	DataBody,
+	fetch as fetchType,
 	HttpProtocols,
 	JsonBody,
 	StreamBody,
@@ -35,20 +36,27 @@ describe( name, ( ) =>
 {
 	jest.setTimeout( 5000 );
 
-	const { fetch, disconnectAll } = context( {
-		httpsProtocols: protos,
-	} );
+	function wrapContext( fn: ( fetch: typeof fetchType ) => Promise< void > )
+	{
+		return async ( ) =>
+		{
+			const { fetch, disconnectAll } = context( {
+				httpsProtocols: protos,
+			} );
 
-	afterEach( disconnectAll );
+			await fn( fetch ).then( ...Finally( disconnectAll ) );
+		};
+	}
 
-	it( "should be possible to GET", async ( ) =>
+	it.concurrent( "should be possible to GET", wrapContext( async ( fetch ) =>
 	{
 		const response = await fetch( `${host}/user-agent` );
 		const data = await response.json( );
 		expect( data[ "user-agent" ] ).toContain( "fetch-h2/" );
-	} );
+	} ) );
 
-	it( "should be possible to POST JSON", async ( ) =>
+	it.concurrent( "should be possible to POST JSON", wrapContext(
+		async ( fetch ) =>
 	{
 		const testData = { foo: "bar" };
 
@@ -63,9 +71,10 @@ describe( name, ( ) =>
 		expect( testData ).toEqual( data.json );
 		// fetch-h2 should set content type for JsonBody
 		expect( data.headers[ "Content-Type" ] ).toBe( "application/json" );
-	} );
+	} ) );
 
-	it( "should be possible to POST buffer-data", async ( ) =>
+	it.concurrent( "should be possible to POST buffer-data", wrapContext(
+		async ( fetch ) =>
 	{
 		const testData = '{"foo": "data"}';
 
@@ -79,9 +88,10 @@ describe( name, ( ) =>
 		const data = await response.json( );
 		expect( data.data ).toBe( testData );
 		expect( data.headers ).not.toHaveProperty( "Content-Type" );
-	} );
+	} ) );
 
-	it( "should be possible to POST already ended stream-data", async ( ) =>
+	it.concurrent( "should be possible to POST already ended stream-data",
+		wrapContext( async ( fetch ) =>
 	{
 		const stream = through2( );
 
@@ -101,9 +111,10 @@ describe( name, ( ) =>
 
 		const data = await response.json( );
 		expect( data.data ).toBe( "foobar" );
-	} );
+	} ) );
 
-	it( "should be possible to POST not yet ended stream-data", async ( ) =>
+	it.concurrent( "should be possible to POST not yet ended stream-data",
+		wrapContext( async ( fetch ) =>
 	{
 		const stream = through2( );
 
@@ -127,9 +138,9 @@ describe( name, ( ) =>
 
 		const data = await response.json( );
 		expect( data.data ).toBe( "foobar" );
-	} );
+	} ) );
 
-	it( "should save and forward cookies", async ( ) =>
+	it.concurrent( "should save and forward cookies", async ( ) =>
 	{
 		const { fetch, disconnectAll } = context( );
 
@@ -148,7 +159,7 @@ describe( name, ( ) =>
 		await disconnectAll( );
 	} );
 
-	it( "should handle (and follow) relative paths", async ( ) =>
+	it.concurrent( "should handle (and follow) relative paths", async ( ) =>
 	{
 		const { fetch, disconnectAll } = context( );
 
@@ -162,11 +173,12 @@ describe( name, ( ) =>
 		await disconnectAll( );
 	} );
 
-	it( "should be possible to GET gzip data", async ( ) =>
+	it.concurrent( "should be possible to GET gzip data", wrapContext(
+		async ( fetch ) =>
 	{
 		const response = await fetch( `${host}/gzip` );
 		const data = await response.json( );
 		expect( data ).toMatchObject( { gzipped: true, method: "GET" } );
-	} );
+	} ) );
 } );
 } );
