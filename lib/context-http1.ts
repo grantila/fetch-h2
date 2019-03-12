@@ -202,7 +202,7 @@ class OriginPool
 
 		this.usedSockets.delete( socket );
 
-		if ( this.maxFreeSockets >= this.unusedSockets.size + 1 )
+		if ( this.maxFreeSockets < this.unusedSockets.size + 1 )
 		{
 			await this.disconnectSocket( socket );
 			return;
