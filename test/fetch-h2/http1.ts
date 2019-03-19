@@ -2,15 +2,8 @@ import { makeMakeServer } from "../lib/server-helpers";
 
 import {
 	context,
-	Response,
-} from "../../";
-
-function ensureStatusSuccess( response: Response ): Response
-{
-	if ( response.status < 200 || response.status >= 300 )
-		throw new Error( "Status not 2xx" );
-	return response;
-}
+} from "../../index";
+import { ensureStatusSuccess } from "../lib/utils";
 
 
 describe( `http1`, ( ) =>

@@ -9,7 +9,8 @@ import {
 	DataBody,
 	JsonBody,
 	StreamBody,
-} from "../../";
+} from "../../index";
+
 
 async function makeSync< T >( fn: ( ) => PromiseLike< T > )
 : Promise< ( ) => T >

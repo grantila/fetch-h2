@@ -5,7 +5,8 @@ import {
 	context,
 	CookieJar,
 	Response,
-} from "../../";
+} from "../../index";
+
 
 function ensureStatusSuccess( response: Response ): Response
 {

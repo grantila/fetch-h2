@@ -11,7 +11,7 @@ import {
 	Server as HttpsServer,
 } from "https";
 
-import { HttpProtocols } from "../../";
+import { HttpProtocols } from "../../index";
 
 
 export interface TestData

@@ -6,7 +6,7 @@ import * as through2 from "through2";
 
 import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
-import { cleanUrl, createIntegrity } from "../lib/utils";
+import { cleanUrl, createIntegrity, ensureStatusSuccess } from "../lib/utils";
 
 import { hasBuiltinBrotli } from "../../lib/utils";
 
@@ -19,7 +19,7 @@ import {
 	onPush as _onPush,
 	Response,
 	StreamBody,
-} from "../../";
+} from "../../index";
 
 
 async function getRejection< T >( promise: Promise< T > ): Promise< Error >
@@ -33,13 +33,6 @@ async function getRejection< T >( promise: Promise< T > ): Promise< Error >
 		return err;
 	}
 	throw new Error( "Expected exception" );
-}
-
-function ensureStatusSuccess( response: Response ): Response
-{
-	if ( response.status < 200 || response.status >= 300 )
-		throw new Error( "Status not 2xx" );
-	return response;
 }
 
 

@@ -10,7 +10,7 @@ import {
 	HttpProtocols,
 	JsonBody,
 	StreamBody,
-} from "../../";
+} from "../../index";
 
 
 interface TestData
