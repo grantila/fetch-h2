@@ -5,7 +5,8 @@ import getStream from "get-stream";
 import * as through2 from "through2";
 import * as toArrayBuffer from "to-arraybuffer";
 
-import { BodyTypes, IBody, StorageBodyTypes } from "./core";
+import { AbortSignal } from "./abort";
+import { AbortError, BodyTypes, IBody, StorageBodyTypes } from "./core";
 
 
 function makeUnknownDataError( )
@@ -47,6 +48,7 @@ export class Body implements IBody
 	private _body?: StorageBodyTypes | null;
 	private _used: boolean;
 	private _integrity?: string;
+	private _signal?: AbortSignal;
 
 	constructor( )
 	{
@@ -64,6 +66,7 @@ export class Body implements IBody
 	public async arrayBuffer( allowIncomplete = false ): Promise< ArrayBuffer >
 	{
 		this._ensureUnused( );
+		this._ensureNotAborted( );
 
 		if ( this._body == null )
 			return this.validateIntegrity( emptyBuffer, allowIncomplete );
@@ -93,6 +96,7 @@ export class Body implements IBody
 	public async json( ): Promise< any >
 	{
 		this._ensureUnused( );
+		this._ensureNotAborted( );
 
 		if ( this._body == null )
 			return Promise.resolve(
@@ -118,6 +122,7 @@ export class Body implements IBody
 	public async text( allowIncomplete = false ): Promise< string >
 	{
 		this._ensureUnused( );
+		this._ensureNotAborted( );
 
 		if ( this._body == null )
 			return Promise.resolve(
@@ -143,6 +148,7 @@ export class Body implements IBody
 	public async readable( ): Promise< NodeJS.ReadableStream >
 	{
 		this._ensureUnused( );
+		this._ensureNotAborted( );
 
 		if ( this._body == null )
 		{
@@ -162,6 +168,11 @@ export class Body implements IBody
 				} );
 		else
 			throw makeUnknownDataError( );
+	}
+
+	protected setSignal( signal: AbortSignal | undefined )
+	{
+		this._signal = signal;
 	}
 
 	protected hasBody( ): boolean
@@ -210,6 +221,8 @@ export class Body implements IBody
 	)
 	: T
 	{
+		this._ensureNotAborted( );
+
 		if (
 			!allowIncomplete &&
 			this._length != null &&
@@ -240,6 +253,12 @@ export class Body implements IBody
 			throwIntegrityMismatch( );
 
 		return data;
+	}
+
+	private _ensureNotAborted( )
+	{
+		if ( this._signal && this._signal.aborted )
+			throw new AbortError( "Response aborted" );
 	}
 
 	private _ensureUnused( )

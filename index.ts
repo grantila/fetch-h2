@@ -1,3 +1,4 @@
+import { AbortController, AbortSignal } from "./lib/abort";
 import { Body, DataBody, JsonBody, StreamBody } from "./lib/body";
 import { Context, ContextOptions } from "./lib/context";
 import { PushHandler } from "./lib/context-http2";
@@ -55,6 +56,8 @@ export {
 	onPush,
 
 	// Re-export
+	AbortController,
+	AbortSignal,
 	HttpProtocols,
 	Body,
 	JsonBody,

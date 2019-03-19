@@ -33,6 +33,7 @@ const {
 export class ServerHttp2 extends TypedServer< Http2Server >
 {
 	private _sessions: Set< Http2Session >;
+	private _awaits: Array< Promise< any > > = [ ];
 
 	constructor( opts: ServerOptions )
 	{
@@ -48,12 +49,21 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 
 		this._server.on( "stream", ( stream, headers ) =>
 		{
-			this.onStream( stream, headers )
+			const awaitStream = this.onStream( stream, headers )
 			.catch( err =>
 			{
-				console.error( "Unit test server failed", err );
+				console.error( "Unit test server failed", err.stack );
 				process.exit( 1 );
+			} )
+			.then( ( ) =>
+			{
+				const index = this._awaits.findIndex( promise =>
+					promise === awaitStream );
+				if ( index !== -1 )
+					this._awaits.splice( index, 1 );
 			} );
+
+			this._awaits.push( awaitStream );
 		} );
 	}
 
@@ -63,6 +73,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 		{
 			session.destroy( );
 		}
+		await Promise.all( this._awaits );
 		this._sessions.clear( );
 	}
 
@@ -274,6 +285,23 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 			ignoreError( ( ) => stream.write( "fghij" ) );
 			ignoreError( ( ) => stream.end( ) );
 		}
+		else if ( path.startsWith( "/delay/" ) )
+		{
+			const waitMs = parseInt( path.replace( "/delay/", "" ), 10 );
+
+			if ( waitMs > 0 )
+				await delay( waitMs );
+
+			const responseHeaders = {
+				":status": 200,
+				[ HTTP2_HEADER_CONTENT_LENGTH ]: "10",
+			};
+
+			ignoreError( ( ) => stream.respond( responseHeaders ) );
+			ignoreError( ( ) => stream.write( "abcde" ) );
+			ignoreError( ( ) => stream.write( "fghij" ) );
+			ignoreError( ( ) => stream.end( ) );
+		}
 		else if ( path.startsWith( "/slow/" ) )
 		{
 			const waitMs = parseInt( path.replace( "/slow/", "" ), 10 );
@@ -308,6 +336,9 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				stream.end( );
 			}
 		}
+
+		if ( !stream.closed )
+			return new Promise( resolve => stream.once( "close", resolve ) );
 	}
 }
 

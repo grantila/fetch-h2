@@ -54,6 +54,7 @@ import {
     Request,
     Response,
     AbortError,
+    AbortController,
     TimeoutError,
 
     ContextOptions,
@@ -67,7 +68,11 @@ import {
 } from 'fetch-h2'
 ```
 
-Apart from the obvious `fetch`, the functions `setup`, `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API). `AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal), `TimeoutError` is thrown if the request times out.
+Apart from the obvious `fetch`, the functions `setup`, `context`, `disconnect`, `disconnectAll` and `onPush` are described below, and the classes [`Body`](https://developer.mozilla.org/docs/Web/API/Body), [`Headers`](https://developer.mozilla.org/docs/Web/API/Headers), [`Request`](https://developer.mozilla.org/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/docs/Web/API/Response) are part of the [Fetch API](https://developer.mozilla.org/docs/Web/API/Fetch_API).
+
+`AbortError` is the error thrown in case of an [abort signal](https://developer.mozilla.org/docs/Web/API/AbortSignal) (this is also the error thrown in case of a *timeout*, which in `fetch-h2` is internally implemented as an abort signal) and the [`AbortController`](https://developer.mozilla.org/docs/Web/API/AbortController) provides a way to abort requests.
+
+`TimeoutError` is thrown if the request times out.
 
 The `ContextOptions`, `DecodeFunction` and `Decoder` types are described below.
 

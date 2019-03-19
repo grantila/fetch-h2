@@ -4,6 +4,7 @@ import { Socket } from "net";
 
 import { syncGuard } from "callguard";
 
+import { AbortController } from "./abort";
 import {
 	FetchInit,
 	SimpleSessionHttp1,
@@ -113,11 +114,32 @@ export async function fetchImpl(
 			{
 				res.once( "end", socketCleanup );
 
-				if ( signal && signal.aborted )
+				const {
+					signal: bodySignal = void 0,
+					abort: bodyAbort = void 0,
+				} = signal ? new AbortController( ) : { };
+
+				if ( signal )
 				{
-					// No reason to continue, the request is aborted
-					req.abort( );
-					return;
+					const abortHandler = ( ) =>
+					{
+						( < ( ) => void >bodyAbort )( );
+						req.abort( );
+						res.destroy( );
+					};
+
+					if ( signal.aborted )
+					{
+						// No reason to continue, the request is aborted
+						abortHandler( );
+						return;
+					}
+
+					signal.once( "abort", abortHandler );
+					res.once( "end", ( ) =>
+					{
+						signal.removeListener( "abort", abortHandler );
+					} );
 				}
 
 				const { headers, statusCode } = res;
@@ -186,6 +208,7 @@ export async function fetchImpl(
 								status: res.statusCode,
 								statusText: res.statusMessage,
 							},
+							bodySignal,
 							1,
 							input.allowForbiddenHeaders,
 							integrity

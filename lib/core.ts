@@ -1,6 +1,7 @@
 import { ClientRequest } from "http";
 import { ClientHttp2Session } from "http2";
 
+import { AbortSignal } from "./abort";
 import { CookieJar } from "./cookie-jar";
 import { Headers, RawHeaders } from "./headers";
 
@@ -103,12 +104,6 @@ export interface IBody
 	readable( ): Promise< NodeJS.ReadableStream >;
 }
 
-export interface Signal
-{
-	readonly aborted: boolean;
-	onabort: ( ) => void;
-}
-
 export interface RequestInitWithoutBody
 {
 	method: Method;
@@ -138,7 +133,7 @@ export type OnTrailers = ( headers: Headers ) => void;
 
 export interface FetchInit extends RequestInit
 {
-	signal: Signal;
+	signal: AbortSignal;
 
 	// This is a helper (just like node-fetch), not part of the Fetch API.
 	// Must not be used if signal is used.

@@ -27,6 +27,10 @@ import {
 } from "./core";
 
 import {
+	AbortSignal,
+} from "./abort";
+
+import {
 	hasBuiltinBrotli,
 } from "./utils";
 
@@ -50,6 +54,7 @@ interface Extra
 	httpVersion: HttpVersion;
 	redirected: boolean;
 	integrity: string;
+	signal: AbortSignal;
 	type: ResponseTypes;
 	url: string;
 }
@@ -95,6 +100,8 @@ export class Response extends Body
 		const redirected = !!_extra.redirected || false;
 		const url = _extra.url || "";
 		const integrity = _extra.integrity || null;
+
+		this.setSignal( _extra.signal );
 
 		if ( body )
 		{
@@ -240,13 +247,14 @@ function makeExtra(
 	httpVersion: HttpVersion,
 	url: string,
 	redirected: boolean,
+	signal?: AbortSignal,
 	integrity?: string
 )
 : Partial< Extra >
 {
 	const type = "basic"; // TODO: Implement CORS
 
-	return { httpVersion, redirected, integrity, type, url };
+	return { httpVersion, redirected, integrity, signal, type, url };
 }
 
 function handleEncoding(
@@ -298,6 +306,7 @@ export class StreamResponse extends Response
 		headers: IncomingHttpHeaders,
 		redirected: boolean,
 		init: Partial< ResponseInit >,
+		signal: AbortSignal | undefined,
 		httpVersion: HttpVersion,
 		allowForbiddenHeaders: boolean,
 		integrity?: string
@@ -318,7 +327,7 @@ export class StreamResponse extends Response
 					: makeInitHttp2( headers, allowForbiddenHeaders )
 				),
 			},
-			makeExtra( httpVersion, url, redirected, integrity )
+			makeExtra( httpVersion, url, redirected, signal, integrity )
 		);
 	}
 }

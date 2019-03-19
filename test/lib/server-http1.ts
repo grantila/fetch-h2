@@ -243,6 +243,25 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 			else
 				request.pipe( response );
 		}
+		else if ( path.startsWith( "/delay/" ) )
+		{
+			const waitMs = parseInt( path.replace( "/delay/", "" ), 10 );
+
+			if ( waitMs > 0 )
+				await delay( waitMs );
+
+			const responseHeaders = {
+				":status": 200,
+				[ HTTP2_HEADER_CONTENT_LENGTH ]: "10",
+			};
+
+			sendHeaders( responseHeaders );
+
+			response.write( "abcde" );
+
+			ignoreError( ( ) => response.write( "fghij" ) );
+			ignoreError( ( ) => response.end( ) );
+		}
 		else if ( path.startsWith( "/slow/" ) )
 		{
 			const waitMs = parseInt( path.replace( "/slow/", "" ), 10 );

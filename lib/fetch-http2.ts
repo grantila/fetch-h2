@@ -5,6 +5,7 @@ import {
 
 import { syncGuard } from "callguard";
 
+import { AbortController } from "./abort";
 import {
 	AbortError,
 	FetchInit,
@@ -226,11 +227,31 @@ async function fetchImpl(
 			stream.on( "response", guard(
 				( headers: IncomingHttp2Headers ) =>
 			{
-				if ( signal && signal.aborted )
+				const {
+					signal: bodySignal = void 0,
+					abort: bodyAbort = void 0,
+				} = signal ? new AbortController( ) : { };
+
+				if ( signal )
 				{
-					// No reason to continue, the request is aborted
-					stream.destroy( );
-					return;
+					const abortHandler = ( ) =>
+					{
+						( < ( ) => void >bodyAbort )( );
+						stream.destroy( );
+					};
+
+					if ( signal.aborted )
+					{
+						// No reason to continue, the request is aborted
+						abortHandler( );
+						return;
+					}
+
+					signal.once( "abort", abortHandler );
+					stream.once( "close", ( ) =>
+					{
+						signal.removeListener( "abort", abortHandler );
+					} );
 				}
 
 				const status = "" + headers[ HTTP2_HEADER_STATUS ];
@@ -269,6 +290,7 @@ async function fetchImpl(
 								? false
 								: extra.redirected.length > 0,
 							{ },
+							bodySignal,
 							2,
 							input.allowForbiddenHeaders,
 							integrity

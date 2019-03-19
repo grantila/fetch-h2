@@ -359,6 +359,7 @@ export class H2Context
 						responseHeaders,
 						false,
 						{ },
+						void 0,
 						2,
 						false
 					);

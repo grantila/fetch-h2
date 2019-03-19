@@ -247,15 +247,17 @@ export async function setupFetch(
 	if ( signal && signal.aborted )
 		throw abortError( );
 
+	let abortHandler: ( ( ) => void ) | undefined;
+
 	const signalPromise: Promise< Response > | null =
 		signal
 		?
 			new Promise< Response >( ( _resolve, reject ) =>
 			{
-				signal.onabort = ( ) =>
+				signal.once( "abort", abortHandler = ( ) =>
 				{
 					reject( abortError( ) );
-				};
+				} );
 			} )
 		: null;
 
@@ -264,8 +266,8 @@ export async function setupFetch(
 		if ( timeoutInfo && timeoutInfo.clear )
 			timeoutInfo.clear( );
 
-		if ( signal )
-			delete signal.onabort;
+		if ( signal && abortHandler )
+			signal.removeListener( "abort", abortHandler );
 	}
 
 	return {
