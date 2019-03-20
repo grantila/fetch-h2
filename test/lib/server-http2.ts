@@ -60,7 +60,10 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				const index = this._awaits.findIndex( promise =>
 					promise === awaitStream );
 				if ( index !== -1 )
+				{
+					console.log(this.port, "REMOVING")
 					this._awaits.splice( index, 1 );
+				} else { console.log(this.port, "NOT FOUND") }
 			} );
 
 			this._awaits.push( awaitStream );
@@ -73,8 +76,14 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 		{
 			session.destroy( );
 		}
-		await Promise.all( this._awaits );
+		console.log(this.port, "CALLING SHUTDOWN")
+		const awaits = [ ...this._awaits ];
+		this._awaits.length = 0;
+		await Promise.all(
+			awaits.map( promise => promise.catch( _err => { } ) )
+		);
 		this._sessions.clear( );
+		console.log(this.port, "SHUTDOWN COMPLETE")
 	}
 
 	private async onStream(
