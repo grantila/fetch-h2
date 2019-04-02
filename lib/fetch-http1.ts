@@ -191,10 +191,10 @@ export async function fetchImpl(
 					delete headers[ "set-cookie2" ];
 				}
 
-				if ( isRedirected && !location )
+				if ( isRedirected && !location && !input.allowForbiddenHeaders )
 					return reject( makeIllegalRedirectError( ) );
 
-				if ( !isRedirected || redirect === "manual" )
+				if ( !isRedirected || redirect === "manual" || !location )
 					return resolve(
 						new StreamResponse(
 							contentDecoders,
