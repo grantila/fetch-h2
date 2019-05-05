@@ -364,7 +364,8 @@ export class H2Context
 						{ },
 						void 0,
 						2,
-						false
+						false,
+						pushedStream.session.socket
 					);
 
 					resolve( response );

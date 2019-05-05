@@ -4,6 +4,10 @@ import {
 } from "http2";
 
 import {
+	Socket
+} from "net";
+
+import {
 	createBrotliDecompress,
 	createGunzip,
 	createInflate,
@@ -297,6 +301,18 @@ function handleEncoding(
 	return decoder( stream );
 }
 
+export interface ResponseInfo
+{
+	socket: Socket;
+}
+
+const inspections = new WeakMap< Response, ResponseInfo >( );
+
+export function inspectResponse( response: Response )
+{
+	return inspections.get( response );
+}
+
 export class StreamResponse extends Response
 {
 	constructor(
@@ -309,6 +325,7 @@ export class StreamResponse extends Response
 		signal: AbortSignal | undefined,
 		httpVersion: HttpVersion,
 		allowForbiddenHeaders: boolean,
+		socket: Socket,
 		integrity?: string
 	)
 	{
@@ -329,5 +346,16 @@ export class StreamResponse extends Response
 			},
 			makeExtra( httpVersion, url, redirected, signal, integrity )
 		);
+
+		interface SocketWithParent extends Socket
+		{
+			_parent?: Socket;
+		}
+
+		socket =
+			( < SocketWithParent >socket )._parent
+			? < Socket >( < SocketWithParent >socket )._parent
+			: socket;
+		inspections.set( this, { socket } );
 	}
 }

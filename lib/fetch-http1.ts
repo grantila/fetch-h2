@@ -211,6 +211,7 @@ export async function fetchImpl(
 							bodySignal,
 							1,
 							input.allowForbiddenHeaders,
+							res.socket,
 							integrity
 						)
 					);
