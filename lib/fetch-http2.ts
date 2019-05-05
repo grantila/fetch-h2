@@ -293,6 +293,7 @@ async function fetchImpl(
 							bodySignal,
 							2,
 							input.allowForbiddenHeaders,
+							stream.session.socket,
 							integrity
 						)
 					);
