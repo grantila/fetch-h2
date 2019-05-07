@@ -10,6 +10,8 @@ import { cleanUrl, createIntegrity, ensureStatusSuccess } from "../lib/utils";
 
 import { hasBuiltinBrotli } from "../../lib/utils";
 
+import { inspectResponse } from "../../lib/response";
+
 import {
 	context,
 	DataBody,
@@ -665,6 +667,68 @@ describe( `generic (${protoVersion})`, ( ) =>
 		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
 		await server.shutdown( );
+	} );
+
+	// if ( /* proto === "https:" || */ version === "http2" )
+	if ( proto === "https:" && version === "http1" )
+	describe( "re-use of sockets", ( ) =>
+	{
+		it.only( "should re-use socket", async ( ) =>
+		{
+			const { fetch, disconnectAll } =
+				context( {
+					http1: { maxFreeSockets: 0 },
+					session: { rejectUnauthorized: false },
+				} );
+
+			const { server, port } = await makeServer( );
+
+			const testData = { foo: "bar" };
+
+			const urls = Array.from( new Array( 10 ) )
+				.map( ( ) => `${proto}//localhost:${port}/headers` );
+
+			const results = await Promise.all(
+				urls.map( async url =>
+				{
+					const response = await fetch(
+						url,
+						{
+							json: testData,
+							method: "POST",
+						}
+					);
+
+					const inspection = inspectResponse( response );
+					if ( !inspection )
+						throw new Error( "Test error" );
+
+					await ensureStatusSuccess( response ).json( );
+
+					return { response, inspection };
+				} )
+			);
+
+			results.forEach( ( { /*response,*/ inspection }, index ) =>
+			{
+				// const { headers } = response;
+
+				if ( index > 0 )
+					expect( inspection.socket )
+						.toBe( results[ index - 1 ].inspection.socket );
+
+				// console.log( {
+				// 	headers,
+				// 	inspection,
+				// 	proto,
+				// 	version,
+				// } );
+				// expect( response.headers.get( "content-encoding" ) ).toBe( "br" );
+			} );
+
+			await disconnectAll( );
+			await server.shutdown( );
+		} );
 	} );
 } );
 
