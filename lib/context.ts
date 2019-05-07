@@ -5,6 +5,8 @@ import {
 import { Socket } from "net";
 import { URL } from "url";
 
+import { funnel, Funnel } from "already";
+
 import { H1Context } from "./context-http1";
 import { H2Context, PushHandler } from "./context-http2";
 import { connectTLS } from "./context-https";
@@ -79,6 +81,7 @@ export class Context
 		ReadonlyArray< HttpProtocols > |
 		PerOrigin< ReadonlyArray< HttpProtocols > >;
 	private _http1Options: Partial< Http1Options | PerOrigin< Http1Options > >;
+	private _tlsFunnel = new Map< string, Funnel< Response > >( );
 
 	constructor( opts?: Partial< ContextOptions > )
 	{
@@ -247,47 +250,55 @@ export class Context
 		{
 			// If we already have a session/socket open to this origin,
 			// re-use it
-
-			if ( this.h2Context.hasOrigin( origin ) )
-				return doFetchHttp2( );
-
-			const resp = await tryWaitForHttp1( );
-			if ( resp )
-				return resp;
-
-			// TODO: Make queue for subsequent fetch requests to the same
-			//       origin, so they can re-use the http2 session, or http1
-			//       pool once we know what protocol will be used.
-			//       This must apply to plain-text http1 too.
-
-			// Use ALPN to figure out protocol lazily
-			const { protocol, socket } = await connectTLS(
-				hostname,
-				port,
-				getByOrigin( this._httpsProtocols, origin ),
-				getByOrigin( this._sessionOptions, origin )
-			);
-
-			if ( protocol === "http2" )
+			return this.getFunnelByOrigin( origin )(
+				async ( shouldRetry, retry ) =>
 			{
-				// Convert socket into http2 session, this will ref (*)
-				const { cleanup } = await this.h2Context.getOrCreateHttp2(
-					origin,
-					{
-						createConnection: ( ) => socket,
-					}
+				if ( shouldRetry( ) )
+					return retry( );
+
+				if ( this.h2Context.hasOrigin( origin ) )
+					return doFetchHttp2( );
+
+				const resp = await tryWaitForHttp1( );
+				if ( resp )
+					return resp;
+
+				// TODO: Make queue for subsequent fetch requests to the same
+				//       origin, so they can re-use the http2 session, or
+				//       http1 pool once we know what protocol will be used.
+				//       This must apply to plain-text http1 too.
+
+				// Use ALPN to figure out protocol lazily
+				const { protocol, socket } = await connectTLS(
+					hostname,
+					port,
+					getByOrigin( this._httpsProtocols, origin ),
+					getByOrigin( this._sessionOptions, origin )
 				);
-				// Session now lingering, it will be re-used by the next get()
-				const ret = doFetchHttp2( );
-				// Unref lingering ref
-				cleanup( );
-				return ret;
-			}
-			else // protocol === "http1"
-			{
-				const cleanup = this.h1Context.addUsedSocket( origin, socket );
-				return doFetchHttp1( socket, cleanup );
-			}
+
+				if ( protocol === "http2" )
+				{
+					// Convert socket into http2 session, this will ref (*)
+					const { cleanup } = await this.h2Context.getOrCreateHttp2(
+						origin,
+						{
+							createConnection: ( ) => socket,
+						}
+					);
+					// Session now lingering, it will be re-used by the next
+					// get()
+					const ret = doFetchHttp2( );
+					// Unref lingering ref
+					cleanup( );
+					return ret;
+				}
+				else // protocol === "http1"
+				{
+					const cleanup =
+						this.h1Context.addUsedSocket( origin, socket );
+					return doFetchHttp1( socket, cleanup );
+				}
+			} );
 		}
 	}
 
@@ -305,6 +316,17 @@ export class Context
 			this.h1Context.disconnectAll( ),
 			this.h2Context.disconnectAll( ),
 		]);
+	}
+
+	private getFunnelByOrigin( origin: string )
+	{
+		const originFunnel = this._tlsFunnel.get( origin );
+		if ( originFunnel )
+			return originFunnel;
+
+		const newFunnel = funnel< Response >( );
+		this._tlsFunnel.set( origin, newFunnel );
+		return newFunnel;
 	}
 
 	private getHttp1(
