@@ -49,7 +49,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const res = await response.json( );
 			expect( res[ "user-agent" ] ).toBe( "foobar" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -71,7 +71,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			expect( res[ "user-agent" ] ).toContain( "foobar" );
 			expect( res[ "user-agent" ] ).toContain( "fetch-h2" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -94,7 +94,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const res = await response.json( );
 			expect( res.accept ).toBe( accept );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -130,7 +130,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				).toBeTruthy( );
 			}
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -153,7 +153,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const res = await response.json( );
 			expect( res[ "user-agent" ] ).toBe( "foobar" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -213,7 +213,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 			expect( cookies3 ).toEqual( [ ] );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -235,7 +235,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			expect( response.headers.get( "set-cookie" ) ).toBe( null );
 			expect( response.headers.get( "set-cookie2" ) ).toBe( null );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -257,7 +257,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 			expect( response.headers.get( "set-cookie" ) ).toBe( "a=b,c=d" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -274,11 +274,11 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 			const awaitFetch = fetch( "${proto}//localhost:0" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await awaitFetch.catch( ( ) => { } );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -296,11 +296,11 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 			const awaitFetch = fetch( "ftp://localhost" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await awaitFetch.catch( ( ) => { } );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );

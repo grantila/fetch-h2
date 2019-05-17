@@ -677,7 +677,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 		{
 			const { fetch, disconnectAll } =
 				context( {
-					http1: { maxFreeSockets: 0 },
+					http1: { maxFreeSockets: 0, keepAlive: true },
 					session: { rejectUnauthorized: false },
 				} );
 
