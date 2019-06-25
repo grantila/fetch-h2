@@ -57,7 +57,7 @@
     "commitizen": "3.x",
     "coveralls": "3.x",
     "cz-conventional-changelog": "2.x",
-    "execa": "1.x",
+    "execa": "^2.0.0",
     "from2": "2.x",
     "jest": "24.x",
     "nyc": "14.x",
