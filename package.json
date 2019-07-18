@@ -54,7 +54,7 @@
     "@types/jest": "24.x",
     "@types/node": "12.x",
     "@types/through2": "2.x",
-    "commitizen": "3.x",
+    "commitizen": "^4.0.0",
     "coveralls": "3.x",
     "cz-conventional-changelog": "2.x",
     "execa": "1.x",
