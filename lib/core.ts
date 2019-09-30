@@ -202,7 +202,7 @@ export function getByOrigin< T >(
 }
 
 export function parsePerOrigin< T >(
-	val: T | PerOrigin< T > | void,
+	val: T | PerOrigin< T > | undefined,
 	_default: T
 )
 : T | PerOrigin< T >

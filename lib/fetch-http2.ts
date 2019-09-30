@@ -362,7 +362,7 @@ export function fetch(
 {
 	const timeoutAt = void 0;
 
-	const raceConditionedGoaway = new Set( );
+	const raceConditionedGoaway = new Set< string>( );
 	const extra = { timeoutAt, redirected: [ ], raceConditionedGoaway };
 
 	return fetchImpl( session, input, init, extra );
