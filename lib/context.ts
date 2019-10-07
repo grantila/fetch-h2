@@ -42,7 +42,7 @@ function makeDefaultUserAgent( ): string
 }
 
 const defaultUserAgent = makeDefaultUserAgent( );
-const defaultAccept = "application/json, text/*;0.9, */*;q=0.8";
+const defaultAccept = "application/json,text/*;q=0.9,*/*;q=0.8";
 
 export interface ContextOptions
 {
