@@ -331,7 +331,7 @@ export class H2Context
 		.filter( name => name.charAt( 0 ) === ":" )
 		.forEach( name => { delete requestHeaders[ name ]; } );
 
-		const pushedRequest = new Request( path, { headers: requestHeaders } );
+		const pushedRequest = new Request( path, { headers: requestHeaders, allowForbiddenHeaders: true } );
 
 		ref( );
 
