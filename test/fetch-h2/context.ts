@@ -232,8 +232,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				}
 			);
 
-			expect( response.headers.get( "set-cookie" ) ).toBe( null );
-			expect( response.headers.get( "set-cookie2" ) ).toBe( null );
+			expect( response.headers.get( "set-cookie" ) ).toBeUndefined();
+			expect( response.headers.get( "set-cookie2" ) ).toBeUndefined();
 
 			disconnectAll( );
 

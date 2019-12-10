@@ -9,9 +9,6 @@ export interface RawHeaders
 	[ key: string ]: string | Array< string > | undefined;
 }
 
-type HeaderMap = Map< string, Array< string > >;
-
-
 const forbiddenHeaders = [
 	"accept-charset",
 	"accept-encoding",
@@ -83,7 +80,7 @@ function isSimpleHeader( name: string, value?: string ): boolean
 
 function filterName( name: string ): string
 {
-	if ( /[^A-Za-z0-9\-#$%&'*+.\^_`|~]/.test( name ) )
+	if ( /[^A-Za-z0-9\-#$%&'*+.^_`|~]/.test( name ) )
 		throw new TypeError(
 			"Invalid character in header field name: " + name );
 
@@ -125,24 +122,19 @@ function _ensureGuard(
 
 let _guard: GuardTypes | null = null;
 
-export class Headers
+export class Headers extends Map < string, string >
 {
 	protected _guard: GuardTypes;
-	private _data: HeaderMap;
 
 	constructor( init?: RawHeaders | Headers )
 	{
+		super();
 		this._guard = < GuardTypes >_guard || "none";
 		_guard = null;
-		this._data = new Map( );
 
-		const set = ( name: string, values: ReadonlyArray< string > ) =>
+		const set = ( name: string, value: string ) =>
 		{
-			if ( values.length === 1 )
-				this.set( name, values[ 0 ] );
-			else
-				for ( const value of values )
-					this.append( name, value );
+			this.append( name, value );
 		};
 
 		if ( !init )
@@ -150,8 +142,8 @@ export class Headers
 
 		else if ( init instanceof Headers )
 		{
-			for ( const [ name, values ] of init._data.entries( ) )
-				set( name, values );
+			for ( const [ name, value ] of init.entries( ) )
+				set( name, value );
 		}
 
 		else
@@ -161,7 +153,7 @@ export class Headers
 				const name = filterName( _name );
 				const value = arrayify( init[ _name ] )
 					.map( val => `${val}` );
-				set( name, [ ...value ] );
+				set( name, [ ...value ].join(",") );
 			}
 		}
 	}
@@ -172,60 +164,41 @@ export class Headers
 
 		_ensureGuard( this._guard, _name, value );
 
-		if ( !this._data.has( _name ) )
-			this._data.set( _name, [ value ] );
+		if ( !!super.get( _name ) )
+			super.set( _name, super.get( _name ) + "," + value );
 
 		else
-			( < Array< string > >this._data.get( _name ) ).push( value );
+			super.set( _name, value );
 	}
 
-	public delete( name: string ): void
+	public delete( name: string ): boolean
 	{
 		const _name = filterName( name );
 
 		_ensureGuard( this._guard );
 
-		this._data.delete( _name );
+		return super.delete( _name );
 	}
 
-	public *entries( ): IterableIterator< [ string, string ] >
-	{
-		for ( const [ name, value ] of this._data.entries( ) )
-			yield [ name, value.join( "," ) ];
-	}
-
-	public get( name: string ): string | null
+	public get( name: string ): string | undefined
 	{
 		const _name = filterName( name );
 
-		return this._data.has( _name )
-			? ( < Array< string > >this._data.get( _name ) ).join( "," )
-			: null;
+		return super.get( _name );
 	}
 
 	public has( name: string ): boolean
 	{
-		return this._data.has( filterName( name ) );
+		return super.has( filterName( name ) );
 	}
 
-	public keys( ): IterableIterator< string >
-	{
-		return this._data.keys( );
-	}
-
-	public set( name: string, value: string ): void
+	public set( name: string, value: string ): this
 	{
 		const _name = filterName( name );
 
 		_ensureGuard( this._guard, _name, value );
 
-		this._data.set( _name, [ value ] );
-	}
-
-	public *values( ): IterableIterator< string >
-	{
-		for ( const value of this._data.values( ) )
-			yield value.join( "," );
+		return super.set( _name, value );
 	}
 }
 
