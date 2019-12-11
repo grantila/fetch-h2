@@ -6,6 +6,7 @@ import {
 	IncomingHttpHeaders as IncomingHttp2Headers,
 	SecureClientSessionOptions,
 } from "http2";
+import { TLSSocket } from "tls";
 import { URL } from "url";
 
 import { asyncGuard, syncGuard } from "callguard";
@@ -126,7 +127,8 @@ export class H2Context
 		cleanup: ( ) => void;
 	}
 	{
-		const willCreate = !this._h2sessions.has( origin );
+		const wildcard = origin.replace(/^(https?:\/\/)?[^\.]+/, "$1*"); // replace the first host with a wildcard (*)
+		const willCreate = !this._h2sessions.has( origin ) && !this._h2sessions.has( wildcard ) ;
 
 		if ( willCreate )
 		{
@@ -138,6 +140,15 @@ export class H2Context
 			promise
 			.then( session =>
 			{
+				if ( session.socket instanceof TLSSocket ) {
+					const tlsSocket: TLSSocket = session.socket;
+					const subjectAltName: string = tlsSocket.getPeerCertificate().subjectaltname || "";
+					const sanList = subjectAltName.split(/,? ?DNS:/).filter( ( v: string ) => !!v );
+					sanList.forEach( ( san: string ) => {
+						this._h2sessions.set(`https://${san}`, sessionItem);
+					});
+				}
+
 				session.once(
 					"close",
 					( ) => this.disconnect( origin, session )
@@ -166,7 +177,7 @@ export class H2Context
 		}
 
 		const { promise: session, ref, unref } =
-			( < H2SessionItem >this._h2sessions.get( origin ) );
+			( < H2SessionItem >this._h2sessions.get( origin ) ||  < H2SessionItem >this._h2sessions.get( wildcard ) );
 
 		if ( !willCreate )
 			// This was re-used
