@@ -166,6 +166,11 @@ export class Headers
 		}
 	}
 
+	get [ Symbol.toStringTag ]( )
+	{
+		return "Map"; // This causes unit test libraries to treat this as a Map
+	}
+
 	public append( name: string, value: string ): void
 	{
 		const _name = filterName( name );
