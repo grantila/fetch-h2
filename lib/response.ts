@@ -6,9 +6,11 @@ import {
 import { pipeline } from "stream";
 
 import {
+	constants as zlibConstants,
 	createBrotliDecompress,
 	createGunzip,
 	createInflate,
+	ZlibOptions,
 } from "zlib";
 
 const {
@@ -276,11 +278,16 @@ function handleEncoding(
 		// TODO: Add error handling
 	};
 
+	const zlibOpts: ZlibOptions = {
+		flush: zlibConstants.Z_SYNC_FLUSH,
+		finishFlush: zlibConstants.Z_SYNC_FLUSH,
+	};
+
 	const decoders: { [ name: string ]: DecodeFunction; } = {
 		deflate: ( stream: NodeJS.ReadableStream ) =>
 			pipeline( stream, createInflate( ), handleStreamResult ),
 		gzip: ( stream: NodeJS.ReadableStream ) =>
-			pipeline( stream, createGunzip( ), handleStreamResult ),
+			pipeline( stream, createGunzip( zlibOpts ), handleStreamResult ),
 	};
 
 	if ( hasBuiltinBrotli( ) )
