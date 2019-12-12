@@ -4,6 +4,7 @@ import {
 } from "http2";
 
 import {
+	constants as zlibConstants,
 	createBrotliDecompress,
 	createGunzip,
 	createInflate,
@@ -273,7 +274,7 @@ function handleEncoding(
 		deflate: ( stream: NodeJS.ReadableStream ) =>
 			stream.pipe( createInflate( ) ),
 		gzip: ( stream: NodeJS.ReadableStream ) =>
-			stream.pipe( createGunzip( ) ),
+			stream.pipe( createGunzip( { finishFlush: zlibConstants.Z_SYNC_FLUSH }) ),
 	};
 
 	if ( hasBuiltinBrotli( ) )
