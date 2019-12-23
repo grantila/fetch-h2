@@ -60,7 +60,7 @@
     "execa": "^2.0.4",
     "from2": "2.x",
     "jest": "24.x",
-    "nyc": "14.x",
+    "nyc": "^15.0.0",
     "rimraf": "^3.0.0",
     "semantic-release": "15.x",
     "travis-deploy-once": "5.x",
