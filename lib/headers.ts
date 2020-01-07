@@ -171,6 +171,11 @@ export class Headers
 		return "Map"; // This causes unit test libraries to treat this as a Map
 	}
 
+	public [ Symbol.iterator ]( )
+	{
+		return this.entries( );
+	}
+
 	public append( name: string, value: string ): void
 	{
 		const _name = filterName( name );
