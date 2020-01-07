@@ -9,6 +9,7 @@ import {
 	Decoder,
 	FetchInit,
 	HttpProtocols,
+	Method,
 	OnTrailers,
 	TimeoutError,
 } from "./lib/core";
@@ -73,4 +74,5 @@ export {
 	DecodeFunction,
 	Decoder,
 	CookieJar,
+	Method,
 };
