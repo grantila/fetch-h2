@@ -34,7 +34,7 @@ const name = `${site} (${protos[ 0 ]} over ${protocol.replace( ":", "" )})`;
 
 describe( name, ( ) =>
 {
-	jest.setTimeout( 5000 );
+	jest.setTimeout( 10000 );
 
 	function wrapContext( fn: ( fetch: typeof fetchType ) => Promise< void > )
 	{
