@@ -62,7 +62,7 @@
     "jest": "24.x",
     "nyc": "14.x",
     "rimraf": "^3.0.0",
-    "semantic-release": "15.x",
+    "semantic-release": "^16.0.0",
     "travis-deploy-once": "5.x",
     "ts-jest": "24.x",
     "ts-node": "8.x",
