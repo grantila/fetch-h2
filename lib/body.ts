@@ -9,6 +9,8 @@ import { AbortSignal } from "./abort";
 import { AbortError, BodyTypes, IBody, StorageBodyTypes } from "./core";
 
 
+const abortError = new AbortError( "Response aborted" );
+
 function makeUnknownDataError( )
 {
 	return new Error( "Unknown body data" );
@@ -72,7 +74,7 @@ export class Body implements IBody
 			return this.validateIntegrity( emptyBuffer, allowIncomplete );
 
 		else if ( isStream( this._body ) )
-			return getStream.buffer( < NodeJS.ReadableStream >this._body )
+			return this.awaitBuffer( < NodeJS.ReadableStream >this._body )
 			.then( buffer =>
 				this.validateIntegrity( buffer, allowIncomplete )
 			)
@@ -104,7 +106,7 @@ export class Body implements IBody
 			)
 			.then( ( ) => this._body );
 		else if ( isStream( this._body ) )
-			return getStream.buffer( < NodeJS.ReadableStream >this._body )
+			return this.awaitBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, false )
 				) )
@@ -130,7 +132,7 @@ export class Body implements IBody
 			)
 			.then( ( ) => < string >< BodyTypes >this._body );
 		else if ( isStream( this._body ) )
-			return getStream.buffer( < NodeJS.ReadableStream >this._body )
+			return this.awaitBuffer( < NodeJS.ReadableStream >this._body )
 				.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, allowIncomplete )
 				) )
@@ -215,6 +217,38 @@ export class Body implements IBody
 			this._integrity = integrity;
 	}
 
+	private async awaitBuffer( readable: NodeJS.ReadableStream )
+	: Promise< Buffer >
+	{
+		if ( !this._signal )
+			return getStream.buffer( readable );
+
+		// Race the readable against the abort signal
+		let callback: ( ) => void = ( ) => { };
+		const onAborted = new Promise< Buffer >( ( _, reject ) =>
+		{
+			callback = ( ) => { reject( abortError ); };
+			this._signal?.addListener( 'abort', callback );
+		} );
+
+		try
+		{
+			this._ensureNotAborted( );
+
+			return await Promise.race( [
+				getStream.buffer( readable ),
+				onAborted,
+			] );
+		}
+		finally
+		{
+			this._signal.removeListener( 'abort', callback );
+			// Could happen if abort and other error happen practically
+			// simultaneously. Ensure Node.js won't get mad about this.
+			onAborted.catch( ( ) => { } );
+		}
+	}
+
 	private validateIntegrity< T extends Buffer | ArrayBuffer >(
 		data: T,
 		allowIncomplete: boolean
@@ -258,7 +292,7 @@ export class Body implements IBody
 	private _ensureNotAborted( )
 	{
 		if ( this._signal && this._signal.aborted )
-			throw new AbortError( "Response aborted" );
+			throw abortError;
 	}
 
 	private _ensureUnused( )

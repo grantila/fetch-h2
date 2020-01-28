@@ -127,10 +127,10 @@ describe( "abort", ( ) =>
 
 			const { server, port } = await makeServer( );
 
-			setTimeout( abort, 50 );
+			setTimeout( abort, 100 );
 
 			const response = ensureStatusSuccess(
-				await fetch( `${proto}://localhost:${port}/slow/100`, { signal } )
+				await fetch( `${proto}://localhost:${port}/slow/200`, { signal } )
 			);
 
 			const awaitBody = response.arrayBuffer( );
