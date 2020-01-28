@@ -1,4 +1,5 @@
 import { URL } from "url";
+import * as fs from "fs";
 
 import { delay, Finally } from "already";
 import * as through2 from "through2";
@@ -15,47 +16,58 @@ import {
 
 interface TestData
 {
-	protocol: string;
+	scheme: string;
 	site: string;
 	protos: Array< HttpProtocols >;
+	certs?: boolean;
 }
 
+const ca = fs.readFileSync( "/tmp/fetch-h2-certs/ca.pem" );
+const cert = fs.readFileSync( "/tmp/fetch-h2-certs/cert.pem" );
+
+const http1bin = `localhost:${process.env.HTTP1BIN_PORT}`;
+const http2bin = `localhost:${process.env.HTTP2BIN_PORT}`;
+const https1bin = `localhost:${process.env.HTTPS1PROXY_PORT}`;
+
 ( [
-	{ protocol: "https:", site: "nghttp2.org/httpbin", protos: [ "http2" ] },
-	{ protocol: "http:", site: "httpbin.org", protos: [ "http1" ] },
-	{ protocol: "https:", site: "httpbin.org", protos: [ "http1" ] },
+	{ scheme: "http:", site: http2bin, protos: [ "http2" ] },
+	{ scheme: "http:", site: http1bin, protos: [ "http1" ] },
+	{ scheme: "https:", site: https1bin, protos: [ "http1" ], certs: false },
+	{ scheme: "https:", site: https1bin, protos: [ "http1" ], certs: true },
 ] as Array< TestData > )
-.forEach( ( { site, protocol, protos } ) =>
+.forEach( ( { site, scheme, protos, certs } ) =>
 {
-const host = `${protocol}//${site}`;
+const host = `${scheme}//${site}`;
 const baseHost = new URL( host ).origin;
 
-const name = `${site} (${protos[ 0 ]} over ${protocol.replace( ":", "" )})`;
+const name = `${site} (${protos[ 0 ]} over ${scheme.replace( ":", "" )})` +
+	( certs ? ' (using explicit certificates)' : '' );
 
 describe( name, ( ) =>
 {
-	jest.setTimeout( 10000 );
-
 	function wrapContext( fn: ( fetch: typeof fetchType ) => Promise< void > )
 	{
 		return async ( ) =>
 		{
 			const { fetch, disconnectAll } = context( {
 				httpsProtocols: protos,
+				session: certs
+					? { ca, cert, rejectUnauthorized: false }
+					: { rejectUnauthorized: false },
 			} );
 
 			await fn( fetch ).then( ...Finally( disconnectAll ) );
 		};
 	}
 
-	it.concurrent( "should be possible to GET", wrapContext( async ( fetch ) =>
+	it( "should be possible to GET", wrapContext( async ( fetch ) =>
 	{
 		const response = await fetch( `${host}/user-agent` );
 		const data = await response.json( );
 		expect( data[ "user-agent" ] ).toContain( "fetch-h2/" );
 	} ) );
 
-	it.concurrent( "should be possible to POST JSON", wrapContext(
+	it( "should be possible to POST JSON", wrapContext(
 		async ( fetch ) =>
 	{
 		const testData = { foo: "bar" };
@@ -73,7 +85,7 @@ describe( name, ( ) =>
 		expect( data.headers[ "Content-Type" ] ).toBe( "application/json" );
 	} ) );
 
-	it.concurrent( "should be possible to POST buffer-data", wrapContext(
+	it( "should be possible to POST buffer-data", wrapContext(
 		async ( fetch ) =>
 	{
 		const testData = '{"foo": "data"}';
@@ -90,7 +102,7 @@ describe( name, ( ) =>
 		expect( data.headers ).not.toHaveProperty( "Content-Type" );
 	} ) );
 
-	it.concurrent( "should be possible to POST already ended stream-data",
+	it( "should be possible to POST already ended stream-data",
 		wrapContext( async ( fetch ) =>
 	{
 		const stream = through2( );
@@ -113,7 +125,7 @@ describe( name, ( ) =>
 		expect( data.data ).toBe( "foobar" );
 	} ) );
 
-	it.concurrent( "should be possible to POST not yet ended stream-data",
+	it( "should be possible to POST not yet ended stream-data",
 		wrapContext( async ( fetch ) =>
 	{
 		const stream = through2( );
@@ -140,10 +152,9 @@ describe( name, ( ) =>
 		expect( data.data ).toBe( "foobar" );
 	} ) );
 
-	it.concurrent( "should save and forward cookies", async ( ) =>
+	it( "should save and forward cookies",
+		wrapContext( async ( fetch ) =>
 	{
-		const { fetch, disconnectAll } = context( );
-
 		const responseSet = await fetch(
 			`${host}/cookies/set?foo=bar`,
 			{ redirect: "manual" } );
@@ -155,13 +166,11 @@ describe( name, ( ) =>
 
 		const data = await response.json( );
 		expect( data.cookies ).toEqual( { foo: "bar" } );
+	} ) );
 
-		await disconnectAll( );
-	} );
-
-	it.concurrent( "should handle (and follow) relative paths", async ( ) =>
+	it( "should handle (and follow) relative paths",
+		wrapContext( async ( fetch ) =>
 	{
-		const { fetch, disconnectAll } = context( );
 
 		const response = await fetch(
 			`${host}/relative-redirect/2`,
@@ -169,11 +178,9 @@ describe( name, ( ) =>
 
 		expect( response.url ).toBe( `${host}/get` );
 		await response.text( );
+	} ) );
 
-		await disconnectAll( );
-	} );
-
-	it.concurrent( "should be possible to GET gzip data", wrapContext(
+	it( "should be possible to GET gzip data", wrapContext(
 		async ( fetch ) =>
 	{
 		const response = await fetch( `${host}/gzip` );

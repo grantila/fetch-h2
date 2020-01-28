@@ -6,7 +6,9 @@ node_js:
   - "12"
   - "13"
 before_script:
-  - "npm run build"
+  - yarn build
+script:
+  - yarn test
 branches:
   except:
     - /^v\d+\.\d+\.\d+$/
@@ -15,6 +17,6 @@ jobs:
     - stage: release
       node_js: lts/*
       script:
-        - npm run test
+        - yarn test
         - cat coverage/lcov.info | npx coveralls
         - npx semantic-release
