@@ -20,5 +20,3 @@ services:
       - 443
     volumes:
       - "/tmp/fetch-h2-certs:/etc/nginx/certs"
-# node_modules/.bin/mkcert create-ca --key /tmp/asdf/ca.key --cert /tmp/asdf/ca.crt
-# node_modules/.bin/mkcert create-cert --ca-key /tmp/asdf/ca.key --ca-cert /tmp/asdf/ca.crt --key /tmp/asdf/cert.key --cert /tmp/asdf/cert.crt --domains localhost,127.0.0.1
