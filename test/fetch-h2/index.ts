@@ -719,7 +719,7 @@ describe( `goaway (${protoVersion})`, ( ) =>
 		const response1 = ensureStatusSuccess( await fetch( url1 ) );
 		expect( response1.url ).toBe( cleanUrl( url1 ) );
 
-		await delay(20);
+		await delay( 20 );
 
 		const response2 = ensureStatusSuccess( await fetch( url2 ) );
 		expect( response2.url ).toBe( cleanUrl( url2 ) );

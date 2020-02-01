@@ -33,10 +33,18 @@ const {
 
 interface H2SessionItem
 {
+	firstOrigin: string;
 	session: ClientHttp2Session;
 	promise: Promise< ClientHttp2Session >;
 
 	ref: ( ) => void;
+	unref: ( ) => void;
+}
+
+export interface CacheableH2Session
+{
+	ref: ( ) => void;
+	session: Promise< ClientHttp2Session >;
 	unref: ( ) => void;
 }
 
@@ -55,9 +63,9 @@ export class H2Context
 {
 	public _pushHandler?: PushHandler;
 
-	private _h2sessions: Map< string, H2SessionItem > = new Map( );
-	private _h2staleSessions: Map< string, Set< ClientHttp2Session > > =
-		new Map( );
+	// TODO: Remove in favor of protocol-agnostic origin cache
+	private _h2sessions = new Map< string, H2SessionItem >( );
+	private _h2staleSessions = new Map< string, Set< ClientHttp2Session > >( );
 	private _getDecoders: GetDecoders;
 	private _getSessionOptions: GetSessionOptions;
 
@@ -80,7 +88,7 @@ export class H2Context
 
 			const printSession = ( origin: string, session: MonkeyH2Session ) =>
 			{
-				debug( "  Origin:", origin );
+				debug( "  First origin:", origin );
 				debug( "   Ref-counter:", session.__fetch_h2_refcount );
 				debug( "   Destroyed:", session.destroyed );
 				debug( "   Destroyed mark:", session.__fetch_h2_destroyed );
@@ -111,80 +119,53 @@ export class H2Context
 		}
 	}
 
-	public hasOrigin( origin: string )
-	{
-		return this._h2sessions.has( origin );
-	}
-
-	public getOrCreateHttp2(
+	public createHttp2(
 		origin: string,
+		onGotGoaway: ( ) => void,
 		extraOptions?: SecureClientSessionOptions
 	)
-	: {
-		didCreate: boolean;
-		session: Promise< ClientHttp2Session >;
-		cleanup: ( ) => void;
-	}
+	: CacheableH2Session
 	{
-		const willCreate = !this._h2sessions.has( origin );
+		const sessionItem = this.connectHttp2( origin, extraOptions );
 
-		if ( willCreate )
+		const { promise } = sessionItem;
+
+		// Handle session closure (delete from store)
+		promise
+		.then( session =>
 		{
-			const sessionItem = this.connectHttp2( origin, extraOptions );
+			session.once(
+				"close",
+				( ) => this.disconnect( origin, session )
+			);
 
-			const { promise } = sessionItem;
-
-			// Handle session closure (delete from store)
-			promise
-			.then( session =>
-			{
-				session.once(
-					"close",
-					( ) => this.disconnect( origin, session )
-				);
-
-				session.once(
-					"goaway",
-					(
-						_errorCode: number,
-						_lastStreamID: number,
-						_opaqueData: Buffer
-					) =>
-					{
-						setGotGoaway( session );
-						this.releaseSession( origin );
-					}
-				);
-			} )
-			.catch( ( ) =>
-			{
-				if ( sessionItem.session )
-					this.disconnect( origin, sessionItem.session );
-			} );
-
-			this._h2sessions.set( origin, sessionItem );
-		}
-
-		const { promise: session, ref, unref } =
-			( < H2SessionItem >this._h2sessions.get( origin ) );
-
-		if ( !willCreate )
-			// This was re-used
-			ref( );
-
-		// Avoid potential double-clean races
-		let hasCleanedUp = false;
-		const cleanup = ( ) =>
+			session.once(
+				"goaway",
+				(
+					_errorCode: number,
+					_lastStreamID: number,
+					_opaqueData: Buffer
+				) =>
+				{
+					setGotGoaway( session );
+					onGotGoaway( );
+					this.releaseSession( origin );
+				}
+			);
+		} )
+		.catch( ( ) =>
 		{
-			if ( hasCleanedUp )
-				return;
-			hasCleanedUp = true;
-			unref( );
-		};
+			if ( sessionItem.session )
+				this.disconnect( origin, sessionItem.session );
+		} );
+
+		this._h2sessions.set( origin, sessionItem );
+
+		const { promise: session, ref, unref } = sessionItem;
 
 		return {
-			cleanup,
-			didCreate: willCreate,
+			ref,
+			unref,
 			session,
 		};
 	}
@@ -266,7 +247,8 @@ export class H2Context
 		return Promise.all( promises ).then( ( ) => { } );
 	}
 
-	public disconnect( url: string, session?: ClientHttp2Session ): Promise< void >
+	public disconnect( url: string, session?: ClientHttp2Session )
+	: Promise< void >
 	{
 		const { origin } = new URL( url );
 		const promises: Array< Promise< void > > = [ ];
@@ -400,7 +382,7 @@ export class H2Context
 		// tslint:disable-next-line
 		const aGuard = asyncGuard( console.error.bind( console ) );
 
-		const sessionRefs: Partial< H2SessionItem > = { };
+		const sessionRefs = { } as Pick< H2SessionItem, 'ref' | 'unref' >;
 
 		const makeRefs = ( session: ClientHttp2Session ) =>
 		{
@@ -418,7 +400,7 @@ export class H2Context
 			};
 			sessionRefs.unref = ( ) =>
 			{
-				if ( session.destroyed )
+				if ( isDestroyed( session ) )
 					return;
 
 				--monkeySession.__fetch_h2_refcount;
@@ -450,8 +432,8 @@ export class H2Context
 							origin,
 							stream,
 							headers,
-							< ( ) => void >sessionRefs.ref,
-							< ( ) => void >sessionRefs.unref
+							( ) => sessionRefs.ref( ),
+							( ) => sessionRefs.unref( )
 						)
 				) );
 
@@ -466,10 +448,11 @@ export class H2Context
 		);
 
 		return {
+			firstOrigin: origin,
 			promise,
-			ref: < ( ) => void >sessionRefs.ref,
+			ref: ( ) => sessionRefs.ref( ),
 			session,
-			unref: < ( ) => void >sessionRefs.unref,
+			unref: ( ) => sessionRefs.unref( ),
 		};
 	}
 }

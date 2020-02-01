@@ -33,7 +33,7 @@ function parseIntegrity( integrity: string )
 	return { algorithm, hash: expectedHash.join( "-" ) };
 }
 
-function isStream( body: StorageBodyTypes ): boolean
+function isStream( body: StorageBodyTypes ): body is NodeJS.ReadableStream
 {
 	return body &&
 		( "readable" in ( < NodeJS.ReadableStream >Object( body ) ) );
@@ -47,7 +47,7 @@ export class Body implements IBody
 	public readonly bodyUsed: boolean;
 	protected _length: number | null;
 	protected _mime?: string;
-	private _body?: StorageBodyTypes | null;
+	protected _body?: StorageBodyTypes | null;
 	private _used: boolean;
 	private _integrity?: string;
 	private _signal?: AbortSignal;
@@ -133,7 +133,7 @@ export class Body implements IBody
 			.then( ( ) => < string >< BodyTypes >this._body );
 		else if ( isStream( this._body ) )
 			return this.awaitBuffer( < NodeJS.ReadableStream >this._body )
-				.then( tap( buffer =>
+			.then( tap( buffer =>
 					< any >this.validateIntegrity( buffer, allowIncomplete )
 				) )
 				.then( buffer => buffer.toString( ) );
@@ -363,6 +363,11 @@ export class BodyInspector extends Body
 		return this._length;
 	}
 
+	private _getBody( )
+	{
+		return this._body;
+	}
+
 	get mime( )
 	{
 		return this._getMime.call( this._ref );
@@ -371,5 +376,11 @@ export class BodyInspector extends Body
 	get length( )
 	{
 		return this._getLength.call( this._ref );
+	}
+
+	get stream( )
+	{
+		const rawBody = this._getBody.call( this._ref );
+		return rawBody && isStream( rawBody ) ? rawBody : undefined;
 	}
 }

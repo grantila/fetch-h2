@@ -179,6 +179,15 @@ export class TimeoutError extends Error
 	}
 }
 
+export class RetryError extends Error
+{
+	constructor( message: string )
+	{
+		super( message );
+		Object.setPrototypeOf( this, RetryError.prototype );
+	}
+}
+
 export type DecodeFunction =
 	( stream: NodeJS.ReadableStream ) => NodeJS.ReadableStream;
 
@@ -253,7 +262,7 @@ export interface SimpleSessionHttp1Request
 
 export interface SimpleSessionHttp2Session
 {
-	session: ClientHttp2Session;
+	session: Promise< ClientHttp2Session >;
 	cleanup: ( ) => void;
 }
 
@@ -264,5 +273,5 @@ export interface SimpleSessionHttp1 extends SimpleSession
 
 export interface SimpleSessionHttp2 extends SimpleSession
 {
-	get( url: string ): Promise< SimpleSessionHttp2Session >;
+	get( ): SimpleSessionHttp2Session;
 }

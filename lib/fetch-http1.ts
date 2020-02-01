@@ -23,7 +23,7 @@ import {
 import { GuardedHeaders } from "./headers";
 import { Request } from "./request";
 import { Response, StreamResponse } from "./response";
-import { arrayify, isRedirectStatus, parseLocation } from "./utils";
+import { arrayify, isRedirectStatus, parseLocation, pipeline } from "./utils";
 
 const {
 	// Responses, these are the same in HTTP/1.1 and HTTP/2
@@ -252,7 +252,11 @@ export async function fetchImpl(
 			await request.readable( )
 			.then( readable =>
 			{
-				readable.pipe( req );
+				pipeline( readable, req )
+				.catch ( _err =>
+				{
+					// TODO: Implement error handling
+				} );
 			} );
 
 		return response;

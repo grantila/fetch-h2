@@ -2,6 +2,7 @@ import { SecureClientSessionOptions } from "http2";
 import { connect, ConnectionOptions, TLSSocket } from "tls";
 
 import { HttpProtocols } from "./core";
+import { AltNameMatch, parseOrigin } from "./san";
 
 const alpnProtocols =
 {
@@ -13,6 +14,7 @@ export interface HttpsSocketResult
 {
 	socket: TLSSocket;
 	protocol: "http1" | "http2";
+	altNameMatch: AltNameMatch;
 }
 
 const defaultMethod: Array< HttpProtocols > = [ "http2", "http1" ];
@@ -48,10 +50,13 @@ export function connectTLS(
 
 	return new Promise< HttpsSocketResult >( ( resolve, reject ) =>
 	{
-		const socket: TLSSocket = connect( parseInt( port, 10 ), host, opts, ( ) =>
+		const socket: TLSSocket = connect( parseInt( port, 10 ), host, opts,
+			( ) =>
 		{
 			const { authorized, authorizationError, alpnProtocol = "" } =
 				socket;
+			const cert = socket.getPeerCertificate( );
+			const altNameMatch = parseOrigin( cert );
 
 			if ( !authorized && opts.rejectUnauthorized !== false )
 				return reject( authorizationError );
@@ -61,14 +66,22 @@ export function connectTLS(
 				// Maybe the server doesn't understand ALPN, enforce
 				// user-provided protocol, or fallback to HTTP/1
 				if ( _protocols.length === 1 )
-					return resolve( { protocol: _protocols[ 0 ], socket } );
+					return resolve( {
+						altNameMatch,
+						protocol: _protocols[ 0 ],
+						socket,
+					} );
 				else
-					return resolve( { protocol: "http1", socket } );
+					return resolve( {
+						altNameMatch,
+						protocol: "http1",
+						socket,
+					} );
 			}
 
 			const protocol = alpnProtocol === "h2" ? "http2" : "http1";
 
-			resolve( { socket, protocol } );
+			resolve( { socket, protocol, altNameMatch } );
 		} );
 
 		socket.once( "error", reject );
