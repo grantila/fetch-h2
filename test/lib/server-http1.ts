@@ -12,6 +12,7 @@ import {
 	Server as HttpsServer,
 } from "https";
 import { Socket } from "net";
+import { pipeline } from "../../lib/utils";
 
 import { createHash } from "crypto";
 import { createBrotliCompress, createDeflate, createGzip } from "zlib";
@@ -126,7 +127,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 			} );
 
 			sendHeaders( responseHeaders );
-			request.pipe( response );
+			pipeline( request, response );
 		}
 		else if ( path === "/set-cookie" )
 		{
@@ -166,7 +167,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 			try
 			{
 				sendHeaders( responseHeaders );
-				request.pipe( response );
+				pipeline( request, response );
 			}
 			catch ( err )
 			// We ignore errors since this route is used to intentionally
@@ -209,7 +210,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 				}
 			} );
 
-			request.pipe( hash );
+			pipeline( request, hash );
 		}
 		else if ( path.startsWith( "/compressed/" ) )
 		{
@@ -239,9 +240,9 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 
 			sendHeaders( responseHeaders );
 			if ( encoder )
-				request.pipe( encoder ).pipe( response );
+				pipeline( request, encoder, response );
 			else
-				request.pipe( response );
+				pipeline( request, response );
 		}
 		else if ( path.startsWith( "/delay/" ) )
 		{

@@ -1,5 +1,10 @@
 import { URL } from "url";
 import { createBrotliCompress } from "zlib";
+import { promisify } from "util";
+import * as stream from "stream";
+
+
+export const pipeline = promisify( stream.pipeline );
 
 export function arrayify< T >(
 	value:

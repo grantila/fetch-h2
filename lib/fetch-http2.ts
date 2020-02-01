@@ -1,6 +1,7 @@
 import {
 	constants as h2constants,
 	IncomingHttpHeaders as IncomingHttp2Headers,
+	ClientHttp2Stream,
 } from "http2";
 
 import { syncGuard } from "callguard";
@@ -8,6 +9,7 @@ import { syncGuard } from "callguard";
 import { AbortController } from "./abort";
 import {
 	AbortError,
+	RetryError,
 	FetchInit,
 	SimpleSessionHttp2,
 } from "./core";
@@ -25,7 +27,7 @@ import {
 import { GuardedHeaders } from "./headers";
 import { Request } from "./request";
 import { Response, StreamResponse } from "./response";
-import { arrayify, isRedirectStatus, parseLocation } from "./utils";
+import { arrayify, isRedirectStatus, parseLocation, pipeline } from "./utils";
 import { hasGotGoaway } from "./utils-http2";
 
 const {
@@ -75,53 +77,67 @@ async function fetchImpl(
 
 	const { raceConditionedGoaway } = extra;
 
-	const streamPromise = session.get( url );
+	const streamPromise = session.get( );
 
 	async function doFetch( ): Promise< Response >
 	{
-		const { session: h2session, cleanup: socketCleanup } =
-			await streamPromise;
+		const { session: ph2session, cleanup: socketCleanup } = streamPromise;
+		const h2session = await ph2session;
 
-		const stream = h2session.request( headersToSend, { endStream } );
+		const tryRetryOnGoaway =
+			( resolve: ( value: Promise< Response > ) => void ) =>
+		{
+			// This could be due to a race-condition in GOAWAY.
+			// As of current Node.js, the 'goaway' event is emitted on the
+			// session before this event (at least frameError, probably
+			// 'error' too) is emitted, so we will know if we got it.
+			if (
+				!raceConditionedGoaway.has( origin ) &&
+				hasGotGoaway( h2session )
+			)
+			{
+				// Don't retry again due to potential GOAWAY
+				raceConditionedGoaway.add( origin );
+
+				// Since we've got the 'goaway' event, the
+				// context has already released the session,
+				// so a retry will create a new session.
+				resolve(
+					fetchImpl(
+						session,
+						request,
+						{ signal, onTrailers },
+						{
+							raceConditionedGoaway,
+							redirected,
+							timeoutAt,
+						}
+					)
+				);
+
+				return true;
+			}
+			return false;
+		};
+
+		let stream: ClientHttp2Stream;
+		try
+		{
+			stream = h2session.request( headersToSend, { endStream } );
+		}
+		catch ( err )
+		{
+			if ( err.code === "ERR_HTTP2_GOAWAY_SESSION" )
+			{
+				// Retry with new session
+				throw new RetryError( err.code );
+			}
+			throw err;
+		}
 
 		const response = new Promise< Response >( ( resolve, reject ) =>
 		{
 			const guard = syncGuard( reject, { catchAsync: true } );
-
-			const tryRetryOnGoaway = ( ) =>
-			{
-				// This could be due to a race-condition in GOAWAY.
-				// As of current Node.js, the 'goaway' event is emitted on the
-				// session before this event (at least frameError, probably
-				// 'error' too) is emitted, so we will know if we got it.
-				if (
-					!raceConditionedGoaway.has( origin ) &&
-					hasGotGoaway( h2session )
-				)
-				{
-					// Don't retry again due to potential GOAWAY
-					raceConditionedGoaway.add( origin );
-
-					// Since we've got the 'goaway' event, the
-					// context has already released the session,
-					// so a retry will create a new session.
-					resolve(
-						fetchImpl(
-							session,
-							request,
-							{ signal, onTrailers },
-							{
-								raceConditionedGoaway,
-								redirected,
-								timeoutAt,
-							}
-						)
-					);
-
-					return true;
-				}
-				return false;
-			};
 
 			stream.on( "aborted", guard( ( ..._whatever ) =>
 			{
@@ -137,7 +153,7 @@ async function fetchImpl(
 					err.message.includes( "NGHTTP2_REFUSED_STREAM" )
 				)
 				{
-					if ( tryRetryOnGoaway( ) )
+					if ( tryRetryOnGoaway( resolve ) )
 						return;
 				}
 				reject( err );
@@ -151,7 +167,7 @@ async function fetchImpl(
 						endStream
 					)
 					{
-						if ( tryRetryOnGoaway( ) )
+						if ( tryRetryOnGoaway( resolve ) )
 							return;
 					}
 
@@ -333,7 +349,11 @@ async function fetchImpl(
 			await request.readable( )
 			.then( readable =>
 			{
-				readable.pipe( stream );
+				pipeline( readable, stream )
+				.catch ( _err =>
+				{
+					// TODO: Implement error handling
+				} );
 			} );
 
 		return response;
@@ -344,12 +364,7 @@ async function fetchImpl(
 		timeoutInfo,
 		cleanup,
 		doFetch,
-		( ) =>
-		{
-			streamPromise
-			.then( ( { cleanup } ) => cleanup( ) )
-			.catch( _err => { } );
-		}
+		streamPromise.cleanup
 	);
 }
 

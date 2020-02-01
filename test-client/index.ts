@@ -1,5 +1,8 @@
 // tslint:disable-next-line
 import { fetch, setup, HttpProtocols } from "..";
+import { pipeline } from "stream";
+
+// tslint:disable no-console
 
 async function work( )
 {
@@ -29,11 +32,15 @@ async function work( )
 		}
 	);
 
-	const readable = await response.readable( );
+	pipeline( await response.readable( ), process.stdout, err =>
+	{
+		if ( !err )
+			return;
 
-	readable.pipe( process.stdout );
+		console.error( "Failed to fetch", err.stack );
+		process.exit( 1 );
+	} )
 }
 
 work( )
-// tslint:disable-next-line
-.catch( err => { console.error( err.stack ); } );
+.catch( err => { console.error( err, err.stack ); } );

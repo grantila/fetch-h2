@@ -28,6 +28,8 @@ Since 1.0.0, `fetch-h2` requires Node.js 10.
 
 Since 2.0.0, `fetch-h2` requires Node.js 10.4.
 
+Since 2.4.0, `fetch-h2` has full TLS SAN (Subject Alternative Name) support.
+
 
 # API
 

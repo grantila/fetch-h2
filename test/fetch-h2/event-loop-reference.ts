@@ -34,7 +34,7 @@ describe( "event-loop", ( ) =>
 			const { stdout } = await execa(
 				script,
 				[ "GET", url, version, "insecure" ],
-				{ input: JSON.stringify( body ) }
+				{ input: JSON.stringify( body ), stderr: 'inherit' }
 			);
 
 			const responseBody = JSON.parse( stdout );

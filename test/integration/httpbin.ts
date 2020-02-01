@@ -1,7 +1,7 @@
 import { URL } from "url";
 import * as fs from "fs";
 
-import { delay, Finally } from "already";
+import { delay } from "already";
 import * as through2 from "through2";
 
 import {
@@ -49,14 +49,16 @@ describe( name, ( ) =>
 	{
 		return async ( ) =>
 		{
-			const { fetch, disconnectAll } = context( {
+			const { fetch } = context( {
 				httpsProtocols: protos,
 				session: certs
 					? { ca, cert, rejectUnauthorized: false }
 					: { rejectUnauthorized: false },
 			} );
 
-			await fn( fetch ).then( ...Finally( disconnectAll ) );
+			// Disconnection shouldn't be necessary, fetch-h2 should unref
+			// the sockets correctly.
+			await fn( fetch );
 		};
 	}
 
@@ -67,8 +69,7 @@ describe( name, ( ) =>
 		expect( data[ "user-agent" ] ).toContain( "fetch-h2/" );
 	} ) );
 
-	it( "should be possible to POST JSON", wrapContext(
-		async ( fetch ) =>
+	it( "should be possible to POST JSON", wrapContext( async ( fetch ) =>
 	{
 		const testData = { foo: "bar" };
 
@@ -161,6 +162,7 @@ describe( name, ( ) =>
 
 		expect( responseSet.headers.has( "location" ) ).toBe( true );
 		const redirectedTo = responseSet.headers.get( "location" );
+		await responseSet.text( );
 
 		const response = await fetch( baseHost + redirectedTo );
 

@@ -8,6 +8,7 @@ import {
 	OutgoingHttpHeaders,
 	ServerHttp2Stream,
 } from "http2";
+import { pipeline } from "../../lib/utils";
 
 import { createHash } from "crypto";
 import { createBrotliCompress, createDeflate, createGzip } from "zlib";
@@ -111,7 +112,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 			} );
 
 			stream.respond( responseHeaders );
-			stream.pipe( stream );
+			pipeline( stream, stream );
 		}
 		else if ( path === "/set-cookie" )
 		{
@@ -149,7 +150,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 			try
 			{
 				stream.respond( responseHeaders );
-				stream.pipe( stream );
+				pipeline( stream, stream );
 			}
 			catch ( err )
 			// We ignore errors since this route is used to intentionally
@@ -202,7 +203,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				}
 			} );
 
-			stream.pipe( hash );
+			pipeline( stream, hash );
 		}
 		else if ( path === "/push" )
 		{
@@ -258,9 +259,9 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 
 			stream.respond( responseHeaders );
 			if ( encoder )
-				stream.pipe( encoder ).pipe( stream );
+				pipeline( stream, encoder, stream );
 			else
-				stream.pipe( stream );
+				pipeline( stream, stream );
 		}
 		else if ( path.startsWith( "/goaway" ) )
 		{

@@ -263,8 +263,8 @@ export async function setupFetch(
 
 	function cleanup( )
 	{
-		if ( timeoutInfo && timeoutInfo.clear )
-			timeoutInfo.clear( );
+		timeoutInfo?.clear?.( );
+		timeoutInfo?.promise?.catch( _err => { } );
 
 		if ( signal && abortHandler )
 			signal.removeListener( "abort", abortHandler );
@@ -303,7 +303,6 @@ export function handleSignalAndTimeout(
 			< Promise< any > >signalPromise,
 			< Promise< any > >( timeoutInfo && timeoutInfo.promise ),
 			fetcher( ).catch( rethrow( onError ) ),
-
 		]
 		.filter( promise => promise )
 	)

@@ -3,6 +3,8 @@ import {
 	constants as h2constants,
 } from "http2";
 
+import { pipeline } from "stream";
+
 import {
 	createBrotliDecompress,
 	createGunzip,
@@ -269,17 +271,22 @@ function handleEncoding(
 	if ( !contentEncoding )
 		return stream;
 
+	const handleStreamResult = ( _err: NodeJS.ErrnoException | null ) =>
+	{
+		// TODO: Add error handling
+	};
+
 	const decoders: { [ name: string ]: DecodeFunction; } = {
 		deflate: ( stream: NodeJS.ReadableStream ) =>
-			stream.pipe( createInflate( ) ),
+			pipeline( stream, createInflate( ), handleStreamResult ),
 		gzip: ( stream: NodeJS.ReadableStream ) =>
-			stream.pipe( createGunzip( ) ),
+			pipeline( stream, createGunzip( ), handleStreamResult ),
 	};
 
 	if ( hasBuiltinBrotli( ) )
 	{
 		decoders.br = ( stream: NodeJS.ReadableStream ) =>
-			stream.pipe( createBrotliDecompress( ) );
+			pipeline( stream, createBrotliDecompress( ), handleStreamResult );
 	}
 
 	contentDecoders.forEach( decoder =>

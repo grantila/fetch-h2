@@ -42,7 +42,7 @@ export interface FreeSocketInfoWithoutSocket
 export type FreeSocketInfo =
 	FreeSocketInfoWithSocket | FreeSocketInfoWithoutSocket;
 
-class OriginPool
+export class OriginPool
 {
 	private usedSockets = new Set< Socket >( );
 	private unusedSockets = new Set< Socket >( );
@@ -286,6 +286,11 @@ class ContextPool
 	}
 }
 
+function sessionToPool( session: unknown )
+{
+	return session as OriginPool;
+}
+
 export class H1Context
 {
 	private contextPool: ContextPool;
@@ -295,21 +300,26 @@ export class H1Context
 		this.contextPool = new ContextPool( options );
 	}
 
-	public getFreeSocketForOrigin( origin: string ): FreeSocketInfo
+	public getSessionForOrigin( origin: string )
 	{
-		return this.contextPool.hasOrigin( origin )
-			? this.contextPool.getOriginPool( origin ).getFreeSocket( )
-			: { shouldCreateNew: true } as FreeSocketInfoWithoutSocket;
+		return this.contextPool.getOriginPool( origin );
 	}
 
-	public addUsedSocket( origin: string, socket: Socket )
+	public getFreeSocketForSession( session: OriginPool ): FreeSocketInfo
 	{
-		return this.contextPool.getOriginPool( origin ).addUsed( socket );
+		const pool = sessionToPool( session );
+		return pool.getFreeSocket( );
 	}
 
-	public waitForSocket( origin: string ): Promise< SocketAndCleanup >
+	public addUsedSocket( session: OriginPool, socket: Socket )
 	{
-		return this.contextPool.getOriginPool( origin ).waitForSocket( );
+		const pool = sessionToPool( session );
+		return pool.addUsed( socket );
+	}
+
+	public waitForSocketBySession( session: OriginPool ): Promise< SocketAndCleanup >
+	{
+		return sessionToPool( session ).waitForSocket( );
 	}
 
 	public connect( url: URL, extraOptions: ConnectOptions, request: Request )
