@@ -8,6 +8,7 @@ import {
 	context,
 	DataBody,
 	fetch as fetchType,
+	disconnectAll as disconnectAllType,
 	HttpProtocols,
 	JsonBody,
 	StreamBody,
@@ -16,11 +17,15 @@ import {
 
 interface TestData
 {
-	scheme: string;
+	scheme: "http:" | "https:";
 	site: string;
 	protos: Array< HttpProtocols >;
 	certs?: boolean;
 }
+
+type TestFunction =
+	( fetch: typeof fetchType, disconnectAll: typeof disconnectAllType ) =>
+		Promise< void >;
 
 const ca = fs.readFileSync( "/tmp/fetch-h2-certs/ca.pem" );
 const cert = fs.readFileSync( "/tmp/fetch-h2-certs/cert.pem" );
@@ -45,11 +50,11 @@ const name = `${site} (${protos[ 0 ]} over ${scheme.replace( ":", "" )})` +
 
 describe( name, ( ) =>
 {
-	function wrapContext( fn: ( fetch: typeof fetchType ) => Promise< void > )
+	function wrapContext( fn: TestFunction )
 	{
 		return async ( ) =>
 		{
-			const { fetch } = context( {
+			const { fetch, disconnectAll } = context( {
 				httpsProtocols: protos,
 				session: certs
 					? { ca, cert, rejectUnauthorized: false }
@@ -58,7 +63,7 @@ describe( name, ( ) =>
 
 			// Disconnection shouldn't be necessary, fetch-h2 should unref
 			// the sockets correctly.
-			await fn( fetch );
+			await fn( fetch, disconnectAll );
 		};
 	}
 
@@ -154,7 +159,7 @@ describe( name, ( ) =>
 	} ) );
 
 	it( "should save and forward cookies",
-		wrapContext( async ( fetch ) =>
+		wrapContext( async ( fetch, disconnectAll ) =>
 	{
 		const responseSet = await fetch(
 			`${host}/cookies/set?foo=bar`,
@@ -162,12 +167,17 @@ describe( name, ( ) =>
 
 		expect( responseSet.headers.has( "location" ) ).toBe( true );
 		const redirectedTo = responseSet.headers.get( "location" );
-		await responseSet.text( );
+		if ( scheme === "https:" )
+			// Over TLS, we need to read the payload, or the socket will not
+			// deref.
+			await responseSet.text( );
 
 		const response = await fetch( baseHost + redirectedTo );
 
 		const data = await response.json( );
 		expect( data.cookies ).toEqual( { foo: "bar" } );
+
+		await disconnectAll( );
 	} ) );
 
 	it( "should handle (and follow) relative paths",

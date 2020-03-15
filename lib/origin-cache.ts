@@ -10,6 +10,7 @@ interface State< Session >
 	session: Session;
 	match?: AltNameMatch;
 	resolved: Array< string >;
+	cleanup?: ( ) => void;
 }
 
 function makeKey( protocol: Protocol, origin: string )
@@ -30,17 +31,6 @@ export default class OriginCache< SessionMap extends AnySessionMap >
 {
 	private sessionMap: Map< unknown, State< unknown > > = new Map( );
 	private staticMap: Map< string, State< unknown > > = new Map( );
-
-	public getAny( origin: string )
-	{
-		return [
-			this.get( 'https1', origin ),
-			this.get( 'https2', origin ),
-			this.get( 'http1', origin ),
-			this.get( 'http2', origin ),
-		]
-		.filter( < T >( t: T ): t is NonNullable< T > => !!t );
-	}
 
 	public get< P extends Protocol >( protocol: P, origin: string )
 	: OriginCacheEntry< typeof protocol, SessionMap[ P ] > | undefined
@@ -80,7 +70,8 @@ export default class OriginCache< SessionMap extends AnySessionMap >
 		origin: string,
 		protocol: Protocol,
 		session: SessionMap[ typeof protocol ],
-		altNameMatch?: AltNameMatch
+		altNameMatch?: AltNameMatch,
+		cleanup?: ( ) => void
 	)
 	{
 		const state: State< typeof session > = {
@@ -89,6 +80,7 @@ export default class OriginCache< SessionMap extends AnySessionMap >
 			session,
 			match: altNameMatch,
 			resolved: [ ],
+			cleanup,
 		};
 
 		this.sessionMap.set( session, state );
@@ -124,9 +116,30 @@ export default class OriginCache< SessionMap extends AnySessionMap >
 		return true;
 	}
 
-	public clear( )
+	public disconnectAll( )
 	{
+		[ ...this.sessionMap ].forEach( ( [ _, session ] ) =>
+		{
+			session.cleanup?.( );
+		} );
+
 		this.sessionMap.clear( );
 		this.staticMap.clear( );
+	}
+
+	public disconnect( origin: string )
+	{
+		[
+			this.get( 'https1', origin ),
+			this.get( 'https2', origin ),
+			this.get( 'http1', origin ),
+			this.get( 'http2', origin ),
+		]
+		.filter( < T >( t: T ): t is NonNullable< T > => !!t )
+		.forEach( ( { session } ) =>
+		{
+			this.sessionMap.get( session )?.cleanup?.( );
+			this.delete( session );
+		} );
 	}
 }
