@@ -8,6 +8,7 @@ import {
 	context,
 	DataBody,
 	fetch as fetchType,
+	disconnectAll as disconnectAllType,
 	HttpProtocols,
 	JsonBody,
 	StreamBody,
@@ -22,16 +23,20 @@ interface TestData
 	certs?: boolean;
 }
 
+type TestFunction =
+	( fetch: typeof fetchType, disconnectAll: typeof disconnectAllType ) =>
+		Promise< void >;
+
 const ca = fs.readFileSync( "/tmp/fetch-h2-certs/ca.pem" );
 const cert = fs.readFileSync( "/tmp/fetch-h2-certs/cert.pem" );
 
-const http1bin = `localhost:${process.env.HTTP1BIN_PORT}`;
-const http2bin = `localhost:${process.env.HTTP2BIN_PORT}`;
+// const http1bin = `localhost:${process.env.HTTP1BIN_PORT}`;
+// const http2bin = `localhost:${process.env.HTTP2BIN_PORT}`;
 const https1bin = `localhost:${process.env.HTTPS1PROXY_PORT}`;
 
 ( [
-	{ scheme: "http:", site: http2bin, protos: [ "http2" ] },
-	{ scheme: "http:", site: http1bin, protos: [ "http1" ] },
+	// { scheme: "http:", site: http2bin, protos: [ "http2" ] },
+	// { scheme: "http:", site: http1bin, protos: [ "http1" ] },
 	{ scheme: "https:", site: https1bin, protos: [ "http1" ], certs: false },
 	{ scheme: "https:", site: https1bin, protos: [ "http1" ], certs: true },
 ] as Array< TestData > )
@@ -45,11 +50,11 @@ const name = `${site} (${protos[ 0 ]} over ${scheme.replace( ":", "" )})` +
 
 describe( name, ( ) =>
 {
-	function wrapContext( fn: ( fetch: typeof fetchType ) => Promise< void > )
+	function wrapContext( fn: TestFunction )
 	{
 		return async ( ) =>
 		{
-			const { fetch } = context( {
+			const { fetch, disconnectAll } = context( {
 				httpsProtocols: protos,
 				session: certs
 					? { ca, cert, rejectUnauthorized: false }
@@ -58,7 +63,7 @@ describe( name, ( ) =>
 
 			// Disconnection shouldn't be necessary, fetch-h2 should unref
 			// the sockets correctly.
-			await fn( fetch );
+			await fn( fetch, disconnectAll );
 		};
 	}
 
@@ -154,7 +159,7 @@ describe( name, ( ) =>
 	} ) );
 
 	it( "should save and forward cookies",
-		wrapContext( async ( fetch ) =>
+		wrapContext( async ( fetch, disconnectAll ) =>
 	{
 		const responseSet = await fetch(
 			`${host}/cookies/set?foo=bar`,
@@ -162,12 +167,14 @@ describe( name, ( ) =>
 
 		expect( responseSet.headers.has( "location" ) ).toBe( true );
 		const redirectedTo = responseSet.headers.get( "location" );
-		await responseSet.text( );
+		// await responseSet.text( );
 
 		const response = await fetch( baseHost + redirectedTo );
 
 		const data = await response.json( );
 		expect( data.cookies ).toEqual( { foo: "bar" } );
+
+		await disconnectAll( );
 	} ) );
 
 	it( "should handle (and follow) relative paths",

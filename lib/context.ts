@@ -180,11 +180,7 @@ export class Context
 	public async disconnect( url: string )
 	{
 		const { origin } = this.parseInput( url );
-		const sessions = this._originCache.getAny( origin );
-		sessions.forEach( ( { session } ) =>
-		{
-			this._originCache.delete( session );
-		} );
+		this._originCache.disconnect( origin );
 
 		await Promise.all( [
 			this.h1Context.disconnect( url ),
@@ -194,7 +190,7 @@ export class Context
 
 	public async disconnectAll( )
 	{
-		this._originCache.clear( );
+		this._originCache.disconnectAll( );
 
 		await Promise.all( [
 			this.h1Context.disconnectAll( ),
@@ -419,6 +415,16 @@ export class Context
 			getByOrigin( this._sessionOptions, origin )
 		);
 
+		const disconnect = once( ( ) =>
+		{
+			console.log( socket.destroyed, socket.destroy, Object.keys(socket) );
+			if ( !socket.destroyed )
+			{
+				socket.destroy( );
+				socket.unref( );
+			}
+		} );
+
 		if ( protocol === "http2" )
 		{
 			// Convert socket into http2 session, this will ref (*)
@@ -435,7 +441,8 @@ export class Context
 				origin,
 				"https2",
 				cacheableSession,
-				altNameMatch
+				altNameMatch,
+				disconnect
 			);
 
 			shortcut( );
@@ -456,7 +463,8 @@ export class Context
 					origin,
 					"https1",
 					session,
-					altNameMatch
+					altNameMatch,
+					disconnect
 				);
 
 			const cleanup = this.h1Context.addUsedSocket(
