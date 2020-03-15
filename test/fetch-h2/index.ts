@@ -368,7 +368,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 
 	it( "should timeout on a slow request", async ( ) =>
 	{
-		jest.setTimeout( 500 );
+		jest.setTimeout( 1000 );
 
 		const { server, port } = await makeServer( );
 

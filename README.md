@@ -1,5 +1,5 @@
 [![npm version][npm-image]][npm-url]
-[![build status][travis-image]][travis-url]
+[![build status][build-image]][build-url]
 [![coverage status][coverage-image]][coverage-url]
 [![Greenkeeper badge](https://badges.greenkeeper.io/grantila/fetch-h2.svg)](https://greenkeeper.io/)
 [![Language grade: JavaScript][lgtm-image]][lgtm-url]
@@ -388,8 +388,8 @@ const response = await fetch( url, { method, body } );
 
 [npm-image]: https://img.shields.io/npm/v/fetch-h2.svg
 [npm-url]: https://npmjs.org/package/fetch-h2
-[travis-image]: https://img.shields.io/travis/grantila/fetch-h2/master.svg
-[travis-url]: https://travis-ci.org/grantila/fetch-h2
+[build-image]: https://img.shields.io/github/workflow/status/grantila/fetch-h2/Master.svg
+[build-url]: https://github.com/grantila/fetch-h2/actions?query=workflow%3AMaster
 [coverage-image]: https://coveralls.io/repos/github/grantila/fetch-h2/badge.svg?branch=master
 [coverage-url]: https://coveralls.io/github/grantila/fetch-h2?branch=master
 [lgtm-image]: https://img.shields.io/lgtm/grade/javascript/g/grantila/fetch-h2.svg?logo=lgtm&logoWidth=18
