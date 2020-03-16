@@ -396,6 +396,7 @@ export class Context
 		{
 			if ( cacheItem.protocol === "https1" )
 			{
+				shortcut( );
 				const resp = await tryWaitForHttp1( cacheItem.session );
 				if ( resp )
 					return resp;
@@ -403,6 +404,7 @@ export class Context
 			else if ( cacheItem.protocol === "https2" )
 			{
 				cacheItem.session.ref( );
+				shortcut( );
 				return doFetchHttp2( cacheItem.session );
 			}
 		}
