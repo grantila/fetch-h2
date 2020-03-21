@@ -30,6 +30,22 @@ describe( "SAN", ( ) =>
 		} );
 	} );
 
+	it( "Should match on CN when no SAN is provided (plain)", ( ) =>
+	{
+		const cert = { subject: { CN: "foo.com" } } as PeerCertificate;
+		const { names, dynamic } = parseOrigin( cert );
+		expect( names ).toStrictEqual( [ "foo.com" ] );
+		expect( dynamic ).toBe( undefined );
+	} );
+
+	it( "Should match on CN when no SAN is provided (dynamic)", ( ) =>
+	{
+		const cert = { subject: { CN: "*.foo.com" } } as PeerCertificate;
+		const { names, dynamic } = parseOrigin( cert );
+		expect( names.length ).toBe( 0 );
+		expect( dynamic?.( "test.foo.com" ) ).toBe( true );
+	} );
+
 	describe( "Multi wildcard domains", ( ) =>
 	{
 		it( "Should throw on double-wildcards", ( ) =>
@@ -39,21 +55,41 @@ describe( "SAN", ( ) =>
 			expect( test ).toThrow( /invalid/i );
 		} );
 
+		const subjectaltname = [
+			"DNS:foo.com",
+			"DNS:bar.com",
+			"DNS:example1.com",
+			"DNS:*.example1.com",
+			"DNS:*.example2.com",
+		].join( ", " );
+
 		const certs = [
 			{
 				name: "CN is wildcard",
 				cert: {
 					subject: { CN: "*.example1.com" },
-					subjectaltname:
-						"DNS:foo.com, DNS:bar.com, DNS:*.example2.com",
+					subjectaltname,
 				} as PeerCertificate,
 			},
 			{
 				name: "CN is plain",
 				cert: {
-					subject: { CN: "foo.com" },
-					subjectaltname:
-						"DNS:bar.com, DNS:*.example1.com, DNS:*.example2.com",
+					subject: { CN: "example1.com" },
+					subjectaltname,
+				} as PeerCertificate,
+			},
+			{
+				name: "CN is wildcard but not in SAN",
+				cert: {
+					subject: { CN: "*.invalid.com" },
+					subjectaltname,
+				} as PeerCertificate,
+			},
+			{
+				name: "CN is plain but not in SAN",
+				cert: {
+					subject: { CN: "invalid.com" },
+					subjectaltname,
 				} as PeerCertificate,
 			},
 		];
@@ -62,14 +98,16 @@ describe( "SAN", ( ) =>
 		{
 			it( `Should not match other domains`, ( ) =>
 			{
-				const match = parseOrigin( cert );
+				const { names, dynamic } = parseOrigin( cert );
 
-				expect( match.dynamic?.( "other.com" ) ).toBe( false );
-				expect( match.dynamic?.( "sub.foo.com" ) ).toBe( false );
-				expect( match.dynamic?.( "sub.bar.com" ) ).toBe( false );
+				expect( names.includes( "invalid.com" ) ).toBe( false );
+				expect( dynamic?.( "invalid.com" ) ).toBe( false );
+				expect( dynamic?.( "test.invalid.com" ) ).toBe( false );
+				expect( dynamic?.( "sub.foo.com" ) ).toBe( false );
+				expect( dynamic?.( "sub.bar.com" ) ).toBe( false );
 			} );
 
-			it( `Should not plain origins`, ( ) =>
+			it( `Should handle plain names`, ( ) =>
 			{
 				const match = parseOrigin( cert );
 
@@ -77,9 +115,10 @@ describe( "SAN", ( ) =>
 				expect( match.dynamic?.( "bar.com" ) ).toBe( false );
 				expect( match.names.includes( "foo.com" ) ).toBe( true );
 				expect( match.names.includes( "bar.com" ) ).toBe( true );
+				expect( match.names.includes( "example1.com" ) ).toBe( true );
 			} );
 
-			it( `Should not wildcard origins`, ( ) =>
+			it( `Should not wildcard plain names`, ( ) =>
 			{
 				const match = parseOrigin( cert );
 

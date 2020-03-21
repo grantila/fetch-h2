@@ -10,7 +10,7 @@ export interface AltNameMatch
 }
 
 
-function getAltNames( cert: PeerCertificate )
+function getNames( cert: PeerCertificate )
 {
 	const CN = cert.subject?.CN;
 	const sans = ( cert.subjectaltname ?? '' )
@@ -19,10 +19,11 @@ function getAltNames( cert: PeerCertificate )
 		.filter( name => name.startsWith( 'DNS:' ) )
 		.map( name => name.substr( 4 ) );
 
-	if ( CN )
-		sans.push( CN );
-
-	return [ ...new Set( sans ) ];
+	if ( cert.subjectaltname )
+		// Ignore CN if SAN:s are present; https://stackoverflow.com/a/29600674
+		return [ ...new Set( sans ) ];
+	else
+		return [ CN ];
 }
 
 export function makeRegex( name: string )
@@ -45,7 +46,7 @@ export function parseOrigin( cert?: PeerCertificate ): AltNameMatch
 
 	if ( cert )
 	{
-		getAltNames( cert ).forEach( name =>
+		getNames( cert ).forEach( name =>
 		{
 			if ( name.match( /.*\*.*\*.*/ ) )
 				throw new Error( `Invalid CN/subjectAltNames: ${name}` );
