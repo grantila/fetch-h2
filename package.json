@@ -70,7 +70,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@types/tough-cookie": "^2.3.6",
+    "@types/tough-cookie": "^4.0.0",
     "already": "^1.12.0",
     "callguard": "^1.2.1",
     "get-stream": "^5.1.0",
