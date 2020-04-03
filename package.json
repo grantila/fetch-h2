@@ -52,7 +52,7 @@
   "devDependencies": {
     "@types/execa": "^2.0.0",
     "@types/from2": "^2.3.0",
-    "@types/jest": "^25.1.4",
+    "@types/jest": "^25.2.1",
     "@types/node": "^13.9.1",
     "@types/through2": "^2.0.34",
     "commitizen": "^4.0.3",
