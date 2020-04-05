@@ -404,6 +404,21 @@ describe( `generic (${protoVersion})`, ( ) =>
 		await server.shutdown( );
 	} );
 
+	it( "should timeout on a slow TLS connect", async ( ) =>
+	{
+		if (proto === "https:")
+		{
+			jest.setTimeout( 1000 );
+
+			const { fetch } = context({ session: { timeout: 50 } } );
+			const eventualResponse = fetch(`${proto}//example.com:81/`);
+
+			const err = await getRejection( eventualResponse );
+
+			expect( err.message ).toContain( "timed out" );
+			}
+	} );
+
 	it( "should be able to POST large (16MiB) stream with known length",
 		async ( ) =>
 	{
