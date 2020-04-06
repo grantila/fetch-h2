@@ -90,15 +90,18 @@ export function connectTLS(
 			resolve( { socket, protocol, altNameMatch } );
 		} );
 
-		socket.once("error", (err) => {
-			if (!handled) {
+		socket.once("error", (err) =>
+		{
+			if (!handled)
+			{
 					handled = true;
 					reject(err);
 			}
 		});
 		socket.once("timeout", () =>
 		{
-			if (!handled) {
+			if (!handled)
+			{
 					handled = true;
 					reject(new TimeoutError("connect timed out after " + opts.timeout + " ms"));
 			}
