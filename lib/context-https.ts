@@ -1,7 +1,7 @@
 import { SecureClientSessionOptions } from "http2";
 import { connect, ConnectionOptions, TLSSocket } from "tls";
 
-import { HttpProtocols } from "./core";
+import { HttpProtocols, TimeoutError } from "./core";
 import { AltNameMatch, parseOrigin } from "./san";
 
 const alpnProtocols =
@@ -50,9 +50,15 @@ export function connectTLS(
 
 	return new Promise< HttpsSocketResult >( ( resolve, reject ) =>
 	{
+		let handled = false;
 		const socket: TLSSocket = connect( parseInt( port, 10 ), host, opts,
 			( ) =>
 		{
+			if (opts.timeout)
+			{
+				// reset connect timeout
+				socket.setTimeout(0);
+			}
 			const { authorized, authorizationError, alpnProtocol = "" } =
 				socket;
 			const cert = socket.getPeerCertificate( );
@@ -84,6 +90,22 @@ export function connectTLS(
 			resolve( { socket, protocol, altNameMatch } );
 		} );
 
-		socket.once( "error", reject );
+		socket.once("error", (err) =>
+		{
+			if (!handled)
+			{
+					handled = true;
+					reject(err);
+			}
+		});
+		socket.once("timeout", () =>
+		{
+			if (!handled)
+			{
+					handled = true;
+					reject(new TimeoutError("connect timed out after " + opts.timeout + " ms"));
+			}
+			socket.destroy();
+		});
 	} );
 }
