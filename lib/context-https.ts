@@ -90,7 +90,12 @@ export function connectTLS(
 			resolve( { socket, protocol, altNameMatch } );
 		} );
 
-		socket.once( "error", reject );
+		socket.once("error", (err) => {
+			if (!handled) {
+					handled = true;
+					reject(err);
+			}
+		});
 		socket.once("timeout", () =>
 		{
 			if (!handled) {
