@@ -731,7 +731,7 @@ describe( `goaway (${protoVersion})`, ( ) =>
 		await server.shutdown( );
 	} );
 
-	it( "user-disconnect closes all sessions", async ( ) =>
+	it.skip( "user-disconnect closes all sessions", async ( ) =>
 	{
 		const { server, port } = await makeServer( );
 
