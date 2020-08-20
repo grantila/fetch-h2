@@ -6,7 +6,8 @@ import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 
 
-const script = path.resolve( path.join( process.cwd( ), "scripts", "test-client" ) );
+const script =
+	path.resolve( path.join( process.cwd( ), "scripts", "test-client" ) );
 
 describe( "event-loop", ( ) =>
 {
@@ -39,6 +40,45 @@ describe( "event-loop", ( ) =>
 
 			const responseBody = JSON.parse( stdout );
 			expect( responseBody[ "user-agent" ] ).toContain( "fetch-h2/" );
+
+			await server.shutdown( );
+		} );
+
+		it( `should handle redirect ${proto} ${version}`, async ( ) =>
+		{
+			const { port, server } = await makeServer( );
+
+			const url = `${proto}//localhost:${port}/redirect/delay/50`;
+
+			const body = { foo: "bar" };
+
+			const { stdout } = await execa(
+				script,
+				[ "GET", url, version, "insecure" ],
+				{ input: JSON.stringify( body ), stderr: 'inherit' }
+			);
+
+			expect( stdout ).toBe( "abcdefghij" );
+
+			await server.shutdown( );
+		} );
+
+		it( `should handle absolute redirect ${proto} ${version}`, async ( ) =>
+		{
+			const { port, server } = await makeServer( );
+
+			const redirectTo = `${proto}//localhost:${port}/delay/50`;
+			const url = `${proto}//localhost:${port}/redirect/${redirectTo}`;
+
+			const body = { foo: "bar" };
+
+			const { stdout } = await execa(
+				script,
+				[ "GET", url, version, "insecure" ],
+				{ input: JSON.stringify( body ), stderr: 'inherit' }
+			);
+
+			expect( stdout ).toBe( "abcdefghij" );
 
 			await server.shutdown( );
 		} );

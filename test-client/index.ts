@@ -29,6 +29,7 @@ async function work( )
 		url,
 		{
 			method: < any >method,
+			redirect: 'follow',
 		}
 	);
 

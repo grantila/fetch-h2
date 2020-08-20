@@ -4,13 +4,8 @@ import { URL } from "url";
 import { Finally, rethrow } from "already";
 
 import { BodyInspector } from "./body";
-import {
-	AbortError,
-	Decoder,
-	FetchInit,
-	SimpleSession,
-	TimeoutError,
-} from "./core";
+import { AbortError, Decoder, FetchInit, TimeoutError } from "./core";
+import { SimpleSession } from "./simple-session";
 import { Headers, RawHeaders } from "./headers";
 import { Request } from "./request";
 import { Response } from "./response";

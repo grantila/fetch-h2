@@ -22,15 +22,27 @@ export function arrayify< T >(
 		: [ value ];
 }
 
+export interface ParsedLocation
+{
+	url: string;
+	isRelative: boolean;
+}
+
 export function parseLocation(
 	location: string | Array< string > | undefined, origin: string
 )
+: null | ParsedLocation
 {
 	if ( "string" !== typeof location )
 		return null;
 
+	const originUrl = new URL( origin );
 	const url = new URL( location, origin );
-	return url.href;
+
+	return {
+		url: url.href,
+		isRelative: originUrl.origin === url.origin,
+	};
 }
 
 export const isRedirectStatus: { [ status: string ]: boolean; } = {

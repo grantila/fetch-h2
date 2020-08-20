@@ -33,6 +33,7 @@ const {
 	HTTP2_HEADER_CONTENT_LENGTH,
 	HTTP2_HEADER_CONTENT_TYPE,
 	HTTP2_HEADER_SET_COOKIE,
+	HTTP2_HEADER_LOCATION,
 } = h2constants;
 
 interface RawHeaders
@@ -285,6 +286,21 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 		else if ( path.startsWith( "/prem-close" ) )
 		{
 			request.socket.destroy( );
+		}
+		else if ( path.startsWith( "/redirect/" ) )
+		{
+			const redirectTo =
+				path.slice( 10 ).startsWith( "http" )
+				? path.slice( 10 )
+				: path.slice( 9 );
+
+			const responseHeaders = {
+				":status": 302,
+				[ HTTP2_HEADER_LOCATION ]: redirectTo,
+			};
+
+			sendHeaders( responseHeaders );
+			response.end( );
 		}
 		else
 		{

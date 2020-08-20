@@ -29,6 +29,7 @@ const {
 	HTTP2_HEADER_CONTENT_LENGTH,
 	HTTP2_HEADER_ACCEPT_ENCODING,
 	HTTP2_HEADER_SET_COOKIE,
+	HTTP2_HEADER_LOCATION,
 } = constants;
 
 export class ServerHttp2 extends TypedServer< Http2Server >
@@ -325,6 +326,21 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 		else if ( path.startsWith( "/prem-close" ) )
 		{
 			stream.close( );
+		}
+		else if ( path.startsWith( "/redirect/" ) )
+		{
+			const redirectTo =
+				path.slice( 10 ).startsWith( "http" )
+				? path.slice( 10 )
+				: path.slice( 9 );
+
+			const responseHeaders = {
+				":status": 302,
+				[ HTTP2_HEADER_LOCATION ]: redirectTo,
+			};
+
+			stream.respond( responseHeaders );
+			stream.end( );
 		}
 		else
 		{

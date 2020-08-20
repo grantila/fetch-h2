@@ -1,8 +1,4 @@
-import { ClientRequest } from "http";
-import { ClientHttp2Session } from "http2";
-
 import { AbortSignal } from "./abort";
-import { CookieJar } from "./cookie-jar";
 import { Headers, RawHeaders } from "./headers";
 
 
@@ -240,38 +236,4 @@ export interface Http1Options
 	maxSockets: number | PerOrigin< number >;
 	maxFreeSockets: number | PerOrigin< number >;
 	timeout: void | number | PerOrigin< void | number >;
-}
-
-export interface SimpleSession
-{
-	protocol: HttpProtocols;
-
-	cookieJar: CookieJar;
-
-	userAgent( ): string;
-	accept( ): string;
-
-	contentDecoders( ): ReadonlyArray< Decoder >;
-}
-
-export interface SimpleSessionHttp1Request
-{
-	req: ClientRequest;
-	cleanup: ( ) => void;
-}
-
-export interface SimpleSessionHttp2Session
-{
-	session: Promise< ClientHttp2Session >;
-	cleanup: ( ) => void;
-}
-
-export interface SimpleSessionHttp1 extends SimpleSession
-{
-	get( url: string ): SimpleSessionHttp1Request;
-}
-
-export interface SimpleSessionHttp2 extends SimpleSession
-{
-	get( ): SimpleSessionHttp2Session;
 }

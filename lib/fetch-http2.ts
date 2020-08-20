@@ -11,8 +11,8 @@ import {
 	AbortError,
 	RetryError,
 	FetchInit,
-	SimpleSessionHttp2,
 } from "./core";
+import { SimpleSessionHttp2 } from "./simple-session";
 import {
 	FetchExtra,
 	handleSignalAndTimeout,
@@ -27,7 +27,13 @@ import {
 import { GuardedHeaders } from "./headers";
 import { Request } from "./request";
 import { Response, StreamResponse } from "./response";
-import { arrayify, isRedirectStatus, parseLocation, pipeline } from "./utils";
+import {
+	arrayify,
+	isRedirectStatus,
+	parseLocation,
+	pipeline,
+	ParsedLocation,
+} from "./utils";
 import { hasGotGoaway } from "./utils-http2";
 
 const {
@@ -121,6 +127,7 @@ async function fetchImpl(
 		};
 
 		let stream: ClientHttp2Stream;
+		let shouldCleanupSocket = true;
 		try
 		{
 			stream = h2session.request( headersToSend, { endStream } );
@@ -177,7 +184,8 @@ async function fetchImpl(
 
 			stream.on( "close", guard( ( ) =>
 			{
-				socketCleanup( );
+				if ( shouldCleanupSocket )
+					socketCleanup( );
 
 				// We'll get an 'error' event if there actually is an
 				// error, but not if we got NGHTTP2_NO_ERROR.
@@ -313,8 +321,11 @@ async function fetchImpl(
 						)
 					);
 
+				const { url: locationUrl, isRelative } =
+					location as ParsedLocation;
+
 				if ( redirect === "error" )
-					return reject( makeRedirectionError( location ) );
+					return reject( makeRedirectionError( locationUrl ) );
 
 				// redirect is 'follow'
 
@@ -323,25 +334,38 @@ async function fetchImpl(
 				// body). The concept is fundementally broken anyway...
 				if ( !endStream )
 					return reject(
-						makeRedirectionMethodError( location, method )
+						makeRedirectionMethodError( locationUrl, method )
 					);
 
 				if ( !location )
 					return reject( makeIllegalRedirectError( ) );
 
-				stream.destroy( );
-				resolve(
-					fetchImpl(
+				if ( isRelative )
+				{
+					shouldCleanupSocket = false;
+					stream.destroy( );
+					resolve( fetchImpl(
 						session,
-						request.clone( location ),
-						{ signal, onTrailers },
+						request.clone( locationUrl ),
+						init,
 						{
 							raceConditionedGoaway,
 							redirected: redirected.concat( url ),
 							timeoutAt,
 						}
-					)
-				);
+					) );
+				}
+				else
+				{
+					resolve( session.newFetch(
+						request.clone( locationUrl ),
+						init,
+						{
+							timeoutAt,
+							redirected: redirected.concat( url ),
+						}
+					) );
+				}
 			} ) );
 		} );
 
@@ -371,14 +395,16 @@ async function fetchImpl(
 export function fetch(
 	session: SimpleSessionHttp2,
 	input: Request,
-	init?: Partial< FetchInit >
+	init?: Partial< FetchInit >,
+	extra?: FetchExtra
 )
 : Promise< Response >
 {
-	const timeoutAt = void 0;
+	const http2Extra: FetchExtraHttp2 = {
+		timeoutAt: extra?.timeoutAt,
+		redirected: extra?.redirected ?? [ ],
+		raceConditionedGoaway: new Set< string>( ),
+	};
 
-	const raceConditionedGoaway = new Set< string>( );
-	const extra = { timeoutAt, redirected: [ ], raceConditionedGoaway };
-
-	return fetchImpl( session, input, init, extra );
+	return fetchImpl( session, input, init, http2Extra );
 }

@@ -5,10 +5,8 @@ import { Socket } from "net";
 import { syncGuard } from "callguard";
 
 import { AbortController } from "./abort";
-import {
-	FetchInit,
-	SimpleSessionHttp1,
-} from "./core";
+import { FetchInit } from "./core";
+import { SimpleSessionHttp1 } from "./simple-session";
 import {
 	FetchExtra,
 	handleSignalAndTimeout,
@@ -23,7 +21,13 @@ import {
 import { GuardedHeaders } from "./headers";
 import { Request } from "./request";
 import { Response, StreamResponse } from "./response";
-import { arrayify, isRedirectStatus, parseLocation, pipeline } from "./utils";
+import {
+	arrayify,
+	isRedirectStatus,
+	parseLocation,
+	pipeline,
+	ParsedLocation,
+} from "./utils";
 
 const {
 	// Responses, these are the same in HTTP/1.1 and HTTP/2
@@ -215,8 +219,11 @@ export async function fetchImpl(
 						)
 					);
 
+				const { url: locationUrl, isRelative } =
+					location as ParsedLocation;
+
 				if ( redirect === "error" )
-					return reject( makeRedirectionError( location ) );
+					return reject( makeRedirectionError( locationUrl ) );
 
 				// redirect is 'follow'
 
@@ -225,24 +232,36 @@ export async function fetchImpl(
 				// body). The concept is fundementally broken anyway...
 				if ( !endStream )
 					return reject(
-						makeRedirectionMethodError( location, method )
+						makeRedirectionMethodError( locationUrl, method )
 					);
 
-				if ( !location )
-					return reject( makeIllegalRedirectError( ) );
-
 				res.destroy( );
-				resolve(
-					fetchImpl(
-						session,
-						request.clone( location ),
-						{ signal, onTrailers },
+
+				if ( isRelative )
+				{
+					resolve(
+						fetchImpl(
+							session,
+							request.clone( locationUrl ),
+							{ signal, onTrailers },
+							{
+								redirected: redirected.concat( url ),
+								timeoutAt,
+							}
+						)
+					);
+				}
+				else
+				{
+					resolve( session.newFetch(
+						request.clone( locationUrl ),
+						init,
 						{
-							redirected: redirected.concat( url ),
 							timeoutAt,
+							redirected: redirected.concat( url ),
 						}
-					)
-				);
+					) );
+				}
 			} ) );
 		} );
 
@@ -274,13 +293,15 @@ export async function fetchImpl(
 export function fetch(
 	session: SimpleSessionHttp1,
 	input: Request,
-	init?: Partial< FetchInit >
+	init?: Partial< FetchInit >,
+	extra?: FetchExtra
 )
 : Promise< Response >
 {
-	const timeoutAt = void 0;
-
-	const extra = { timeoutAt, redirected: [ ] };
+	extra = {
+		timeoutAt: extra?.timeoutAt,
+		redirected: extra?.redirected ?? [ ],
+	};
 
 	return fetchImpl( session, input, init, extra );
 }

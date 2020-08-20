@@ -19,11 +19,13 @@ import {
 	HttpProtocols,
 	parsePerOrigin,
 	PerOrigin,
+	RetryError,
+} from "./core";
+import {
 	SimpleSession,
 	SimpleSessionHttp1,
 	SimpleSessionHttp2,
-	RetryError,
-} from "./core";
+} from "./simple-session";
 import { fetch as fetchHttp1 } from "./fetch-http1";
 import { fetch as fetchHttp2 } from "./fetch-http2";
 import { version } from "./generated/version";
@@ -31,6 +33,7 @@ import { Request } from "./request";
 import { Response } from "./response";
 import { parseInput } from "./utils";
 import OriginCache from "./origin-cache";
+import { FetchExtra } from "./fetch-common";
 
 
 function makeDefaultUserAgent( ): string
@@ -174,7 +177,7 @@ export class Context
 
 	public async fetch( input: string | Request, init?: Partial< FetchInit > )
 	{
-		return this.retryFetch( input, init, 0 );
+		return this.retryFetch( input, init );
 	}
 
 	public async disconnect( url: string )
@@ -201,25 +204,27 @@ export class Context
 	private async retryFetch(
 		input: string | Request,
 		init: Partial< FetchInit > | undefined,
-		count: number
+		extra?: FetchExtra,
+		count: number = 0
 	)
 	: Promise< Response >
 	{
 		++count;
 
-		return this.retryableFetch( input, init )
+		return this.retryableFetch( input, init, extra )
 		.catch( specific( RetryError, err =>
 		{
 			// TODO: Implement a more robust retry logic
 			if ( count > 10 )
 				throw err;
-			return this.retryFetch( input, init, count );
+			return this.retryFetch( input, init, extra, count );
 		} ) );
 	}
 
 	private async retryableFetch(
 		input: string | Request,
-		init?: Partial< FetchInit >
+		init?: Partial< FetchInit >,
+		extra?: FetchExtra
 	)
 	: Promise< Response >
 	{
@@ -243,6 +248,7 @@ export class Context
 				cookieJar: this._cookieJar,
 				protocol,
 				userAgent: ( ) => this.userAgent( origin ),
+				newFetch: this.retryFetch.bind( this ),
 			} );
 
 		const doFetchHttp1 = ( socket: Socket, cleanup: ( ) => void ) =>
@@ -259,7 +265,7 @@ export class Context
 					} ),
 				...makeSimpleSession( "http1" ),
 			};
-			return fetchHttp1( sessionGetterHttp1, request, init );
+			return fetchHttp1( sessionGetterHttp1, request, init, extra );
 		};
 
 		const doFetchHttp2 = async ( cacheableSession: CacheableH2Session ) =>
@@ -273,7 +279,9 @@ export class Context
 					get: ( ) => ( { session, cleanup } ),
 					...makeSimpleSession( "http2" ),
 				};
-				return await fetchHttp2( sessionGetterHttp2, request, init );
+				return await fetchHttp2(
+					sessionGetterHttp2, request, init, extra
+				);
 			}
 			catch ( err )
 			{
