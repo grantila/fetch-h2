@@ -1,3 +1,4 @@
+import { map } from "already";
 import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 
@@ -270,7 +271,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 		{
 			const { server } = await makeServer( );
 
-			const { disconnectAll, fetch } = context( );
+			const { disconnectAll, fetch } = context( { ...cycleOpts } );
 
 			const awaitFetch = fetch( "${proto}//localhost:0" );
 
@@ -303,6 +304,83 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			disconnectAll( );
 
 			await server.shutdown( );
+		} );
+	} );
+
+	describe( "session sharing", ( ) =>
+	{
+		jest.setTimeout( 2500 );
+
+		it( "should re-use session for same host", async ( ) =>
+		{
+			const { disconnectAll, fetch } = context( { ...cycleOpts } );
+
+			const urls = [
+				[ "https://en.wikipedia.org/wiki/33", "33" ],
+				[ "https://en.wikipedia.org/wiki/44", "44" ],
+				[ "https://en.wikipedia.org/wiki/42", "42" ],
+			];
+
+			const resps = await map(
+				urls,
+				{ concurrency: Infinity },
+				async ( [ url, title ] ) =>
+				{
+					const resp = await fetch( url );
+					const text = await resp.text( );
+					const m = text.match( /<h1[^>]*>(.*)<\/h1>/ );
+					return { expected: title, got: m?.[ 1 ] };
+				}
+			);
+
+			resps.forEach( ( { expected, got } ) =>
+			{
+				expect( expected ).toBe( got );
+			} );
+
+			await disconnectAll( );
+		} );
+
+		it( "should re-use session for same SAN but different host",
+			async ( ) =>
+		{
+			const { disconnectAll, fetch } = context( { ...cycleOpts } );
+
+			const urls = [
+				{ lang: "en", title: "33" },
+				{ lang: "en", title: "44" },
+				{ lang: "sv", title: "33" },
+				{ lang: "sv", title: "44" },
+			] as const;
+
+			const resps = await map(
+				urls,
+				{ concurrency: Infinity },
+				async ( { lang, title } ) =>
+				{
+					const url = `https://${lang}.wikipedia.org/wiki/${title}`;
+					const resp = await fetch( url );
+					const text = await resp.text( );
+					const mLang = text.match( /<html[^>]* lang="([^"]+)"/ );
+					const mTitle = text.match( /<h1[^>]*>([^<]+)<\/h1>/ );
+					return {
+						expectedLang: lang,
+						gotLang: mLang?.[ 1 ],
+						expectedTitle: title,
+						gotTitle: mTitle?.[ 1 ],
+					};
+				}
+			);
+
+			resps.forEach(
+				( { expectedLang, gotLang, expectedTitle, gotTitle } ) =>
+				{
+					expect( expectedLang ).toBe( gotLang );
+					expect( expectedTitle ).toBe( gotTitle );
+				}
+			);
+
+			await disconnectAll( );
 		} );
 	} );
 } );

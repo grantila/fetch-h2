@@ -16,6 +16,7 @@ const {
 	HTTP2_HEADER_METHOD,
 	HTTP2_HEADER_SCHEME,
 	HTTP2_HEADER_PATH,
+	HTTP2_HEADER_AUTHORITY,
 
 	// Methods
 	HTTP2_METHOD_GET,
@@ -124,6 +125,7 @@ export async function setupFetch(
 	const {
 		origin,
 		protocol,
+		host,
 		pathname, search, hash,
 	} = new URL( url );
 	const path = pathname + search + hash;
@@ -142,6 +144,9 @@ export async function setupFetch(
 
 	if ( headers.has( HTTP2_HEADER_COOKIE ) )
 		cookies.push( ...arrayify( headers.get( HTTP2_HEADER_COOKIE ) ) );
+
+	if ( !headers.has( "host" ) )
+		headers.set( "host", host );
 
 	const headersToSend: RawHeaders = {
 		// Set required headers
@@ -165,7 +170,7 @@ export async function setupFetch(
 		if ( key === "host" && session.protocol === "http2" )
 			// Convert to :authority like curl does:
 			// https://github.com/grantila/fetch-h2/issues/9
-			headersToSend[ ":authority" ] = val;
+			headersToSend[ HTTP2_HEADER_AUTHORITY ] = val;
 		else if ( key !== HTTP2_HEADER_COOKIE )
 			headersToSend[ key ] = val;
 	}
