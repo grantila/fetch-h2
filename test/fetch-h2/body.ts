@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import getStream from "get-stream";
+import { buffer as getStreamBuffer } from "get-stream";
 import * as through2 from "through2";
 
 import { createIntegrity } from "../lib/utils";
@@ -498,21 +498,21 @@ describe( "body", ( ) =>
 		it( "handle null", async ( ) =>
 		{
 			const body = new DataBody( null );
-			const data = await getStream.buffer( await body.readable( ) );
+			const data = await getStreamBuffer( await body.readable( ) );
 			expect( data.toString( ) ).toBe( "" );
 		} );
 
 		it( "handle string", async ( ) =>
 		{
 			const body = new DataBody( "foo" );
-			const data = await getStream.buffer( await body.readable( ) );
+			const data = await getStreamBuffer( await body.readable( ) );
 			expect( data.toString( ) ).toBe( "foo" );
 		} );
 
 		it( "handle buffer", async ( ) =>
 		{
 			const body = new DataBody( Buffer.from( "foo" ) );
-			const data = await getStream.buffer( await body.readable( ) );
+			const data = await getStreamBuffer( await body.readable( ) );
 			expect( data.toString( ) ).toBe( "foo" );
 		} );
 
@@ -521,7 +521,7 @@ describe( "body", ( ) =>
 			const stream = through2( );
 			stream.end( "foo" );
 			const body = new StreamBody( stream );
-			const data = await getStream.buffer( await body.readable( ) );
+			const data = await getStreamBuffer( await body.readable( ) );
 			expect( data.toString( ) ).toBe( "foo" );
 		} );
 	} );

@@ -18,7 +18,7 @@ import { createHash } from "crypto";
 import { createBrotliCompress, createDeflate, createGzip } from "zlib";
 
 import { delay } from "already";
-import getStream from "get-stream";
+import { buffer as getStreamBuffer } from "get-stream";
 
 import {
 	ignoreError,
@@ -136,7 +136,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 				[ HTTP2_HEADER_SET_COOKIE ]: [ ],
 			};
 
-			const data = await getStream.buffer( request );
+			const data = await getStreamBuffer( request );
 			const json = JSON.parse( data.toString( ) );
 			json.forEach( ( cookie: any ) =>
 			{
@@ -180,7 +180,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 				":status": 200,
 			};
 
-			const data = await getStream.buffer( request );
+			const data = await getStreamBuffer( request );
 			const json = JSON.parse( data.toString( ) );
 
 			sendHeaders( responseHeaders );

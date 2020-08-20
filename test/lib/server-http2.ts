@@ -14,7 +14,7 @@ import { createHash } from "crypto";
 import { createBrotliCompress, createDeflate, createGzip } from "zlib";
 
 import { delay } from "already";
-import getStream from "get-stream";
+import { buffer as getStreamBuffer } from "get-stream";
 
 import {
 	ignoreError,
@@ -121,7 +121,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				[ HTTP2_HEADER_SET_COOKIE ]: [ ],
 			};
 
-			const data = await getStream.buffer( stream );
+			const data = await getStreamBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 			json.forEach( ( cookie: any ) =>
 			{
@@ -163,7 +163,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				":status": 200,
 			};
 
-			const data = await getStream.buffer( stream );
+			const data = await getStreamBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 
 			stream.once( "wantTrailers", ( ) =>
@@ -211,7 +211,7 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				":status": 200,
 			};
 
-			const data = await getStream.buffer( stream );
+			const data = await getStreamBuffer( stream );
 			const json = JSON.parse( data.toString( ) );
 
 			json.forEach( ( pushable: any ) =>

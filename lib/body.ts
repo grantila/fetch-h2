@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 
 import { tap } from "already";
-import getStream from "get-stream";
+import { buffer as getStreamBuffer } from "get-stream";
 import * as through2 from "through2";
 import * as toArrayBuffer from "to-arraybuffer";
 
@@ -221,7 +221,7 @@ export class Body implements IBody
 	: Promise< Buffer >
 	{
 		if ( !this._signal )
-			return getStream.buffer( readable );
+			return getStreamBuffer( readable );
 
 		// Race the readable against the abort signal
 		let callback: ( ) => void = ( ) => { };
@@ -236,7 +236,7 @@ export class Body implements IBody
 			this._ensureNotAborted( );
 
 			return await Promise.race( [
-				getStream.buffer( readable ),
+				getStreamBuffer( readable ),
 				onAborted,
 			] );
 		}

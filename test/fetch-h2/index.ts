@@ -1,7 +1,7 @@
 import { defer, delay } from "already";
 import { createHash } from "crypto";
 import * as from2 from "from2";
-import getStream from "get-stream";
+import { buffer as getStreamBuffer } from "get-stream";
 import * as through2 from "through2";
 
 import { TestData } from "../lib/server-common";
@@ -603,7 +603,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStream.buffer( stream );
+		const data = await getStreamBuffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
@@ -630,7 +630,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStream.buffer( stream );
+		const data = await getStreamBuffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
@@ -660,7 +660,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 
 		const stream = await response.readable( );
 
-		const data = await getStream.buffer( stream );
+		const data = await getStreamBuffer( stream );
 
 		expect( JSON.parse( data.toString( ) ) ).toEqual( testData );
 
