@@ -237,6 +237,16 @@ export class Headers
 		for ( const value of this._data.values( ) )
 			yield value.join( "," );
 	}
+
+	// This is non-standard, but useful
+	public toJSON( )
+	{
+		return [ ...this.entries( ) ]
+			.reduce( ( prev, [ key, val ] ) =>
+				Object.assign( prev, { [ key ]: val } ),
+				{ }
+			);
+	}
 }
 
 export class GuardedHeaders extends Headers

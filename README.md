@@ -167,6 +167,7 @@ These are features in `fetch-h2`, that don't exist in the Fetch API. Some things
  * The `Request` class (options to `fetch`) has an extra property `allowForbiddenHeaders`, which defaults to `false`.
  * The `Response` class also has an extra property `allowForbiddenHeaders`, which defaults to `false` (or to the value of the `Request` if it was constructed through a `fetch` call, which is the common case).
  * The response object has an extra property `httpVersion` which is either `1` or `2` (numbers), depending on what was negotiated with the server.
+ * The `Headers` class (e.g. retried by `{response}.headers`) has a `toJSON` function which converts the headers to a simple JavaScript object.
 
 
 ## Contexts
