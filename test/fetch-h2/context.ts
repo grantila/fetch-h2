@@ -131,7 +131,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				).toBeTruthy( );
 			}
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );
@@ -154,7 +154,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const res = await response.json( );
 			expect( res[ "user-agent" ] ).toBe( "foobar" );
 
-			disconnectAll( );
+			await disconnectAll( );
 
 			await server.shutdown( );
 		} );

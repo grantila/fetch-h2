@@ -824,8 +824,8 @@ describe( `premature stream close (${protoVersion})`, ( ) =>
 			const expected =
 				version === "http1"
 				? "socket hang up"
-				: "Stream prematurely closed";
-			expect( err.message ).toContain( expected );
+				: [ "Stream prematurely closed", "Connection closed" ];
+			expect( expected ).toContain( err.message );
 		}
 
 		await disconnectAll( );

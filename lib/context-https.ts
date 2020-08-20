@@ -4,6 +4,10 @@ import { connect, ConnectionOptions, TLSSocket } from "tls";
 import { HttpProtocols } from "./core";
 import { AltNameMatch, parseOrigin } from "./san";
 
+
+const needsSocketHack = [ "12", "13" ]
+	.includes( process.versions.node.split( '.' )[ 0 ] );
+
 const alpnProtocols =
 {
 	http1: Buffer.from( "\x08http/1.1" ),
@@ -83,6 +87,12 @@ export function connectTLS(
 
 			resolve( { socket, protocol, altNameMatch } );
 		} );
+
+		if ( needsSocketHack )
+			socket.once( 'secureConnect', ( ) =>
+			{
+				( socket as any ).secureConnecting = false;
+			} );
 
 		socket.once( "error", reject );
 	} );

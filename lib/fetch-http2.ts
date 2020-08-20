@@ -248,8 +248,7 @@ async function fetchImpl(
 				}
 			) );
 
-			stream.on( "response", guard(
-				( headers: IncomingHttp2Headers ) =>
+			stream.on( "response", guard( ( headers: IncomingHttp2Headers ) =>
 			{
 				const {
 					signal: bodySignal = void 0,
