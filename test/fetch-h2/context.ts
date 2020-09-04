@@ -1,4 +1,6 @@
 import { map } from "already";
+import { lsof } from "list-open-files";
+
 import { TestData } from "../lib/server-common";
 import { makeMakeServer } from "../lib/server-helpers";
 
@@ -321,6 +323,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				[ "https://en.wikipedia.org/wiki/42", "42" ],
 			];
 
+			const [ { files: openFilesBefore } ] = await lsof( );
+
 			const resps = await map(
 				urls,
 				{ concurrency: Infinity },
@@ -332,6 +336,19 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 					return { expected: title, got: m?.[ 1 ] };
 				}
 			);
+
+			const [ { files: openFilesAfter } ] = await lsof( { } );
+
+			const numAfter =
+				openFilesAfter.filter( fd => fd.type === 'IP' ).length;
+			const numBefore =
+				openFilesBefore.filter( fd => fd.type === 'IP' ).length;
+
+			// HTTP/1.1 will most likely spawn new sockets, but timing *may*
+			// affect this. For HTTP/2, it should always just use 1 socket per
+			// origin / SAN cluster.
+			if ( version === 'http2' )
+				expect( numBefore ).toEqual( numAfter - 1 );
 
 			resps.forEach( ( { expected, got } ) =>
 			{
@@ -353,6 +370,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				{ lang: "sv", title: "44" },
 			] as const;
 
+			const [ { files: openFilesBefore } ] = await lsof( );
+
 			const resps = await map(
 				urls,
 				{ concurrency: Infinity },
@@ -371,6 +390,19 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 					};
 				}
 			);
+
+			const [ { files: openFilesAfter } ] = await lsof( { } );
+
+			const numAfter =
+				openFilesAfter.filter( fd => fd.type === 'IP' ).length;
+			const numBefore =
+				openFilesBefore.filter( fd => fd.type === 'IP' ).length;
+
+			// HTTP/1.1 will most likely spawn new sockets, but timing *may*
+			// affect this. For HTTP/2, it should always just use 1 socket per
+			// origin / SAN cluster.
+			if ( version === 'http2' )
+				expect( numBefore ).toEqual( numAfter - 1 );
 
 			resps.forEach(
 				( { expectedLang, gotLang, expectedTitle, gotTitle } ) =>

@@ -1,3 +1,5 @@
+import { lsof } from "list-open-files";
+
 import { makeMakeServer } from "../lib/server-helpers";
 
 import {
@@ -13,46 +15,87 @@ describe( `http1`, ( ) =>
 
 	describe( "keep-alive", ( ) =>
 	{
-		it( "should not send 'connection: close' by default", async ( ) =>
+		describe( "http1.keelAlive === true (default)", ( ) =>
 		{
-			const { server, port } = await makeServer( );
-			const { disconnectAll, fetch } = context( { ...cycleOpts } );
+			it( "should not send 'connection: close'", async ( ) =>
+			{
+				const { server, port } = await makeServer( );
+				const { disconnectAll, fetch } = context( { ...cycleOpts } );
 
-			const response1 = ensureStatusSuccess(
-				await fetch( `http://localhost:${port}/headers` )
-			);
+				const response1 = ensureStatusSuccess(
+					await fetch( `http://localhost:${port}/headers` )
+				);
 
-			const headers = await response1.json( );
+				const headers = await response1.json( );
 
-			expect( headers.connection ).not.toBe( "close" );
+				expect( headers.connection ).not.toBe( "close" );
 
-			disconnectAll( );
+				disconnectAll( );
 
-			await server.shutdown( );
-		} );
-
-		it( "should send 'connection: close' if http1.keelAlive === false",
-			async ( ) =>
-		{
-			const { server, port } = await makeServer( );
-			const { disconnectAll, fetch } = context( {
-				...cycleOpts,
-				http1: {
-					keepAlive: false,
-				},
+				await server.shutdown( );
 			} );
 
-			const response1 = ensureStatusSuccess(
-				await fetch( `http://localhost:${port}/headers` )
-			);
+			it( "should re-use socket", async ( ) =>
+			{
+				const { server, port } = await makeServer( );
+				const { disconnectAll, fetch } = context( { ...cycleOpts } );
 
-			const headers = await response1.json( );
+				const [ { files: openFilesA } ] = await lsof( { } );
 
-			expect( headers.connection ).toBe( "close" );
+				const response1 = ensureStatusSuccess(
+					await fetch( `http://localhost:${port}/headers` )
+				);
+				await response1.json( );
 
-			disconnectAll( );
+				const [ { files: openFilesB } ] = await lsof( { } );
 
-			await server.shutdown( );
+				const response2 = ensureStatusSuccess(
+					await fetch( `http://localhost:${port}/headers` )
+				);
+				await response2.json( );
+
+				const [ { files: openFilesC } ] = await lsof( { } );
+
+				const ipA = openFilesA.filter( fd => fd.type === 'IP' );
+				const ipB = openFilesB.filter( fd => fd.type === 'IP' );
+				const ipC = openFilesC.filter( fd => fd.type === 'IP' );
+
+				// 2 less because client+server
+				expect( ipA.length ).toEqual( ipB.length - 2 );
+				expect( ipB.length ).toEqual( ipC.length );
+				expect( ipB ).toEqual( ipC );
+
+				disconnectAll( );
+
+				await server.shutdown( );
+			} );
+		} );
+
+		describe( "http1.keelAlive === false", ( ) =>
+		{
+			it( "should send 'connection: close'",
+				async ( ) =>
+			{
+				const { server, port } = await makeServer( );
+				const { disconnectAll, fetch } = context( {
+					...cycleOpts,
+					http1: {
+						keepAlive: false,
+					},
+				} );
+
+				const response1 = ensureStatusSuccess(
+					await fetch( `http://localhost:${port}/headers` )
+				);
+
+				const headers = await response1.json( );
+
+				expect( headers.connection ).toBe( "close" );
+
+				disconnectAll( );
+
+				await server.shutdown( );
+			} );
 		} );
 	} );
 } );
