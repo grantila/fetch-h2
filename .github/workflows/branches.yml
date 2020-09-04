@@ -5,8 +5,8 @@ name: Branches
 
 on:
   push:
-    branches:
-      - '*'
+    branches-ignore:
+      - master
 
 jobs:
   build:
