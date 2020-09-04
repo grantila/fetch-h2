@@ -1,4 +1,5 @@
 [![npm version][npm-image]][npm-url]
+[![downloads][downloads-image]][npm-url]
 [![build status][build-image]][build-url]
 [![coverage status][coverage-image]][coverage-url]
 [![Greenkeeper badge](https://badges.greenkeeper.io/grantila/fetch-h2.svg)](https://greenkeeper.io/)
@@ -389,6 +390,7 @@ const response = await fetch( url, { method, body } );
 
 [npm-image]: https://img.shields.io/npm/v/fetch-h2.svg
 [npm-url]: https://npmjs.org/package/fetch-h2
+[downloads-image]: https://img.shields.io/npm/dm/fetch-h2.svg
 [build-image]: https://img.shields.io/github/workflow/status/grantila/fetch-h2/Master.svg
 [build-url]: https://github.com/grantila/fetch-h2/actions?query=workflow%3AMaster
 [coverage-image]: https://coveralls.io/repos/github/grantila/fetch-h2/badge.svg?branch=master
