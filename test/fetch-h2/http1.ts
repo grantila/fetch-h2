@@ -8,6 +8,8 @@ import {
 import { ensureStatusSuccess } from "../lib/utils";
 
 
+const itSkipCi = process.env.CI ? it.skip : it;
+
 describe( `http1`, ( ) =>
 {
 	const { cycleOpts, makeServer } =
@@ -35,7 +37,7 @@ describe( `http1`, ( ) =>
 				await server.shutdown( );
 			} );
 
-			it( "should re-use socket", async ( ) =>
+			itSkipCi( "should re-use socket", async ( ) =>
 			{
 				const { server, port } = await makeServer( );
 				const { disconnectAll, fetch } = context( { ...cycleOpts } );
