@@ -407,7 +407,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 	it( "should be able to POST large (16MiB) stream with known length",
 		async ( ) =>
 	{
-		jest.setTimeout( 2000 );
+		jest.setTimeout( 4000 );
 
 		const { server, port } = await makeServer( );
 
@@ -455,7 +455,7 @@ describe( `generic (${protoVersion})`, ( ) =>
 	it( "should be able to POST large (16MiB) stream with unknown length",
 		async ( ) =>
 	{
-		jest.setTimeout( 2000 );
+		jest.setTimeout( 4000 );
 
 		const { server, port } = await makeServer( );
 
