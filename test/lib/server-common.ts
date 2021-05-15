@@ -47,7 +47,7 @@ export abstract class Server
 
 	public async listen( port: number | undefined = void 0 ): Promise< number >
 	{
-		return new Promise( ( resolve, _reject ) =>
+		return new Promise< void >( ( resolve, _reject ) =>
 		{
 			this._server.listen( port, "0.0.0.0", resolve );
 		} )
