@@ -12,6 +12,7 @@ import {
 	Method,
 	OnTrailers,
 	TimeoutError,
+	HttpVersion,
 } from "./lib/core";
 import { Headers } from "./lib/headers";
 import { Request } from "./lib/request";
@@ -69,6 +70,7 @@ export {
 	Response,
 	AbortError,
 	TimeoutError,
+	HttpVersion,
 	OnTrailers,
 	ContextOptions,
 	DecodeFunction,
