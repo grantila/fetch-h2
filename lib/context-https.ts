@@ -65,7 +65,10 @@ export function connectTLS(
 			if ( !authorized && opts.rejectUnauthorized !== false )
 				return reject( authorizationError );
 
-			if ( ![ "h2", "http/1.1", "http/1.0" ].includes( alpnProtocol ) )
+			if (
+				!alpnProtocol ||
+				![ "h2", "http/1.1", "http/1.0" ].includes( alpnProtocol )
+			)
 			{
 				// Maybe the server doesn't understand ALPN, enforce
 				// user-provided protocol, or fallback to HTTP/1

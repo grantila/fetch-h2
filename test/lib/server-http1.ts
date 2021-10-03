@@ -11,7 +11,7 @@ import {
 	createServer as createSecureServer,
 	Server as HttpsServer,
 } from "https";
-import { Socket } from "net";
+import { Duplex } from "stream";
 import { pipeline } from "../../lib/utils";
 
 import { createHash } from "crypto";
@@ -43,7 +43,7 @@ interface RawHeaders
 
 export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 {
-	private _store = new Set< Socket >( );
+	private _store = new Set< Duplex >( );
 
 	constructor( opts: ServerOptions )
 	{

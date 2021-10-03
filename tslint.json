@@ -22,10 +22,7 @@
             "check-whitespace"
         ],
         "no-unused-variable": [
-            true,
-            {
-                "ignore-pattern": "^_"
-            }
+            false
         ],
         "no-unused-expression": [
             true,

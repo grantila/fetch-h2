@@ -132,7 +132,7 @@ async function fetchImpl(
 		{
 			stream = h2session.request( headersToSend, { endStream } );
 		}
-		catch ( err )
+		catch ( err: any )
 		{
 			if ( err.code === "ERR_HTTP2_GOAWAY_SESSION" )
 			{

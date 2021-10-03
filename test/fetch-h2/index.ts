@@ -30,7 +30,7 @@ async function getRejection< T >( promise: Promise< T > ): Promise< Error >
 	}
 	catch ( err )
 	{
-		return err;
+		return err as Error;
 	}
 	throw new Error( "Expected exception" );
 }
@@ -796,7 +796,7 @@ describe( `integrity (${protoVersion})`, ( ) =>
 			await response.text( );
 			expect( false ).toBe( true );
 		}
-		catch ( err )
+		catch ( err: any )
 		{
 			expect( err.message ).toContain( "integrity" );
 		}
@@ -819,7 +819,7 @@ describe( `premature stream close (${protoVersion})`, ( ) =>
 			await fetch( url );
 			expect( false ).toBe( true );
 		}
-		catch ( err )
+		catch ( err: any )
 		{
 			const expected =
 				version === "http1"

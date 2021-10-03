@@ -122,7 +122,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				await fetch( `https://localhost:${port}/headers` );
 				expect( true ).toEqual( false );
 			}
-			catch ( err )
+			catch ( err: any )
 			{
 				expect(
 					err.message.includes( "closed" ) // < Node 9.4

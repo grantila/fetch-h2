@@ -1,7 +1,7 @@
 import { constants as h2constants } from "http2";
 import { URL } from "url";
 
-import { Finally, rethrow } from "already";
+import { rethrow } from "already";
 
 import { BodyInspector } from "./body";
 import { AbortError, Decoder, FetchInit, TimeoutError } from "./core";
@@ -306,7 +306,7 @@ export function handleSignalAndTimeout(
 		]
 		.filter( promise => promise )
 	)
-	.then( ...Finally( cleanup ) );
+	.finally( cleanup );
 }
 
 export function make100Error( )
