@@ -20,7 +20,7 @@ Regardless of whether you're actually interested in the Fetch API per se or not,
 
 `fetch-h2` supports cookies (per-context, see below), so when the server sends 'set-cookie' headers, they are saved and automatically re-sent, even after disconnect. They are however only persisted in-memory.
 
-By default, `fetch-h2` will accept `gzip` and `deflate` encodings (and Brolti `br` if running on Node.js 11.7 or later), and decode transparently. If you want to allow Brotli for older versions node Node.js, use the [`fetch-h2-br`](https://www.npmjs.com/package/fetch-h2-br) package.
+By default, `fetch-h2` will accept `br`, `gzip` and `deflate` encodings, and decodes transparently.
 
 
 ## Releases
@@ -37,12 +37,6 @@ Since 3.0.0, `fetch-h2` requires Node.js 12.
 # API
 
 ## Imports
-
-This README uses the ES6/TypeScript `import` syntax, mainly because `fetch-h2` is written in TypeScript (and also because ES6 modules will eventually arrive in Node.js). If you use pure JavaScript in Node.js today, you don't have *modules* support, just `require` instead, e.g:
-
-```js
-const { fetch } = require( 'fetch-h2' );
-```
 
 `fetch-h2` exports more than just `fetch()`, namely all necessary classes and functions for taking advantage of the Fetch API (and more).
 
