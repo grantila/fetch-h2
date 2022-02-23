@@ -7,6 +7,7 @@ import {
 	AbortError,
 	DecodeFunction,
 	Decoder,
+	RequestInit,
 	FetchInit,
 	HttpProtocols,
 	Method,
@@ -60,6 +61,8 @@ export {
 	// Re-export
 	AbortController,
 	AbortSignal,
+	RequestInit,
+	FetchInit,
 	HttpProtocols,
 	Body,
 	JsonBody,
