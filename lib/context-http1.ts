@@ -134,7 +134,7 @@ export class OriginPool
 			)
 		);
 
-		const waiting = this.waiting;
+		const waiting = [ ...this.waiting ];
 		this.waiting.length = 0;
 		waiting.forEach( waiter =>
 			// TODO: Better error class + message
