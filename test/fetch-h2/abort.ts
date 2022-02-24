@@ -40,7 +40,7 @@ describe( "abort", ( ) =>
 
 			const spy = jest.fn( );
 
-			signal.on( "abort", spy );
+			signal.addEventListener( "abort", spy );
 
 			expect( signal.aborted ).toBe( false );
 			controller.abort( );
@@ -57,7 +57,7 @@ describe( "abort", ( ) =>
 
 			const spy = jest.fn( );
 
-			signal.on( "abort", spy );
+			signal.addEventListener( "abort", spy );
 
 			expect( signal.aborted ).toBe( false );
 			abort( );

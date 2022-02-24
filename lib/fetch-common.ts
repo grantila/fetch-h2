@@ -1,7 +1,7 @@
 import { constants as h2constants } from "http2";
 import { URL } from "url";
 
-import { rethrow } from "already";
+import { rethrow, once } from "already";
 
 import { BodyInspector } from "./body";
 import { AbortError, Decoder, FetchInit, TimeoutError } from "./core";
@@ -254,10 +254,10 @@ export async function setupFetch(
 		?
 			new Promise< Response >( ( _resolve, reject ) =>
 			{
-				signal.once( "abort", abortHandler = ( ) =>
+				signal.addEventListener( "abort", abortHandler = once( ( ) =>
 				{
 					reject( abortError( ) );
-				} );
+				} ) );
 			} )
 		: null;
 
@@ -267,7 +267,7 @@ export async function setupFetch(
 		timeoutInfo?.promise?.catch( _err => { } );
 
 		if ( signal && abortHandler )
-			signal.removeListener( "abort", abortHandler );
+			signal.removeEventListener( "abort", abortHandler );
 	}
 
 	return {

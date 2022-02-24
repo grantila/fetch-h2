@@ -228,7 +228,7 @@ export class Body implements IBody
 		const onAborted = new Promise< Buffer >( ( _, reject ) =>
 		{
 			callback = ( ) => { reject( abortError ); };
-			this._signal?.addListener( 'abort', callback );
+			this._signal?.addEventListener( 'abort', callback );
 		} );
 
 		try
@@ -242,7 +242,7 @@ export class Body implements IBody
 		}
 		finally
 		{
-			this._signal.removeListener( 'abort', callback );
+			this._signal.removeEventListener( 'abort', callback );
 			// Could happen if abort and other error happen practically
 			// simultaneously. Ensure Node.js won't get mad about this.
 			onAborted.catch( ( ) => { } );

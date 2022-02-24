@@ -2,6 +2,7 @@ import { IncomingMessage } from "http";
 import { constants as h2constants } from "http2";
 import { Socket } from "net";
 
+import { once } from "already";
 import { syncGuard } from "callguard";
 
 import { AbortController } from "./abort";
@@ -139,10 +140,10 @@ export async function fetchImpl(
 						return;
 					}
 
-					signal.once( "abort", abortHandler );
+					signal.addEventListener( "abort", once( abortHandler ) );
 					res.once( "end", ( ) =>
 					{
-						signal.removeListener( "abort", abortHandler );
+						signal.removeEventListener( "abort", abortHandler );
 					} );
 				}
 

@@ -4,6 +4,7 @@ import {
 	ClientHttp2Stream,
 } from "http2";
 
+import { once } from "already";
 import { syncGuard } from "callguard";
 
 import { AbortController } from "./abort";
@@ -259,10 +260,10 @@ async function fetchImpl(
 						return;
 					}
 
-					signal.once( "abort", abortHandler );
+					signal.addEventListener( "abort", once( abortHandler ) );
 					stream.once( "close", ( ) =>
 					{
-						signal.removeListener( "abort", abortHandler );
+						signal.removeEventListener( "abort", abortHandler );
 					} );
 				}
 
