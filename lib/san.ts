@@ -12,7 +12,7 @@ export interface AltNameMatch
 
 function getNames( cert: PeerCertificate )
 {
-	const CN = cert.subject?.CN;
+	const CN = cert.subject?.CN ?? '';
 	const sans = ( cert.subjectaltname ?? '' )
 		.split( ',' )
 		.map( name => name.trim( ) )
