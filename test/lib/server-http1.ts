@@ -101,7 +101,7 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 
 			response.statusCode = status;
 
-			for ( const [ key, value ] of Object.entries( rest ) )
+			for ( const [ key, value ] of Object.entries( rest as RawHeaders ) )
 				response.setHeader( key, value );
 		};
 
