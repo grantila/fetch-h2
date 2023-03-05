@@ -315,12 +315,14 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 
 		it( "should re-use session for same host", async ( ) =>
 		{
+			const { server, port } = await makeServer();
+
 			const { disconnectAll, fetch } = context( { ...cycleOpts } );
 
 			const urls = [
-				[ "https://en.wikipedia.org/wiki/33", "33" ],
-				[ "https://en.wikipedia.org/wiki/44", "44" ],
-				[ "https://en.wikipedia.org/wiki/42", "42" ],
+				[ `${proto}//localhost:${port}/sha256`, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ],
+				[ `${proto}//localhost:${port}/sha256`, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ],
+				[ `${proto}//localhost:${port}/sha256`, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ],
 			];
 
 			const [ { files: openFilesBefore } ] = await lsof( );
@@ -328,12 +330,11 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const resps = await map(
 				urls,
 				{ concurrency: Infinity },
-				async ( [ url, title ] ) =>
+				async ( [ url, expected ] ) =>
 				{
 					const resp = await fetch( url );
 					const text = await resp.text( );
-					const m = text.match( /<h1[^>]*>(.*)<\/h1>/ );
-					return { expected: title, got: m?.[ 1 ] };
+					return { expected, got: text };
 				}
 			);
 
@@ -344,18 +345,20 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const numBefore =
 				openFilesBefore.filter( fd => fd.type === 'IP' ).length;
 
-			// HTTP/1.1 will most likely spawn new sockets, but timing *may*
-			// affect this. For HTTP/2, it should always just use 1 socket per
-			// origin / SAN cluster.
+			// HTTP/1.1 will most likely spawn new sockets, but timing *may* affect this.
+			// For HTTP/2, it should always just use 1 socket per origin / SAN cluster
+			// plus we need to account for one open file from our locally running server as well.
 			if ( version === 'http2' )
-				expect( numBefore ).toEqual( numAfter - 1 );
+				expect( numBefore ).toEqual( numAfter - 2 );
 
 			resps.forEach( ( { expected, got } ) =>
 			{
-				expect( expected ).toBe( got );
+				expect( got ).toBe( expected );
 			} );
 
 			await disconnectAll( );
+			await server.shutdown( );
+
 		} );
 
 		it( "should re-use session for same SAN but different host",
@@ -381,7 +384,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 					const resp = await fetch( url );
 					const text = await resp.text( );
 					const mLang = text.match( /<html[^>]* lang="([^"]+)"/ );
-					const mTitle = text.match( /<h1[^>]*>([^<]+)<\/h1>/ );
+					const mTitle = text.match( /<title[^>]*>(\S+).*<\/title>/ );
 					return {
 						expectedLang: lang,
 						gotLang: mLang?.[ 1 ],
@@ -398,17 +401,16 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			const numBefore =
 				openFilesBefore.filter( fd => fd.type === 'IP' ).length;
 
-			// HTTP/1.1 will most likely spawn new sockets, but timing *may*
-			// affect this. For HTTP/2, it should always just use 1 socket per
-			// origin / SAN cluster.
+			// HTTP/1.1 will most likely spawn new sockets, but timing *may* affect this.
+			// For HTTP/2, it should always just use 1 socket per origin / SAN cluster.
 			if ( version === 'http2' )
-				expect( numBefore ).toEqual( numAfter - 1 );
+				expect( numAfter ).toEqual( numBefore + 1 );
 
 			resps.forEach(
 				( { expectedLang, gotLang, expectedTitle, gotTitle } ) =>
 				{
-					expect( expectedLang ).toBe( gotLang );
-					expect( expectedTitle ).toBe( gotTitle );
+					expect( gotLang ).toBe( expectedLang );
+					expect( gotTitle ).toBe( expectedTitle );
 				}
 			);
 
