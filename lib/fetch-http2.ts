@@ -274,7 +274,7 @@ async function fetchImpl(
 
 				const isRedirected = isRedirectStatus[ status ];
 
-				if ( headers[ HTTP2_HEADER_SET_COOKIE ] )
+				if ( session.cookieJar && headers[ HTTP2_HEADER_SET_COOKIE ] )
 				{
 					const setCookies =
 						arrayify( headers[ HTTP2_HEADER_SET_COOKIE ] );

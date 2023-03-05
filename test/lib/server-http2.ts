@@ -92,6 +92,10 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 		const path = headers[ HTTP2_HEADER_PATH ] as string;
 		let m;
 
+		if (headers.cookie) {
+			this.receivedCookies.push(headers.cookie);
+		}
+
 		if ( path === "/headers" )
 		{
 			stream.respond( {
@@ -129,7 +133,6 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 				( < any >responseHeaders[ HTTP2_HEADER_SET_COOKIE ] )
 					.push( cookie );
 			} );
-
 			stream.respond( responseHeaders );
 			stream.end( );
 		}
@@ -360,11 +363,11 @@ export class ServerHttp2 extends TypedServer< Http2Server >
 }
 
 export async function makeServer( opts: ServerOptions = { } )
-: Promise< { server: Server; port: number | null; } >
+: Promise< { server: Server; port: number | null; receivedCookies: Array<string> } >
 {
 	opts = opts || { };
 
 	const server = new ServerHttp2( opts );
 	await server.listen( opts.port );
-	return { server, port: server.port };
+	return { server, port: server.port, receivedCookies: server.receivedCookies };
 }

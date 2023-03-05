@@ -82,7 +82,7 @@ export class Context
 	private _userAgent: string | PerOrigin< string >;
 	private _overwriteUserAgent: boolean | PerOrigin< boolean >;
 	private _accept: string | PerOrigin< string >;
-	private _cookieJar: CookieJar;
+	private _cookieJar: undefined | CookieJar;
 	private _decoders:
 		ReadonlyArray< Decoder > | PerOrigin< ReadonlyArray< Decoder > >;
 	private _sessionOptions:
@@ -122,10 +122,7 @@ export class Context
 	{
 		opts = opts || { };
 
-		this._cookieJar = "cookieJar" in opts
-			? ( opts.cookieJar || new CookieJar( ) )
-			: new CookieJar( );
-
+		this._cookieJar = "cookieJar" in opts ? opts.cookieJar : new CookieJar( );
 		this._userAgent = parsePerOrigin( opts.userAgent, "" );
 		this._overwriteUserAgent =
 			parsePerOrigin( opts.overwriteUserAgent, false );

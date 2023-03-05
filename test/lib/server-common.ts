@@ -41,9 +41,9 @@ export interface ServerOptions
 export abstract class Server
 {
 	public port: number | null = null;
+	public receivedCookies: Array<string> = new Array<string>();
 	protected _opts: ServerOptions = { };
 	protected _server: HttpServer | HttpsServer | Http2Server = < any >void 0;
-
 
 	public async listen( port: number | undefined = void 0 ): Promise< number >
 	{

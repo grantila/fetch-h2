@@ -95,6 +95,10 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 		if ( path == null )
 			throw new Error( "Internal test error" );
 
+		if (request.headers.cookie) {
+			this.receivedCookies.push(request.headers.cookie);
+		}
+
 		const sendHeaders = ( headers: RawHeaders ) =>
 		{
 			const { ":status": status = 200, ...rest } = { ...headers };
@@ -310,11 +314,11 @@ export class ServerHttp1 extends TypedServer< HttpServer | HttpsServer >
 }
 
 export async function makeServer( opts: ServerOptions = { } )
-: Promise< { server: Server; port: number | null; } >
+: Promise< { server: Server; port: number | null; receivedCookies: Array<string> } >
 {
 	opts = opts || { };
 
 	const server = new ServerHttp1( opts );
 	await server.listen( opts.port );
-	return { server, port: server.port };
+	return { server, port: server.port, receivedCookies: server.receivedCookies };
 }

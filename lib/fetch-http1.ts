@@ -181,7 +181,7 @@ export async function fetchImpl(
 
 				const isRedirected = isRedirectStatus[ "" + statusCode ];
 
-				if ( headers[ HTTP1_HEADER_SET_COOKIE ] )
+				if ( session.cookieJar && headers[ HTTP1_HEADER_SET_COOKIE ] )
 				{
 					const setCookies =
 						arrayify( headers[ HTTP1_HEADER_SET_COOKIE ] );
