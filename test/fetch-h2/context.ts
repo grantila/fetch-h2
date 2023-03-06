@@ -166,7 +166,7 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 	{
 		it( "should be able to specify custom cookie jar", async ( ) =>
 		{
-			const { server, port } = await makeServer( );
+			const { server, port, receivedCookies: serverReceivedCookies } = await makeServer( );
 
 			const cookieJar = new CookieJar( );
 
@@ -181,11 +181,14 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 				userAgent: "foobar",
 			} );
 
-			await fetch( `${proto}//localhost:${port}/set-cookie`, {
+			const response1 = await fetch( `${proto}//localhost:${port}/set-cookie`, {
 				json: [ "a=b" , "c=d" ],
 				method: "POST",
+				allowForbiddenHeaders: true,
 			} );
 
+			expect(serverReceivedCookies).toHaveLength(0);
+			expect(response1.headers.get('set-cookie')).not.toBeNull();
 			const cookies =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
 
@@ -198,6 +201,8 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			// Next request should maintain cookies
 
 			await fetch( `${proto}//localhost:${port}/echo` );
+			expect(serverReceivedCookies.length).toBe(1);
+			expect(serverReceivedCookies).toEqual(["a=b; c=d"]);
 
 			const cookies2 =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
@@ -207,9 +212,12 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			// If we manually clear the cookie jar, subsequent requests
 			// shouldn't have any cookies
 
+			serverReceivedCookies.splice(0);
 			cookieJar.reset( );
 
 			await fetch( `${proto}//localhost:${port}/echo` );
+
+			expect(serverReceivedCookies.length).toBe(0);
 
 			const cookies3 =
 				await cookieJar.getCookies( `${proto}//localhost:${port}/` );
@@ -221,7 +229,74 @@ describe( `context (${version} over ${proto.replace( ":", "" )})`, ( ) =>
 			await server.shutdown( );
 		} );
 
-		it( "shouldn't be able to read cookie headers be default", async ( ) =>
+		it( "should be able to specify undefined cookie jar to indicate not to manage cookies", async ( ) =>
+		{
+			const { server, port, receivedCookies: serverReceivedCookies } = await makeServer( );
+
+			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
+				cookieJar: undefined,
+				overwriteUserAgent: true,
+				userAgent: "foobar",
+			} );
+
+			await fetch( `${proto}//localhost:${port}/set-cookie`, {
+				json: [ "a=b" , "c=d" ],
+				method: "POST",
+			} );
+
+			expect(serverReceivedCookies).toHaveLength(0);
+
+			// Next request should not return cookies
+			await fetch( `${proto}//localhost:${port}/set-cookie`, {
+				json: [ "x=y" , "y=z" ],
+				method: "POST",
+			} );
+
+			expect(serverReceivedCookies).toHaveLength(0);
+
+			await fetch( `${proto}//localhost:${port}/echo` );
+
+			expect(serverReceivedCookies).toHaveLength(0);
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+
+		it( "should be able to not specify cookie jar and have its setup by default, cookies working", async ( ) =>
+		{
+			const { server, port, receivedCookies: serverReceivedCookies } = await makeServer( );
+
+
+			const { disconnectAll, fetch } = context( {
+				...cycleOpts,
+				overwriteUserAgent: true,
+				userAgent: "foobar",
+			} );
+
+			const response1 = await fetch( `${proto}//localhost:${port}/set-cookie`, {
+				json: [ "a=b" , "c=d" ],
+				method: "POST",
+				allowForbiddenHeaders: true,
+			} );
+
+			expect(serverReceivedCookies).toHaveLength(0);
+			expect(response1.headers.get('set-cookie')).not.toBeNull();
+
+			// Next request should maintain cookies
+
+			await fetch( `${proto}//localhost:${port}/echo` );
+			expect(serverReceivedCookies.length).toBe(1);
+			expect(serverReceivedCookies).toEqual(["a=b; c=d"]);
+
+			disconnectAll( );
+
+			await server.shutdown( );
+		} );
+
+
+		it( "shouldn't be able to read cookie headers by default", async ( ) =>
 		{
 			const { server, port } = await makeServer( );
 

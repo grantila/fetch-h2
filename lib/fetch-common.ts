@@ -135,8 +135,8 @@ export async function setupFetch(
 
 	const headers = new Headers( request.headers );
 
-	const cookies = ( await session.cookieJar.getCookies( url ) )
-		.map( cookie => cookie.cookieString( ) );
+	const cookies = session.cookieJar ? ( await session.cookieJar.getCookies( url ) )
+		.map( cookie => cookie.cookieString( ) ) : [];
 
 	const contentDecoders = session.contentDecoders( );
 

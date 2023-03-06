@@ -12,7 +12,7 @@ export interface SimpleSession
 {
 	protocol: HttpProtocols;
 
-	cookieJar: CookieJar;
+	cookieJar:  CookieJar | undefined;
 
 	userAgent( ): string;
 	accept( ): string;

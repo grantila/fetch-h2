@@ -280,6 +280,7 @@ application/json, text/*;0.9, */*;q=0.8
 
 where `Cookie` is a [`tough-cookie` Cookie](https://www.npmjs.com/package/tough-cookie#cookie).
 
+`cookieJar` can also be set to undefined, which will cause `fetch-h2` to not process/store cookies.
 
 ### Content encodings (compression)
 
